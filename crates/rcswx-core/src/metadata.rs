@@ -164,13 +164,16 @@ impl Op {
 
 #[derive(Debug)]
 pub struct Architecture {
-    pub ops: Vec<Op>,
+    pub(crate) ops: Vec<Op>,
 }
 impl Architecture {
     pub fn new(ops: Vec<Op>, limits: &Limits) -> Result<Self> {
         let value = Self { ops };
         value.validate(limits)?;
         Ok(value)
+    }
+    pub fn operations(&self) -> &[Op] {
+        &self.ops
     }
     pub fn validate(&self, limits: &Limits) -> Result<()> {
         let mut guard = Guard::new(limits, &CancellationToken::default())?;
@@ -243,4 +246,25 @@ impl Guard {
         self.check()?;
         check_limit("max_core_bytes", self.limits.max_core_bytes, bytes)
     }
+}
+
+pub(crate) fn allocation<T>(count: usize, base_bytes: usize, guard: &Guard) -> Result<Vec<T>> {
+    let bytes = count
+        .checked_mul(size_of::<T>())
+        .and_then(|n| n.checked_add(base_bytes))
+        .ok_or(Error::BudgetExceeded {
+            resource: "max_core_bytes",
+            limit: guard.limits.max_core_bytes as u64,
+            observed: u64::MAX,
+        })?;
+    guard.bytes(bytes)?;
+    let mut result = Vec::new();
+    result
+        .try_reserve_exact(count)
+        .map_err(|_| Error::BudgetExceeded {
+            resource: "allocation",
+            limit: guard.limits.max_core_bytes as u64,
+            observed: bytes as u64,
+        })?;
+    Ok(result)
 }
