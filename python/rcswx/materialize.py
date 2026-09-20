@@ -25,6 +25,18 @@ def _leaf(operation: Operation, input_spec: TensorSpec) -> nn.Module:
             device="meta",
             dtype=torch.float32,
         )
+    if operation.kind == "dropout":
+        return nn.Dropout(operation.get("p"), inplace=False)
+    if operation.kind == "batch_norm1d":
+        return nn.BatchNorm1d(
+            input_spec.shape[1],
+            eps=operation.get("eps"),
+            momentum=operation.get("momentum"),
+            affine=operation.get("affine"),
+            track_running_stats=operation.get("track_running_stats"),
+            device="meta",
+            dtype=torch.float32,
+        )
     raise UnsupportedOperator(f"{operation.kind} has no verified materialization route")
 
 
@@ -96,6 +108,8 @@ def materialize(
                     requires_grad, action = True, "initialized"
                     if init == "zeros":
                         data.zero_()
+                    elif operation.kind == "batch_norm1d":
+                        data.fill_(1 if parameter.name == "weight" else 0)
                     else:
                         if generator is None:
                             generator = torch.Generator(device="cpu")
@@ -116,6 +130,10 @@ def materialize(
                         "donor_address": address,
                     }
                 )
+            for buffer in realization.buffers:
+                data = torch.empty(buffer.shape, dtype=getattr(torch, buffer.dtype), device="cpu")
+                data.fill_(1 if buffer.name == "running_var" else 0)
+                setattr(leaf, buffer.name, data)
             root.add_module(str(index), leaf)
     root.train(training)
     check_deadline(start, limits)
@@ -145,4 +163,10 @@ def copied_state(
         raise UnsupportedConfiguration(
             "copied-state conformance requires compatible complete state"
         )
+    with torch.no_grad():
+        for index, binding in enumerate(architecture.bindings):
+            if binding.buffers:
+                source = donor.get_submodule(binding.module_path)
+                for buffer in binding.buffers:
+                    getattr(model[index], buffer.name).copy_(getattr(source, buffer.name))
     return model
