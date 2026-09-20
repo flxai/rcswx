@@ -97,7 +97,8 @@ class Operation:
             else:
                 if type(value) not in (int, float) or not math.isfinite(value):
                     raise UnsupportedConfiguration(f"{name} must be a finite real number")
-                value = float(value)
+                # Signed zero has no logical effect and must not split canonical keys.
+                value = 0.0 if value == 0 else float(value)
                 if (
                     name == "eps"
                     and value <= 0
