@@ -47,6 +47,10 @@ impl PyEditPath {
     fn stats(&self) -> BTreeMap<&'static str, usize> {
         stats(self.inner.stats())
     }
+    #[getter]
+    fn owned_bytes(&self) -> usize {
+        self.inner.owned_bytes()
+    }
     fn selected_cost(&self, mask: u64) -> PyResult<u64> {
         guarded(|| self.inner.selected_cost(mask))
     }
@@ -106,18 +110,21 @@ struct PySampler {
 #[pymethods]
 impl PySampler {
     #[new]
+    #[pyo3(signature = (path, seed, limits, token, external_bytes=0))]
     fn new(
         py: Python<'_>,
         path: &PyEditPath,
         seed: u64,
         limits: &PyLimits,
         token: &PyCancellationToken,
+        external_bytes: usize,
     ) -> PyResult<Self> {
         let path = path.inner.clone();
         let limits = limits.inner.clone();
         let token = token.inner.clone();
-        let inner =
-            py.detach(move || guarded(|| core::Sampler::new(path, seed, &limits, &token)))?;
+        let inner = py.detach(move || {
+            guarded(|| core::Sampler::new(path, seed, &limits, &token, external_bytes))
+        })?;
         Ok(Self { inner })
     }
     fn draw(&mut self) -> PyResult<u64> {

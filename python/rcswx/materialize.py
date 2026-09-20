@@ -75,6 +75,8 @@ def materialize(
         raise ValueError("inheritance requires two live donor modules")
     if inference.storage_bytes > limits.max_child_bytes:
         raise BudgetExceeded("max_child_bytes", limits.max_child_bytes, inference.storage_bytes)
+    if limits.max_depth < 2:
+        raise BudgetExceeded("max_depth", limits.max_depth, 2)
     check_global_hooks()
     check_deadline(start, limits)
     root, decisions, generator = nn.Sequential(), [], None

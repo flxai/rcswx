@@ -93,6 +93,8 @@ def infer(
     start = time.monotonic()
     if not operations:
         raise UnsupportedConfiguration("an edited sequence cannot be empty")
+    if check_storage and limits.max_depth < 2:
+        raise BudgetExceeded("max_depth", limits.max_depth, 2)
     if len(operations) > limits.max_nodes:
         raise BudgetExceeded("max_nodes", limits.max_nodes, len(operations))
     if len(input_spec.shape) > limits.max_rank:

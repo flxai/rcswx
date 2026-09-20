@@ -42,6 +42,7 @@ pub struct Sampler {
     entries: Vec<Entry>,
     rng: ChaCha12Rng,
     guard: Guard,
+    external_bytes: usize,
     pub stats: SamplingStats,
 }
 impl Sampler {
@@ -50,8 +51,10 @@ impl Sampler {
         seed: u64,
         limits: &Limits,
         cancel: &CancellationToken,
+        external_bytes: usize,
     ) -> Result<Self> {
         let mut guard = Guard::new(limits, cancel)?;
+        check_limit("max_core_bytes", limits.max_core_bytes, external_bytes)?;
         check_limit("max_edits", limits.max_edits, path.edit_count())?;
         check_limit(
             "max_predecessors",
@@ -66,7 +69,7 @@ impl Sampler {
                 observed: u64::MAX,
             })?;
         check_limit("max_masks", limits.max_masks, masks)?;
-        let base = path.owned_bytes() + size_of::<Self>();
+        let base = path.owned_bytes() + size_of::<Self>() + external_bytes;
         let mut entries = allocation::<Entry>(masks, base, &guard)?;
         let mut total = Sum::default();
         let mut cost = 0_u64;
@@ -123,6 +126,7 @@ impl Sampler {
             entries,
             rng: ChaCha12Rng::from_seed(derive_seed(seed, b"selection")),
             guard,
+            external_bytes,
             stats,
         })
     }
@@ -144,7 +148,8 @@ impl Sampler {
         cancel: &CancellationToken,
     ) -> Result<(u64, Vec<(u8, usize)>)> {
         let mask = self.draw()?;
-        let retained_bytes = size_of::<Self>() + self.entries.capacity() * size_of::<Entry>();
+        let retained_bytes =
+            size_of::<Self>() + self.entries.capacity() * size_of::<Entry>() + self.external_bytes;
         let origins = self
             .path
             .project_with_retained(mask, limits, cancel, retained_bytes)?;
@@ -226,6 +231,7 @@ mod tests {
             u64::MAX,
             &Limits::default(),
             &CancellationToken::default(),
+            0,
         )
         .unwrap();
         assert_eq!(
@@ -257,7 +263,8 @@ mod tests {
                     max_masks: 3,
                     ..Limits::default()
                 },
-                &CancellationToken::default()
+                &CancellationToken::default(),
+                0
             ),
             Err(Error::BudgetExceeded {
                 resource: "max_masks",
@@ -272,7 +279,8 @@ mod tests {
                     max_core_bytes: 1,
                     ..Limits::default()
                 },
-                &CancellationToken::default()
+                &CancellationToken::default(),
+                0
             ),
             Err(Error::BudgetExceeded {
                 resource: "max_core_bytes",
