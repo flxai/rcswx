@@ -55,10 +55,28 @@ class _Request:
         return _native_call(_core.Limits, **self.remaining().core_kwargs())
 
 
-def _parents(source, target, *, example_inputs, input_spec, request: _Request, fallback_spec=None):
+def _parents(
+    source,
+    target,
+    *,
+    example_inputs,
+    input_spec,
+    request: _Request,
+    fallback_spec=None,
+    retained_path=None,
+):
     prepared = type(source) is Architecture, type(target) is Architecture
     if prepared[0] != prepared[1]:
         raise TypeError("use two live modules or two prepared architectures, not mixed inputs")
+    held = 0 if retained_path is None else retained_path.native.owned_bytes
+    known = (
+        set()
+        if retained_path is None
+        else {id(retained_path.source.native), id(retained_path.target.native)}
+    )
+    ceiling = request.limits.max_core_bytes
+    if held > ceiling:
+        raise BudgetExceeded("max_core_bytes", ceiling, held)
     if prepared[0]:
         if example_inputs is not None or input_spec is not None:
             raise ValueError("prepared architectures already contain their input contracts")
@@ -68,17 +86,35 @@ def _parents(source, target, *, example_inputs, input_spec, request: _Request, f
             raise TypeError("inputs must both be modules or prepared architectures")
         if example_inputs is None and input_spec is None:
             input_spec = fallback_spec
-        pair = tuple(
-            prepare(
-                model,
-                example_inputs=example_inputs,
-                input_spec=input_spec,
-                limits=request.remaining(),
-            )
-            for model in (source, target)
-        )
+        pair, captured = [], {}
+        for model in (source, target):
+            # A caller must prevent concurrent mutation. Repeating the identical
+            # donor in one request cannot change its capture or binding contract.
+            if id(model) not in captured:
+                if held >= ceiling:
+                    raise BudgetExceeded("max_core_bytes", ceiling, held + 1)
+                try:
+                    architecture = prepare(
+                        model,
+                        example_inputs=example_inputs,
+                        input_spec=input_spec,
+                        limits=replace(request.remaining(), max_core_bytes=ceiling - held),
+                    )
+                except BudgetExceeded as error:
+                    if error.resource == "max_core_bytes":
+                        raise BudgetExceeded(
+                            "max_core_bytes", ceiling, held + error.observed
+                        ) from None
+                    raise
+                held += architecture.native.owned_bytes
+                known.add(id(architecture.native))
+                captured[id(model)] = architecture
+            pair.append(captured[id(model)])
         donors = source, target
     for architecture in pair:
+        if id(architecture.native) not in known:
+            held += architecture.native.owned_bytes
+            known.add(id(architecture.native))
         if len(architecture.operations) > request.limits.max_nodes:
             raise BudgetExceeded(
                 "max_nodes", request.limits.max_nodes, len(architecture.operations)
@@ -86,6 +122,8 @@ def _parents(source, target, *, example_inputs, input_spec, request: _Request, f
         rank = max(len(architecture.input_spec.shape), len(architecture.output_spec.shape))
         if rank > request.limits.max_rank:
             raise BudgetExceeded("max_rank", request.limits.max_rank, rank)
+    if held > ceiling:
+        raise BudgetExceeded("max_core_bytes", ceiling, held)
     request.check()
     return pair[0], pair[1], donors
 

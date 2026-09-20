@@ -64,6 +64,7 @@ def crossover_with_report(
         input_spec=input_spec,
         request=request,
         fallback_spec=None if path is None else path.source.input_spec,
+        retained_path=path,
     )
     _contracts(source, target)
     if inherit and donors is None:
@@ -80,8 +81,19 @@ def crossover_with_report(
         _validate_path(path, source, target)
     timings["alignment_seconds"] = time.monotonic() - alignment_start
     sampling_start = time.monotonic()
+    held = {id(path.source.native), id(path.target.native)}
+    external_bytes = 0
+    for architecture in (source, target):
+        if id(architecture.native) not in held:
+            external_bytes += architecture.native.owned_bytes
+            held.add(id(architecture.native))
     sampler = _native_call(
-        _core.Sampler, path.native, resolved_seed, request.native_limits(), request.token
+        _core.Sampler,
+        path.native,
+        resolved_seed,
+        request.native_limits(),
+        request.token,
+        external_bytes,
     )
     timings["distribution_seconds"] = time.monotonic() - sampling_start
     visited, valid, charged, total = sampler.stats
