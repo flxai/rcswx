@@ -73,3 +73,25 @@ class Cancelled(RcswxError):
 
 class InternalInvariant(RcswxError):
     """A library invariant failed; never treat this as a sampling rejection."""
+
+
+def _native_call(function, /, *args, **kwargs):
+    from . import _core
+
+    try:
+        return function(*args, **kwargs)
+    except _core.CoreError as exc:
+        kind, *payload = exc.args
+        if kind == "budget":
+            raise BudgetExceeded(*payload) from None
+        if kind == "cancelled":
+            raise Cancelled("request cancelled") from None
+        if kind == "invalid_input":
+            raise UnsupportedConfiguration(*payload) from None
+        if kind == "invalid_selection":
+            raise InvalidEditSelection(*payload) from None
+        if kind == "no_alignment":
+            raise NoAdmissibleAlignment("complete search found no legal witness") from None
+        if kind == "internal":
+            raise InternalInvariant(*payload) from None
+        raise InternalInvariant("unknown native error category") from exc

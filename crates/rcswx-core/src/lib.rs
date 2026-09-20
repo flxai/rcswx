@@ -2,6 +2,11 @@
 
 use sha2::{Digest, Sha256};
 
+mod metadata;
+pub use metadata::{
+    Architecture, CancellationToken, Error, Limits, Op, Result, Stats, check_limit,
+};
+
 pub const PROFILE_VERSION: &str = "torch-grammar-v1";
 pub const RNG_VERSION: &str = "rcswx-rng-v1";
 
