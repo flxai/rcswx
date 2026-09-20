@@ -1,0 +1,32 @@
+[
+  {
+    "seed": 0,
+    "domain": "selection",
+    "hex": "20294a30e0769b42dea62f0ed1ac4846f1993e671a07f52450f44c8f95d0c341"
+  },
+  {
+    "seed": 0,
+    "domain": "initialization",
+    "hex": "94d60d0fcc97642e078566f8741619ea84dde834d24b0e69aee626be3d849724"
+  },
+  {
+    "seed": 42,
+    "domain": "selection",
+    "hex": "2d8f5b37656719ba62fbd32e20a54951048088403b6e48949b3f5dce5d33e809"
+  },
+  {
+    "seed": 42,
+    "domain": "initialization",
+    "hex": "20c770aaa8cb0eb23e3b0438947d5a403e70dad100f82415c65fad17946176a1"
+  },
+  {
+    "seed": 18446744073709551615,
+    "domain": "selection",
+    "hex": "ef59e570722c5ffc51bc6d7fffc9ee917ae0d177ac0e48350420ca09ad187bb2"
+  },
+  {
+    "seed": 18446744073709551615,
+    "domain": "initialization",
+    "hex": "e53bdedae7e346ce09a949e475d604b9cc5b32d85d9811302123236d4a27f89d"
+  }
+]
