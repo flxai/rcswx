@@ -46,6 +46,8 @@ class TensorSpec:
             if dimension > _MAX_DIMENSION:
                 raise BudgetExceeded("dimension", _MAX_DIMENSION, _MAX_DIMENSION + 1)
         checked_numel(self.shape)
+        if any(type(value) is not str for value in (self.dtype, self.device, self.layout)):
+            raise TypeError("contract metadata must contain ordinary primitive strings")
         if (self.dtype, self.device, self.layout) != ("float32", "cpu", "contiguous"):
             raise UnsupportedConfiguration(
                 "only contiguous dense CPU float32 contracts are supported"
@@ -147,7 +149,7 @@ class ParameterBinding:
         if type(self.shape) is not tuple or any(type(n) is not int or n <= 0 for n in self.shape):
             raise UnsupportedConfiguration("invalid realized tensor shape")
         checked_numel(self.shape)
-        if self.dtype not in ("float32", "int64"):
+        if type(self.dtype) is not str or self.dtype not in ("float32", "int64"):
             raise UnsupportedConfiguration("unsupported realized tensor dtype")
 
 
