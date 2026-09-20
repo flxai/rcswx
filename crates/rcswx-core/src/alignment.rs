@@ -162,6 +162,15 @@ impl Path {
         limits: &Limits,
         cancel: &CancellationToken,
     ) -> Result<Vec<(u8, usize)>> {
+        self.project_with_retained(mask, limits, cancel, 0)
+    }
+    pub(crate) fn project_with_retained(
+        &self,
+        mask: u64,
+        limits: &Limits,
+        cancel: &CancellationToken,
+        retained_bytes: usize,
+    ) -> Result<Vec<(u8, usize)>> {
         let mut guard = Guard::new(limits, cancel)?;
         self.check_mask(mask)?;
         check_limit("max_edits", limits.max_edits, self.edit_count())?;
@@ -177,7 +186,7 @@ impl Path {
             ));
         }
         check_limit("max_nodes", limits.max_nodes, count as usize)?;
-        let mut result = allocation(count as usize, self.owned_bytes(), &guard)?;
+        let mut result = allocation(count as usize, self.owned_bytes() + retained_bytes, &guard)?;
         for step in &self.steps {
             let selected = step.edit_id.is_some_and(|bit| mask & (1 << bit) != 0);
             let origin = match step.kind {

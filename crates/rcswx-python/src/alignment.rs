@@ -99,8 +99,55 @@ fn align(
     })
 }
 
+#[pyclass(name = "Sampler")]
+struct PySampler {
+    inner: core::Sampler,
+}
+#[pymethods]
+impl PySampler {
+    #[new]
+    fn new(
+        py: Python<'_>,
+        path: &PyEditPath,
+        seed: u64,
+        limits: &PyLimits,
+        token: &PyCancellationToken,
+    ) -> PyResult<Self> {
+        let path = path.inner.clone();
+        let limits = limits.inner.clone();
+        let token = token.inner.clone();
+        let inner =
+            py.detach(move || guarded(|| core::Sampler::new(path, seed, &limits, &token)))?;
+        Ok(Self { inner })
+    }
+    fn draw(&mut self) -> PyResult<u64> {
+        guarded(|| self.inner.draw())
+    }
+    fn propose(
+        &mut self,
+        py: Python<'_>,
+        limits: &PyLimits,
+        token: &PyCancellationToken,
+    ) -> PyResult<(u64, Vec<(u8, usize)>)> {
+        let limits = limits.inner.clone();
+        let token = token.inner.clone();
+        py.detach(|| guarded(|| self.inner.propose(&limits, &token)))
+    }
+    #[getter]
+    fn stats(&self) -> (usize, usize, usize, f64) {
+        let stats = self.inner.stats;
+        (
+            stats.visited_masks,
+            stats.valid_masks,
+            stats.charged_bytes,
+            stats.total_weight,
+        )
+    }
+}
+
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyEditPath>()?;
+    module.add_class::<PySampler>()?;
     module.add_function(wrap_pyfunction!(distance, module)?)?;
     module.add_function(wrap_pyfunction!(align, module)?)?;
     Ok(())

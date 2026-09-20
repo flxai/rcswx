@@ -10,6 +10,9 @@ pub use metadata::{
     Architecture, CancellationToken, Error, Limits, Op, Result, Stats, check_limit,
 };
 
+mod sampler;
+pub use sampler::{Sampler, SamplingStats};
+
 pub const PROFILE_VERSION: &str = "torch-grammar-v1";
 pub const RNG_VERSION: &str = "rcswx-rng-v1";
 
