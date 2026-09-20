@@ -6,6 +6,11 @@ import secrets
 from dataclasses import asdict, dataclass
 
 PROFILE_VERSION = "torch-grammar-v1"
+SCHEMA_VERSION = "rcswx-ir-v1"
+GRAMMAR_VERSION = "ordered-unary-v1"
+REGISTRY_VERSION = "torch-cpu-f32-v1"
+SAMPLING_VERSION = "gaussian-mask-v1"
+REPORT_VERSION = "rcswx-report-v1"
 NORMALIZATION_VERSION = "sequence-normalization-v1"
 WITNESS_VERSION = "ordered-witness-v1"
 RNG_VERSION = "rcswx-rng-v1"
