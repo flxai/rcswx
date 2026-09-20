@@ -49,8 +49,7 @@ class Limits:
                 raise ValueError(f"{name} must be an integer in [{minimum}, {maximum}]")
         deadline = self.deadline_seconds
         if (
-            isinstance(deadline, bool)
-            or not isinstance(deadline, (int, float))
+            type(deadline) not in (int, float)
             or not math.isfinite(deadline)
             or not 0 < deadline <= 3600
         ):
