@@ -178,6 +178,8 @@ def _validate_path(path: EditPath, source: Architecture, target: Architecture) -
             or actual.canonical != recorded.canonical
         ):
             raise StaleEditPath("path does not describe these directed parent architectures")
+        if actual.binding_key != recorded.binding_key or actual.bindings != recorded.bindings:
+            raise StaleEditPath("path occurrence bindings differ from the supplied parents")
 
 
 def distance(

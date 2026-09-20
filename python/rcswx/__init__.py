@@ -3,6 +3,7 @@
 from ._core import PROFILE_VERSION as PROFILE_VERSION
 from ._core import RNG_VERSION as RNG_VERSION
 from .api import CancellationToken, Edit, EditPath, distance, edit_path
+from .crossover import CrossoverResult, crossover, crossover_with_report
 from .errors import (
     AmbiguousRepresentation,
     BudgetExceeded,
@@ -10,6 +11,7 @@ from .errors import (
     InputContractMismatch,
     InternalInvariant,
     InvalidEditSelection,
+    MissingDonor,
     NoAdmissibleAlignment,
     OutputContractMismatch,
     RcswxError,
@@ -37,6 +39,9 @@ __all__ = [
     "EditPath",
     "distance",
     "edit_path",
+    "crossover",
+    "crossover_with_report",
+    "CrossoverResult",
     "RcswxError",
     "UnsupportedArchitecture",
     "UnsupportedOperator",
@@ -47,6 +52,7 @@ __all__ = [
     "InputContractMismatch",
     "OutputContractMismatch",
     "StaleEditPath",
+    "MissingDonor",
     "NoAdmissibleAlignment",
     "InvalidEditSelection",
     "SamplingExhausted",

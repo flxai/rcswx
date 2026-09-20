@@ -37,6 +37,10 @@ class OutputContractMismatch(RcswxError, ValueError):
     """The parents have different root output contracts."""
 
 
+class MissingDonor(RcswxError, ValueError):
+    """Inheritance needs two live donors, not metadata-only snapshots."""
+
+
 class StaleEditPath(RcswxError, ValueError):
     """The supplied path does not describe these ordered architectures."""
 
