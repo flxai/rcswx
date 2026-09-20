@@ -2,6 +2,7 @@
 
 from ._core import PROFILE_VERSION as PROFILE_VERSION
 from ._core import RNG_VERSION as RNG_VERSION
+from .api import CancellationToken, Edit, EditPath, distance, edit_path
 from .errors import (
     AmbiguousRepresentation,
     BudgetExceeded,
@@ -31,6 +32,11 @@ __all__ = [
     "TensorSpec",
     "Limits",
     "prepare",
+    "CancellationToken",
+    "Edit",
+    "EditPath",
+    "distance",
+    "edit_path",
     "RcswxError",
     "UnsupportedArchitecture",
     "UnsupportedOperator",

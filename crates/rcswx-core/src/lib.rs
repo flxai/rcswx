@@ -2,6 +2,9 @@
 
 use sha2::{Digest, Sha256};
 
+mod alignment;
+pub use alignment::{Distance, Path, Step, align, distance};
+
 mod metadata;
 pub use metadata::{
     Architecture, CancellationToken, Error, Limits, Op, Result, Stats, check_limit,
