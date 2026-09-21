@@ -16,8 +16,10 @@ def routing(inner, before="identity", after="identity"):
     return ("routing", before, inner, after)
 
 
-def branching(arity, inner):
-    children = [inner, chain(["relu"])] if arity == 2 else [inner]
+def branching(arity, inner, other=None):
+    children = [inner]
+    if arity == 2:
+        children.append(chain(["relu"]) if other is None else other)
     return (f"branching({arity})", f"clone({arity})", *children, f"add({arity})")
 
 
@@ -41,6 +43,47 @@ CASES = [
 ]
 
 
+BRANCH_BOUNDARY_CASES = [
+    pytest.param(
+        (
+            branching(2, chain(["identity"])),
+            branching(2, chain(["relu"]), chain(["identity"])),
+        ),
+        0,
+        id="reversed",
+    ),
+    pytest.param(
+        (
+            branching(2, chain(["identity", "norm"])),
+            branching(2, chain(["relu"]), chain(["identity", "norm"])),
+        ),
+        0,
+        id="unequal-branches",
+    ),
+    pytest.param(
+        (
+            ("sequential", chain(["identity"]), branching(2, chain(["identity"]))),
+            (
+                "sequential",
+                chain(["norm"]),
+                branching(2, chain(["relu"]), chain(["identity"])),
+            ),
+        ),
+        0.5,
+        id="nonzero-prefix",
+    ),
+    pytest.param(
+        (
+            branching(2, branching(2, chain(["identity"])), chain(["norm"])),
+            branching(2, chain(["norm"]), branching(2, chain(["relu"]), chain(["identity"]))),
+        ),
+        0,
+        id="nested",
+    ),
+]
+CASES.extend(case.values[0] for case in BRANCH_BOUNDARY_CASES)
+
+
 def make_pair(descriptions, owned):
     guard = limits()
     kwargs = {"node_type": DerivationTreeNode, "operation_type": Operation} if owned else {}
@@ -55,10 +98,15 @@ def align_outcome(descriptions, owned, collapse_corners=False):
     except Exception as error:
         return (type(error).__name__, tuple(tree_record(parent) for parent in parents)), None
     return (
+        # Compare every ordered history, not only the selected path.
         float(result.distance),
         tuple(operation_record(op) for op in result.operations),
         tuple(operation_record(op) for op in result.nontrivial_ops),
         tuple(tree_record(parent) for parent in parents),
+        tuple(
+            tuple(map(operation_record, path))
+            for path in (result.paths if owned else result.matrix[-1][-1].paths)
+        ),
     ), result
 
 
@@ -68,6 +116,22 @@ def test_recursive_cost_witness_dependencies_and_parent_effects(descriptions, co
     expected, _ = align_outcome(descriptions, False, collapse_corners)
     actual, _ = align_outcome(descriptions, True, collapse_corners)
     assert actual == expected
+
+
+@pytest.mark.parametrize("descriptions,expected_distance", BRANCH_BOUNDARY_CASES)
+@pytest.mark.parametrize("collapse_corners", [False, True])
+@pytest.mark.parametrize("reverse_parents", [False, True])
+def test_branch_boundary_costs_and_histories(
+    descriptions, expected_distance, collapse_corners, reverse_parents
+):
+    if reverse_parents:
+        descriptions = descriptions[::-1]
+    expected, reference = align_outcome(descriptions, False, collapse_corners)
+    actual, native = align_outcome(descriptions, True, collapse_corners)
+    assert actual == expected
+    assert reference.distance == native.distance == expected_distance
+    for path in native.paths:
+        assert sum(operation.value for operation in path) == expected_distance
 
 
 def test_ordered_ties_preserve_reference_edit_domain():
@@ -81,7 +145,11 @@ def test_ordered_ties_preserve_reference_edit_domain():
     assert len(native.nontrivial_ops) == 2
 
 
-@pytest.mark.parametrize("descriptions", [CASES[0], CASES[6], CASES[7], CASES[8], CASES[9]])
+@pytest.mark.parametrize(
+    "descriptions",
+    [CASES[index] for index in (0, 6, 7, 8, 9, 10, 11, 12)]
+    + [case.values[0] for case in BRANCH_BOUNDARY_CASES],
+)
 def test_every_valid_tiny_selection_preserves_offspring_and_application_failures(descriptions):
     expected, reference = align_outcome(descriptions, False)
     actual, native = align_outcome(descriptions, True)
@@ -122,13 +190,13 @@ def test_tiny_ordered_history_space():
         assert actual == expected
 
 
-def test_reference_failure_does_not_consume_selector_rng():
+def test_branch_alignment_does_not_consume_selector_rng():
     np.random.seed(47)
     before = np.random.get_state()
     expected, _ = align_outcome(CASES[10], False)
     actual, _ = align_outcome(CASES[10], True)
     assert expected == actual
-    assert expected[0] == "IndexError"
+    assert expected[0] == 0.5
     after = np.random.get_state()
     assert before[0] == after[0] and np.array_equal(before[1], after[1]) and before[2:] == after[2:]
 

@@ -52,7 +52,7 @@ WORKLOADS = (
     "unequal_tied_histories",
     "nested_routing_alignment",
     "branching_macro_alignment",
-    "binary_reference_failure",
+    "binary_branch_alignment",
     "raw_ordered_crossover",
     "fractional_selector_failure",
     "dependency_distribution",
@@ -82,7 +82,7 @@ def descriptions(name):
             (f"branching({arity})", f"clone({arity})", chain(["identity"]), f"add({arity})")
             for arity in (4, 8)
         )
-    if name == "binary_reference_failure":
+    if name == "binary_branch_alignment":
         return tuple(
             ("branching(2)", "clone(2)", chain([inner]), chain(["relu"]), "add(2)")
             for inner in ("identity", "relu")

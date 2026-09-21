@@ -31,7 +31,7 @@ from scipy.stats import skewnorm
 from termcolor import colored
 from tqdm import tqdm
 
-SOURCE_COMMIT = "7e713c7951397a6b12bd57638409774a74381746"
+SOURCE_COMMIT = "3f44ddf086bee0c213404e240ee0adf99e3e1501"
 SOURCE_HASHES = {
     "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
     "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
@@ -41,7 +41,7 @@ SOURCE_HASHES = {
     "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
     "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
     "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
-    "search_strategies/utils/recursive_constrained_smith_waterman.py": "f771b61a1bb5e182d5322138449f9886ed0999a1afb0c256c362b04887ef2876",
+    "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
 }
 
 
