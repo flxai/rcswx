@@ -3,7 +3,7 @@
 //! Histories are persistent lists, not merged dynamic-programming states. Appending
 //! shares immutable prefixes and the original mutable operation identities, just
 //! as Python's `path + [operation]` shares the preceding operation objects.
-//! Derived from einsearch 7e713c7951397a6b12bd57638409774a74381746.
+//! Derived from einsearch 3f44ddf086bee0c213404e240ee0adf99e3e1501.
 //! See LICENSE.einsearch for the original MIT attribution.
 
 use std::cell::RefCell;
@@ -251,7 +251,11 @@ fn parameter_cost(left: &str, right: &str) -> f64 {
     if left.split('(').next() != right.split('(').next() {
         return 1.0;
     }
-    if left == right { 0.0 } else { 0.5 }
+    if left == right {
+        0.0
+    } else {
+        0.5
+    }
 }
 pub fn mutation_cost(left: &Token, right: &Token) -> Result<f64> {
     if left.name.contains("wrap_") || right.name.contains("wrap_") {
@@ -765,12 +769,13 @@ impl Kernel<'_> {
                 let mut aux_j = None;
                 if compute_i {
                     let mut aux = self.initialize(&a_swap, b, false)?;
-                    let column: Vec<_> = (0..aux.len())
-                        .map(|i| cell(im, (prev_i + i) as isize, prev_j as isize))
-                        .collect::<Result<_>>()?;
-                    // The reference writes this column to im, not aux. Preserve that distinction.
-                    for (i, value) in column.into_iter().enumerate() {
-                        set(im, i, 0, value)?;
+                    for i in 0..aux.len() {
+                        set(
+                            &mut aux,
+                            i,
+                            0,
+                            cell(im, (prev_i + i) as isize, prev_j as isize)?,
+                        )?;
                     }
                     if cell(&aux, 0, -1)?.borrow().value.is_nan() {
                         aux[0] = row_slice(&matrix, prev_i, prev_j, max_j)?;
@@ -869,14 +874,15 @@ impl Kernel<'_> {
                 }
                 if compute_i && compute_j {
                     let mut both = self.initialize(&a_swap, &b_swap, false)?;
-                    both[0] = row_slice(&both, prev_i, prev_j, max_j)?;
-                    // Keep the actual local/global indexing from the source. Checked access
-                    // reproduces its IndexError rather than panicking or fixing the algorithm.
-                    let column: Vec<_> = (0..both.len())
-                        .map(|i| cell(&both, (prev_i + i) as isize, prev_j as isize))
-                        .collect::<Result<_>>()?;
-                    for (i, value) in column.into_iter().enumerate() {
-                        set(&mut both, i, 0, value)?;
+                    // Offsets address the enclosing matrix, not the local auxiliary block.
+                    both[0] = row_slice(ijm, prev_i, prev_j, max_j)?;
+                    for i in 0..both.len() {
+                        set(
+                            &mut both,
+                            i,
+                            0,
+                            cell(ijm, (prev_i + i) as isize, prev_j as isize)?,
+                        )?;
                     }
                     if cell(&both, 0, -1)?.borrow().value.is_nan() {
                         both[0] = row_slice(jm, prev_i, prev_j, max_j)?;
