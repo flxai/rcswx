@@ -1,0 +1,153 @@
+
+    sequential[
+        
+    sequential[
+        sequential[
+            routing[im2col3k1s1p, computation[linear16], col2im],
+            computation[norm]
+        ],
+        computation[relu]
+    ],
+        sequential[
+            sequential[
+                sequential[
+                    
+    sequential[
+        branching(2)[
+            clone(2),
+            sequential[
+                sequential[
+                    sequential[
+                        routing[im2col3k1s1p, computation[linear64], col2im],
+                        computation[norm]
+                    ],
+                    computation[relu]
+                ],
+                routing[im2col3k1s1p, computation[linear64], col2im]
+            ],
+            routing[im2col1k1s0p, computation[linear64], col2im],
+            add(2)
+        ],
+        sequential[
+            computation[norm],
+            computation[relu]
+        ]
+    ],
+                    
+    sequential[
+        branching(2)[
+            clone(2),
+            sequential[
+                sequential[
+                    sequential[
+                        routing[im2col3k1s1p, computation[linear64], col2im],
+                        computation[norm]
+                    ],
+                    computation[relu]
+                ],
+                routing[im2col3k1s1p, computation[linear64], col2im]
+            ],
+            computation[identity],
+            add(2)
+        ],
+        sequential[
+            computation[norm],
+            computation[relu]
+        ]
+    ]
+                ],
+                sequential[
+                    
+    sequential[
+        branching(2)[
+            clone(2),
+            sequential[
+                sequential[
+                    sequential[
+                        routing[im2col3k2s1p, computation[linear128], col2im],
+                        computation[norm]
+                    ],
+                    computation[relu]
+                ],
+                routing[im2col3k1s1p, computation[linear128], col2im]
+            ],
+            routing[im2col1k2s0p, computation[linear128], col2im],
+            add(2)
+        ],
+        sequential[
+            computation[norm],
+            computation[relu]
+        ]
+    ],
+                    
+    sequential[
+        branching(2)[
+            clone(2),
+            sequential[
+                sequential[
+                    sequential[
+                        routing[im2col3k1s1p, computation[linear128], col2im],
+                        computation[norm]
+                    ],
+                    computation[relu]
+                ],
+                routing[im2col3k1s1p, computation[linear128], col2im]
+            ],
+            computation[identity],
+            add(2)
+        ],
+        sequential[
+            computation[norm],
+            computation[relu]
+        ]
+    ]
+                ]
+            ],
+            sequential[
+                
+    sequential[
+        branching(2)[
+            clone(2),
+            sequential[
+                sequential[
+                    sequential[
+                        routing[im2col3k2s1p, computation[linear256], col2im],
+                        computation[norm]
+                    ],
+                    computation[relu]
+                ],
+                routing[im2col3k1s1p, computation[linear256], col2im]
+            ],
+            routing[im2col1k2s0p, computation[linear256], col2im],
+            add(2)
+        ],
+        sequential[
+            computation[norm],
+            computation[relu]
+        ]
+    ],
+                
+    sequential[
+        branching(2)[
+            clone(2),
+            sequential[
+                sequential[
+                    sequential[
+                        routing[im2col3k1s1p, computation[linear256], col2im],
+                        computation[norm]
+                    ],
+                    computation[relu]
+                ],
+                routing[im2col3k1s1p, computation[linear256], col2im]
+            ],
+            computation[identity],
+            add(2)
+        ],
+        sequential[
+            computation[norm],
+            computation[relu]
+        ]
+    ]
+            ]
+        ]
+    ]

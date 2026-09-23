@@ -1,0 +1,78 @@
+{
+  "schema": "rcswx-table42-policy-example-v2",
+  "kind": "execution_design_not_existing_runner_config",
+  "warning": "Resolve a real runtime-config schema and all required limiter/grammar values in the repository. Do not pass this policy JSON as --runtime-config.",
+  "historical_evidence": {
+    "input_params": null,
+    "limits": null,
+    "algorithm_commit": null,
+    "measurement_entry_point": null,
+    "collapse_corners": null,
+    "notebook_config_reference": "configs/einspace/collimation0.yaml",
+    "yaml_contents_provided": false,
+    "notebook_device_example": "cuda",
+    "notebook_default_seed": 42,
+    "notebook_settings_confirmed_for_table": false
+  },
+  "diagnostic_execution_profile": {
+    "id": "diagnostic_cpu32_v1",
+    "historical": false,
+    "input_params": {
+      "shape": [
+        2,
+        3,
+        32,
+        32
+      ],
+      "other_shape": null,
+      "mode": "im",
+      "other_mode": null,
+      "branching_factor": 1,
+      "last_im_shape": null
+    },
+    "dtype": "float32",
+    "device": "cpu",
+    "seed": 42,
+    "threads": 1,
+    "grammar_selection": null,
+    "grammar_sha256": null,
+    "construction_limits": null,
+    "alignment_limits": null,
+    "unresolved_runtime_fields_are_mandatory_before_execution": true
+  },
+  "strata": [
+    "paired_current_reference",
+    "historical_table_if_source_recovered"
+  ],
+  "collapse_corners": [
+    false,
+    true
+  ],
+  "primary_pairs": [
+    "resnet18-mixer8",
+    "resnet18-mixer12",
+    "resnet34-mixer8",
+    "resnet34-mixer12"
+  ],
+  "primary_backends": [
+    "reference",
+    "native"
+  ],
+  "primary_configurations_per_repetition": 16,
+  "primary_boundary": "complete_alignment_object_return",
+  "protocol": {
+    "one_call_per_fresh_process": true,
+    "target_warmup_calls": 0,
+    "concurrent_workers": 1,
+    "pilot_attempts_per_configuration": 1,
+    "pilot_worker_timeout_seconds": 120,
+    "extended_worker_timeout_seconds": 1800,
+    "requested_successful_primary_repetitions": 3,
+    "campaign_measurement_wall_budget_seconds": 7200,
+    "supervisor_rss_limit_mib": null,
+    "pilot_all_configurations_before_extended_runs": true,
+    "repeat_timeouts_automatically": false,
+    "persistent_budget_required": true,
+    "allocation_profiling_in_primary_timing": false
+  }
+}

@@ -9,6 +9,7 @@ dist/
 *.so
 *.egg-info/
 result
+benchmark-results/
 # Purged artifacts stay outside versioned source.
 crates/rcswx-core/tests/fixtures/wavefront-oracle-v1.json
 examples/web/fixtures/recordings.json

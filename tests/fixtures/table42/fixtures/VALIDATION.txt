@@ -1,0 +1,9 @@
+Static extraction validation
+
+Command: python -m unittest -v test_recovery
+Result: 5 tests passed.
+
+Verified all 12 expanded model definitions and their syntax-tree and operation-stream hashes.
+Source copies are byte-for-byte equal to the six mounted coauthor uploads.
+Primary source-operation counts: ResNet18=267, ResNet34=499, Mixer d8=264, Mixer d12=392.
+No einsearch imports, PyTorch model builds/forwards, alignment runs, speed tests or memory benchmarks were performed.

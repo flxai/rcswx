@@ -1,0 +1,15 @@
+Static validation during handoff preparation
+Python: 3.13.5 (main, Jul 15 2026, 20:25:40) [GCC 14.2.0]
+Scope: static source recovery; no PyTorch model or RCSWX benchmark executed.
+
+Command: (cd fixtures && python -m unittest -v test_recovery)
+test_all_model_strings_and_trees (test_recovery.RecoveryTests.test_all_model_strings_and_trees) ... ok
+test_importable_definitions (test_recovery.RecoveryTests.test_importable_definitions) ... ok
+test_only_supported_source_expressions (test_recovery.RecoveryTests.test_only_supported_source_expressions) ... ok
+test_resnet_stage_template_invocations (test_recovery.RecoveryTests.test_resnet_stage_template_invocations) ... ok
+test_source_checksums (test_recovery.RecoveryTests.test_source_checksums) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.014s
+
+OK

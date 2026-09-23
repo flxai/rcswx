@@ -1,0 +1,213 @@
+
+    sequential[
+        sequential[
+            routing[im2col4k4s0p, computation[linear512], identity],
+            computation[pos_enc]
+        ],
+        sequential[
+            sequential[
+                
+    sequential[
+        branching(2)[
+            clone(2),
+            sequential[
+                computation[norm],
+                
+    sequential[
+        branching(4)[
+            clone(4),
+            
+    branching(2)[
+        clone(2),
+        sequential[
+            branching(2)[
+                clone(2),
+                computation[linear64],
+                routing[identity, computation[linear64], permute21],
+                dot_product(scaled=True)
+            ],
+            computation[softmax]
+        ],
+        computation[linear64],
+        dot_product(scaled=False)
+    ],
+            cat(4,2)
+        ],
+        computation[linear512]
+    ]
+            ],
+            computation[identity],
+            add(2)
+        ],
+        branching(2)[
+            clone(2),
+            sequential[
+                computation[norm],
+                
+    sequential[
+        sequential[
+            computation[linear2048],
+            computation[relu]
+        ],
+        computation[linear512]
+    ]
+            ],
+            computation[identity],
+            add(2)
+        ]
+    ],
+                
+    sequential[
+        branching(2)[
+            clone(2),
+            sequential[
+                computation[norm],
+                
+    sequential[
+        branching(4)[
+            clone(4),
+            
+    branching(2)[
+        clone(2),
+        sequential[
+            branching(2)[
+                clone(2),
+                computation[linear64],
+                routing[identity, computation[linear64], permute21],
+                dot_product(scaled=True)
+            ],
+            computation[softmax]
+        ],
+        computation[linear64],
+        dot_product(scaled=False)
+    ],
+            cat(4,2)
+        ],
+        computation[linear512]
+    ]
+            ],
+            computation[identity],
+            add(2)
+        ],
+        branching(2)[
+            clone(2),
+            sequential[
+                computation[norm],
+                
+    sequential[
+        sequential[
+            computation[linear2048],
+            computation[relu]
+        ],
+        computation[linear512]
+    ]
+            ],
+            computation[identity],
+            add(2)
+        ]
+    ]
+            ],
+            sequential[
+                
+    sequential[
+        branching(2)[
+            clone(2),
+            sequential[
+                computation[norm],
+                
+    sequential[
+        branching(4)[
+            clone(4),
+            
+    branching(2)[
+        clone(2),
+        sequential[
+            branching(2)[
+                clone(2),
+                computation[linear64],
+                routing[identity, computation[linear64], permute21],
+                dot_product(scaled=True)
+            ],
+            computation[softmax]
+        ],
+        computation[linear64],
+        dot_product(scaled=False)
+    ],
+            cat(4,2)
+        ],
+        computation[linear512]
+    ]
+            ],
+            computation[identity],
+            add(2)
+        ],
+        branching(2)[
+            clone(2),
+            sequential[
+                computation[norm],
+                
+    sequential[
+        sequential[
+            computation[linear2048],
+            computation[relu]
+        ],
+        computation[linear512]
+    ]
+            ],
+            computation[identity],
+            add(2)
+        ]
+    ],
+                
+    sequential[
+        branching(2)[
+            clone(2),
+            sequential[
+                computation[norm],
+                
+    sequential[
+        branching(4)[
+            clone(4),
+            
+    branching(2)[
+        clone(2),
+        sequential[
+            branching(2)[
+                clone(2),
+                computation[linear64],
+                routing[identity, computation[linear64], permute21],
+                dot_product(scaled=True)
+            ],
+            computation[softmax]
+        ],
+        computation[linear64],
+        dot_product(scaled=False)
+    ],
+            cat(4,2)
+        ],
+        computation[linear512]
+    ]
+            ],
+            computation[identity],
+            add(2)
+        ],
+        branching(2)[
+            clone(2),
+            sequential[
+                computation[norm],
+                
+    sequential[
+        sequential[
+            computation[linear2048],
+            computation[relu]
+        ],
+        computation[linear512]
+    ]
+            ],
+            computation[identity],
+            add(2)
+        ]
+    ]
+            ]
+        ]
+    ]

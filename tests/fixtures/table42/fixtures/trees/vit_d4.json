@@ -1,0 +1,940 @@
+{
+  "operation": "sequential",
+  "children": [
+    {
+      "operation": "sequential",
+      "children": [
+        {
+          "operation": "routing",
+          "children": [
+            {
+              "operation": "im2col4k4s0p",
+              "children": []
+            },
+            {
+              "operation": "computation",
+              "children": [
+                {
+                  "operation": "linear512",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "operation": "identity",
+              "children": []
+            }
+          ]
+        },
+        {
+          "operation": "computation",
+          "children": [
+            {
+              "operation": "pos_enc",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "sequential",
+      "children": [
+        {
+          "operation": "sequential",
+          "children": [
+            {
+              "operation": "sequential",
+              "children": [
+                {
+                  "operation": "branching(2)",
+                  "children": [
+                    {
+                      "operation": "clone(2)",
+                      "children": []
+                    },
+                    {
+                      "operation": "sequential",
+                      "children": [
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "norm",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "sequential",
+                          "children": [
+                            {
+                              "operation": "branching(4)",
+                              "children": [
+                                {
+                                  "operation": "clone(4)",
+                                  "children": []
+                                },
+                                {
+                                  "operation": "branching(2)",
+                                  "children": [
+                                    {
+                                      "operation": "clone(2)",
+                                      "children": []
+                                    },
+                                    {
+                                      "operation": "sequential",
+                                      "children": [
+                                        {
+                                          "operation": "branching(2)",
+                                          "children": [
+                                            {
+                                              "operation": "clone(2)",
+                                              "children": []
+                                            },
+                                            {
+                                              "operation": "computation",
+                                              "children": [
+                                                {
+                                                  "operation": "linear64",
+                                                  "children": []
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "operation": "routing",
+                                              "children": [
+                                                {
+                                                  "operation": "identity",
+                                                  "children": []
+                                                },
+                                                {
+                                                  "operation": "computation",
+                                                  "children": [
+                                                    {
+                                                      "operation": "linear64",
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "operation": "permute21",
+                                                  "children": []
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "operation": "dot_product(scaled=True)",
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "operation": "computation",
+                                          "children": [
+                                            {
+                                              "operation": "softmax",
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "operation": "computation",
+                                      "children": [
+                                        {
+                                          "operation": "linear64",
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "operation": "dot_product(scaled=False)",
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "cat(4,2)",
+                                  "children": []
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "computation",
+                              "children": [
+                                {
+                                  "operation": "linear512",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "computation",
+                      "children": [
+                        {
+                          "operation": "identity",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "add(2)",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "operation": "branching(2)",
+                  "children": [
+                    {
+                      "operation": "clone(2)",
+                      "children": []
+                    },
+                    {
+                      "operation": "sequential",
+                      "children": [
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "norm",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "sequential",
+                          "children": [
+                            {
+                              "operation": "sequential",
+                              "children": [
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "linear2048",
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "relu",
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "computation",
+                              "children": [
+                                {
+                                  "operation": "linear512",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "computation",
+                      "children": [
+                        {
+                          "operation": "identity",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "add(2)",
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "operation": "sequential",
+              "children": [
+                {
+                  "operation": "branching(2)",
+                  "children": [
+                    {
+                      "operation": "clone(2)",
+                      "children": []
+                    },
+                    {
+                      "operation": "sequential",
+                      "children": [
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "norm",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "sequential",
+                          "children": [
+                            {
+                              "operation": "branching(4)",
+                              "children": [
+                                {
+                                  "operation": "clone(4)",
+                                  "children": []
+                                },
+                                {
+                                  "operation": "branching(2)",
+                                  "children": [
+                                    {
+                                      "operation": "clone(2)",
+                                      "children": []
+                                    },
+                                    {
+                                      "operation": "sequential",
+                                      "children": [
+                                        {
+                                          "operation": "branching(2)",
+                                          "children": [
+                                            {
+                                              "operation": "clone(2)",
+                                              "children": []
+                                            },
+                                            {
+                                              "operation": "computation",
+                                              "children": [
+                                                {
+                                                  "operation": "linear64",
+                                                  "children": []
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "operation": "routing",
+                                              "children": [
+                                                {
+                                                  "operation": "identity",
+                                                  "children": []
+                                                },
+                                                {
+                                                  "operation": "computation",
+                                                  "children": [
+                                                    {
+                                                      "operation": "linear64",
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "operation": "permute21",
+                                                  "children": []
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "operation": "dot_product(scaled=True)",
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "operation": "computation",
+                                          "children": [
+                                            {
+                                              "operation": "softmax",
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "operation": "computation",
+                                      "children": [
+                                        {
+                                          "operation": "linear64",
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "operation": "dot_product(scaled=False)",
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "cat(4,2)",
+                                  "children": []
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "computation",
+                              "children": [
+                                {
+                                  "operation": "linear512",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "computation",
+                      "children": [
+                        {
+                          "operation": "identity",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "add(2)",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "operation": "branching(2)",
+                  "children": [
+                    {
+                      "operation": "clone(2)",
+                      "children": []
+                    },
+                    {
+                      "operation": "sequential",
+                      "children": [
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "norm",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "sequential",
+                          "children": [
+                            {
+                              "operation": "sequential",
+                              "children": [
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "linear2048",
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "relu",
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "computation",
+                              "children": [
+                                {
+                                  "operation": "linear512",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "computation",
+                      "children": [
+                        {
+                          "operation": "identity",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "add(2)",
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "operation": "sequential",
+          "children": [
+            {
+              "operation": "sequential",
+              "children": [
+                {
+                  "operation": "branching(2)",
+                  "children": [
+                    {
+                      "operation": "clone(2)",
+                      "children": []
+                    },
+                    {
+                      "operation": "sequential",
+                      "children": [
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "norm",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "sequential",
+                          "children": [
+                            {
+                              "operation": "branching(4)",
+                              "children": [
+                                {
+                                  "operation": "clone(4)",
+                                  "children": []
+                                },
+                                {
+                                  "operation": "branching(2)",
+                                  "children": [
+                                    {
+                                      "operation": "clone(2)",
+                                      "children": []
+                                    },
+                                    {
+                                      "operation": "sequential",
+                                      "children": [
+                                        {
+                                          "operation": "branching(2)",
+                                          "children": [
+                                            {
+                                              "operation": "clone(2)",
+                                              "children": []
+                                            },
+                                            {
+                                              "operation": "computation",
+                                              "children": [
+                                                {
+                                                  "operation": "linear64",
+                                                  "children": []
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "operation": "routing",
+                                              "children": [
+                                                {
+                                                  "operation": "identity",
+                                                  "children": []
+                                                },
+                                                {
+                                                  "operation": "computation",
+                                                  "children": [
+                                                    {
+                                                      "operation": "linear64",
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "operation": "permute21",
+                                                  "children": []
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "operation": "dot_product(scaled=True)",
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "operation": "computation",
+                                          "children": [
+                                            {
+                                              "operation": "softmax",
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "operation": "computation",
+                                      "children": [
+                                        {
+                                          "operation": "linear64",
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "operation": "dot_product(scaled=False)",
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "cat(4,2)",
+                                  "children": []
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "computation",
+                              "children": [
+                                {
+                                  "operation": "linear512",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "computation",
+                      "children": [
+                        {
+                          "operation": "identity",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "add(2)",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "operation": "branching(2)",
+                  "children": [
+                    {
+                      "operation": "clone(2)",
+                      "children": []
+                    },
+                    {
+                      "operation": "sequential",
+                      "children": [
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "norm",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "sequential",
+                          "children": [
+                            {
+                              "operation": "sequential",
+                              "children": [
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "linear2048",
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "relu",
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "computation",
+                              "children": [
+                                {
+                                  "operation": "linear512",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "computation",
+                      "children": [
+                        {
+                          "operation": "identity",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "add(2)",
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "operation": "sequential",
+              "children": [
+                {
+                  "operation": "branching(2)",
+                  "children": [
+                    {
+                      "operation": "clone(2)",
+                      "children": []
+                    },
+                    {
+                      "operation": "sequential",
+                      "children": [
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "norm",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "sequential",
+                          "children": [
+                            {
+                              "operation": "branching(4)",
+                              "children": [
+                                {
+                                  "operation": "clone(4)",
+                                  "children": []
+                                },
+                                {
+                                  "operation": "branching(2)",
+                                  "children": [
+                                    {
+                                      "operation": "clone(2)",
+                                      "children": []
+                                    },
+                                    {
+                                      "operation": "sequential",
+                                      "children": [
+                                        {
+                                          "operation": "branching(2)",
+                                          "children": [
+                                            {
+                                              "operation": "clone(2)",
+                                              "children": []
+                                            },
+                                            {
+                                              "operation": "computation",
+                                              "children": [
+                                                {
+                                                  "operation": "linear64",
+                                                  "children": []
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "operation": "routing",
+                                              "children": [
+                                                {
+                                                  "operation": "identity",
+                                                  "children": []
+                                                },
+                                                {
+                                                  "operation": "computation",
+                                                  "children": [
+                                                    {
+                                                      "operation": "linear64",
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "operation": "permute21",
+                                                  "children": []
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "operation": "dot_product(scaled=True)",
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "operation": "computation",
+                                          "children": [
+                                            {
+                                              "operation": "softmax",
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "operation": "computation",
+                                      "children": [
+                                        {
+                                          "operation": "linear64",
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "operation": "dot_product(scaled=False)",
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "cat(4,2)",
+                                  "children": []
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "computation",
+                              "children": [
+                                {
+                                  "operation": "linear512",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "computation",
+                      "children": [
+                        {
+                          "operation": "identity",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "add(2)",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "operation": "branching(2)",
+                  "children": [
+                    {
+                      "operation": "clone(2)",
+                      "children": []
+                    },
+                    {
+                      "operation": "sequential",
+                      "children": [
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "norm",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "sequential",
+                          "children": [
+                            {
+                              "operation": "sequential",
+                              "children": [
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "linear2048",
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "relu",
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "computation",
+                              "children": [
+                                {
+                                  "operation": "linear512",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "computation",
+                      "children": [
+                        {
+                          "operation": "identity",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "add(2)",
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
