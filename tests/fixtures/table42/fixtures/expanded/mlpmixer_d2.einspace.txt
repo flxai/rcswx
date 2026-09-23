@@ -1,0 +1,63 @@
+
+    sequential[
+        sequential[
+            routing[im2col4k4s0p, computation[linear512], identity],
+            computation[pos_enc]
+        ],
+        sequential[
+            
+    branching(2)[
+        clone(2),
+        sequential[
+            computation[norm],
+            sequential[
+                
+    sequential[
+        sequential[
+            routing[permute21, computation[linear_x(4)], identity],
+            computation[relu]
+        ],
+        routing[identity, computation[linear_x(0.25)], permute21]
+    ],
+                
+    sequential[
+        sequential[
+            computation[linear256],
+            computation[relu]
+        ],
+        computation[linear512]
+    ],
+            ],
+        ],
+        computation[identity],
+        add(2)
+    ],
+            
+    branching(2)[
+        clone(2),
+        sequential[
+            computation[norm],
+            sequential[
+                
+    sequential[
+        sequential[
+            routing[permute21, computation[linear_x(4)], identity],
+            computation[relu]
+        ],
+        routing[identity, computation[linear_x(0.25)], permute21]
+    ],
+                
+    sequential[
+        sequential[
+            computation[linear256],
+            computation[relu]
+        ],
+        computation[linear512]
+    ],
+            ],
+        ],
+        computation[identity],
+        add(2)
+    ]
+        ]
+    ]

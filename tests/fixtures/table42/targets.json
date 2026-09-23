@@ -1,0 +1,186 @@
+{
+  "schema": "rcswx-table42-targets-v2",
+  "kind": "targets_and_provenance_not_benchmark_results",
+  "image": "evidence/table_4_2.png",
+  "image_sha256": "b08f7f3c1b888cc38bfff6d281f02890976371220371b0fa5610cc9883beabc5",
+  "models": {
+    "resnet18_no_maxpool": {
+      "display_name": "ResNet18",
+      "source_symbol": "resnet18_no_maxpool",
+      "source_file": "fixtures/source/baselines/resnet.py",
+      "source_file_sha256": "017e244fbd0a82e8bd25340f2c245a46e51f0747b10cf72ff0e67f4445741111",
+      "source_assignment_lines": [
+        74,
+        99
+      ],
+      "definition_path": "fixtures/expanded/resnet18_no_maxpool.einspace.txt",
+      "definition_sha256": "ba206bf3ca9d17b0205a7230ee58f590a208f719bd4b23d2c3d96de692c2cef3",
+      "static_tree_path": "fixtures/trees/resnet18_no_maxpool.json",
+      "source_operations_path": "fixtures/operations/resnet18_no_maxpool.json",
+      "static_operation_occurrences": 267,
+      "runtime_serialise_length_target": 267,
+      "runtime_serialise_length_observed": null,
+      "provenance_status": "coauthor_supplied_source_static_verified",
+      "historical_source_commit": null,
+      "runtime_fixture_validated": false
+    },
+    "resnet34_no_maxpool": {
+      "display_name": "ResNet34",
+      "source_symbol": "resnet34_no_maxpool",
+      "source_file": "fixtures/source/baselines/resnet.py",
+      "source_file_sha256": "017e244fbd0a82e8bd25340f2c245a46e51f0747b10cf72ff0e67f4445741111",
+      "source_assignment_lines": [
+        127,
+        176
+      ],
+      "definition_path": "fixtures/expanded/resnet34_no_maxpool.einspace.txt",
+      "definition_sha256": "11ef11659729650ea15566f30ac25ae992e259015f456dca43f0e1a16a766585",
+      "static_tree_path": "fixtures/trees/resnet34_no_maxpool.json",
+      "source_operations_path": "fixtures/operations/resnet34_no_maxpool.json",
+      "static_operation_occurrences": 499,
+      "runtime_serialise_length_target": 499,
+      "runtime_serialise_length_observed": null,
+      "provenance_status": "coauthor_supplied_source_static_verified",
+      "historical_source_commit": null,
+      "runtime_fixture_validated": false
+    },
+    "mlpmixer_d8": {
+      "display_name": "MLP-Mixer d8",
+      "source_symbol": "mlpmixer_d8",
+      "source_file": "fixtures/source/baselines/mlpmixer.py",
+      "source_file_sha256": "b7176703826fcbb17d68ad76420180d746d680ff588bb06f177d00452c260332",
+      "source_assignment_lines": [
+        58,
+        86
+      ],
+      "definition_path": "fixtures/expanded/mlpmixer_d8.einspace.txt",
+      "definition_sha256": "328bd9429115cdc01d8d70865e4d134896946e5fee0ae454ceccf690ae875bfb",
+      "static_tree_path": "fixtures/trees/mlpmixer_d8.json",
+      "source_operations_path": "fixtures/operations/mlpmixer_d8.json",
+      "static_operation_occurrences": 264,
+      "runtime_serialise_length_target": 264,
+      "runtime_serialise_length_observed": null,
+      "provenance_status": "coauthor_supplied_source_static_verified",
+      "historical_source_commit": null,
+      "runtime_fixture_validated": false
+    },
+    "mlpmixer_d12": {
+      "display_name": "MLP-Mixer d12",
+      "source_symbol": "mlpmixer_d12",
+      "source_file": "fixtures/source/baselines/mlpmixer.py",
+      "source_file_sha256": "b7176703826fcbb17d68ad76420180d746d680ff588bb06f177d00452c260332",
+      "source_assignment_lines": [
+        88,
+        128
+      ],
+      "definition_path": "fixtures/expanded/mlpmixer_d12.einspace.txt",
+      "definition_sha256": "4885db26f7ff739b9d1c440c99f14c4a7e383591d9f13d3430023dc784d319b7",
+      "static_tree_path": "fixtures/trees/mlpmixer_d12.json",
+      "source_operations_path": "fixtures/operations/mlpmixer_d12.json",
+      "static_operation_occurrences": 392,
+      "runtime_serialise_length_target": 392,
+      "runtime_serialise_length_observed": null,
+      "provenance_status": "coauthor_supplied_source_static_verified",
+      "historical_source_commit": null,
+      "runtime_fixture_validated": false
+    }
+  },
+  "ordered_pairs": [
+    {
+      "pair_id": "resnet18-mixer8",
+      "parent1": "resnet18_no_maxpool",
+      "parent2": "mlpmixer_d8",
+      "printed_node_counts": [
+        267,
+        264
+      ],
+      "printed_compute_time": "39.054 seconds",
+      "printed_time_number": "39.054",
+      "printed_time_unit": "seconds",
+      "literal_time_seconds": 39.054,
+      "printed_distance": "60.38",
+      "historical_collapse_corners": null,
+      "historical_timing_boundary": null,
+      "historical_hardware": null,
+      "historical_input_params": null,
+      "printed_unit_confirmed_by_coauthor": false,
+      "unit_note": null
+    },
+    {
+      "pair_id": "resnet18-mixer12",
+      "parent1": "resnet18_no_maxpool",
+      "parent2": "mlpmixer_d12",
+      "printed_node_counts": [
+        267,
+        392
+      ],
+      "printed_compute_time": "342.383 seconds",
+      "printed_time_number": "342.383",
+      "printed_time_unit": "seconds",
+      "literal_time_seconds": 342.383,
+      "printed_distance": "95.38",
+      "historical_collapse_corners": null,
+      "historical_timing_boundary": null,
+      "historical_hardware": null,
+      "historical_input_params": null,
+      "printed_unit_confirmed_by_coauthor": false,
+      "unit_note": null
+    },
+    {
+      "pair_id": "resnet34-mixer8",
+      "parent1": "resnet34_no_maxpool",
+      "parent2": "mlpmixer_d8",
+      "printed_node_counts": [
+        499,
+        264
+      ],
+      "printed_compute_time": "86.633 seconds",
+      "printed_time_number": "86.633",
+      "printed_time_unit": "seconds",
+      "literal_time_seconds": 86.633,
+      "printed_distance": "119.62",
+      "historical_collapse_corners": null,
+      "historical_timing_boundary": null,
+      "historical_hardware": null,
+      "historical_input_params": null,
+      "printed_unit_confirmed_by_coauthor": false,
+      "unit_note": null
+    },
+    {
+      "pair_id": "resnet34-mixer12",
+      "parent1": "resnet34_no_maxpool",
+      "parent2": "mlpmixer_d12",
+      "printed_node_counts": [
+        499,
+        392
+      ],
+      "printed_compute_time": "741.57 minutes",
+      "printed_time_number": "741.57",
+      "printed_time_unit": "minutes",
+      "literal_time_seconds": 44494.2,
+      "printed_distance": "115.62",
+      "historical_collapse_corners": null,
+      "historical_timing_boundary": null,
+      "historical_hardware": null,
+      "historical_input_params": null,
+      "printed_unit_confirmed_by_coauthor": false,
+      "unit_note": "Preserve literal minutes; possible typo is unverified."
+    }
+  ],
+  "primary_collapse_corners": [
+    false,
+    true
+  ],
+  "collapse_rule": {
+    "name": "corner_history_collapse",
+    "threshold_fraction": 0.25,
+    "fixed_in_inspected_sources": true,
+    "coordinate_rule": "J-I >= n2*0.25 or I-J >= n1*0.25; I=i+start_i, J=j+start_j; n1,n2 are full token-list lengths",
+    "not_a_guaranteed_percentage_saving": true
+  },
+  "inspected_native_commit": "9444dcfd861b9f8ee5ea96eac72e3c5b74268438",
+  "pinned_current_python_reference": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+  "reference_algorithm_sha256": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+  "historical_algorithm_commit": null,
+  "runtime_or_alignment_benchmark_executed_during_preparation": false
+}

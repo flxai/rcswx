@@ -1,0 +1,500 @@
+{
+  "schema": 1,
+  "scope": "Static, source-derived architecture recovery. No einsearch imports, tensor execution, or alignment benchmark.",
+  "provenance": "User-uploaded coauthor files, identified by the coauthor in the conversation as the definitions used; no source commit supplied.",
+  "count_convention": "One per operation occurrence in the uploaded loader's flattened DSL stream. Not RCSWX alignment-token count, expanded repetition count, parameter count, or runtime-verified serialise() length.",
+  "sources": {
+    "__init__.py": {
+      "upload_name": "__init__(1).py",
+      "relative_path": "source/baselines/__init__.py",
+      "sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf"
+    },
+    "convnextv2.py": {
+      "upload_name": "convnextv2.py",
+      "relative_path": "source/baselines/convnextv2.py",
+      "sha256": "b2462a9092c6dd0926c96dbae28238fee9185439f4ac642e4883e3585afec9b1",
+      "reassigned_symbols": []
+    },
+    "mlpmixer.py": {
+      "upload_name": "mlpmixer(1).py",
+      "relative_path": "source/baselines/mlpmixer.py",
+      "sha256": "b7176703826fcbb17d68ad76420180d746d680ff588bb06f177d00452c260332",
+      "reassigned_symbols": []
+    },
+    "resnet.py": {
+      "upload_name": "resnet(1).py",
+      "relative_path": "source/baselines/resnet.py",
+      "sha256": "017e244fbd0a82e8bd25340f2c245a46e51f0747b10cf72ff0e67f4445741111",
+      "reassigned_symbols": []
+    },
+    "vit.py": {
+      "upload_name": "vit.py",
+      "relative_path": "source/baselines/vit.py",
+      "sha256": "b88e44cf58491f75d663a13e0acb23ebe07e29e9eac910edc0599d746f8011db",
+      "reassigned_symbols": [
+        {
+          "symbol": "prenorm_transformer_layer",
+          "previous_lines": [
+            63,
+            83
+          ],
+          "replacement_lines": [
+            84,
+            104
+          ]
+        }
+      ]
+    },
+    "wideresnet.py": {
+      "upload_name": "wideresnet.py",
+      "relative_path": "source/baselines/wideresnet.py",
+      "sha256": "190568fc44b95cb411fc649cc90b7e2b6aab96df0f9eb017cecc41056244d88d",
+      "reassigned_symbols": []
+    }
+  },
+  "models": {
+    "resnet18_no_maxpool": {
+      "source_file": "source/baselines/resnet.py",
+      "assignment_lines": [
+        74,
+        99
+      ],
+      "expanded_definition": "expanded/resnet18_no_maxpool.einspace.txt",
+      "expanded_definition_sha256": "ba206bf3ca9d17b0205a7230ee58f590a208f719bd4b23d2c3d96de692c2cef3",
+      "ordered_source_operations_sha256": "5ca31bd5a993518baa47c111975afac63fa5aa8bcf1981461cecd835b04874ed",
+      "syntax_tree_sha256": "a8e493bcd7b83e7c680a09631a86685573e24cfb25dd2679f5dd710c9824810c",
+      "expanded_operation_count": 267,
+      "operation_histogram": {
+        "add(2)": 8,
+        "branching(2)": 8,
+        "clone(2)": 8,
+        "col2im": 21,
+        "computation": 63,
+        "identity": 5,
+        "im2col1k2s0p": 3,
+        "im2col3k1s1p": 14,
+        "im2col3k2s1p": 4,
+        "linear128": 5,
+        "linear256": 5,
+        "linear512": 5,
+        "linear64": 6,
+        "norm": 20,
+        "relu": 17,
+        "routing": 21,
+        "sequential": 54
+      },
+      "historical_count_target": 267,
+      "historical_count_matches": true,
+      "static_tree_arity_validated": true
+    },
+    "resnet18_conv7x7_no_maxpool": {
+      "source_file": "source/baselines/resnet.py",
+      "assignment_lines": [
+        100,
+        125
+      ],
+      "expanded_definition": "expanded/resnet18_conv7x7_no_maxpool.einspace.txt",
+      "expanded_definition_sha256": "cc77c769ec39c2768aafba33d9aa8baa3b5129175a4d81fc4854ac87591eb0be",
+      "ordered_source_operations_sha256": "86a0576716796dce80f6b9e1c0702f66692e3b6cab270c2547dfc252e062c2b6",
+      "syntax_tree_sha256": "8c442d6035e6462dbb8380b569fb54420cdef315e74975cdeab179e0c3375f80",
+      "expanded_operation_count": 267,
+      "operation_histogram": {
+        "add(2)": 8,
+        "branching(2)": 8,
+        "clone(2)": 8,
+        "col2im": 21,
+        "computation": 63,
+        "identity": 5,
+        "im2col1k2s0p": 3,
+        "im2col3k1s1p": 13,
+        "im2col3k2s1p": 4,
+        "im2col7k2s3p": 1,
+        "linear128": 5,
+        "linear256": 5,
+        "linear512": 5,
+        "linear64": 6,
+        "norm": 20,
+        "relu": 17,
+        "routing": 21,
+        "sequential": 54
+      },
+      "historical_count_target": null,
+      "historical_count_matches": null,
+      "static_tree_arity_validated": true
+    },
+    "resnet34_no_maxpool": {
+      "source_file": "source/baselines/resnet.py",
+      "assignment_lines": [
+        127,
+        176
+      ],
+      "expanded_definition": "expanded/resnet34_no_maxpool.einspace.txt",
+      "expanded_definition_sha256": "11ef11659729650ea15566f30ac25ae992e259015f456dca43f0e1a16a766585",
+      "ordered_source_operations_sha256": "089644e7cfa929bdd501e7ca28fc9533eea07b6cc14d4a42384b64ea15042a33",
+      "syntax_tree_sha256": "2bb945afd0d9cab99529c5fa80440bfdb1e5142c77109ad646ae536dd0bf8e7e",
+      "expanded_operation_count": 499,
+      "operation_histogram": {
+        "add(2)": 16,
+        "branching(2)": 16,
+        "clone(2)": 16,
+        "col2im": 37,
+        "computation": 119,
+        "identity": 13,
+        "im2col1k2s0p": 3,
+        "im2col3k1s1p": 30,
+        "im2col3k2s1p": 4,
+        "linear128": 9,
+        "linear256": 13,
+        "linear512": 7,
+        "linear64": 8,
+        "norm": 36,
+        "relu": 33,
+        "routing": 37,
+        "sequential": 102
+      },
+      "historical_count_target": 499,
+      "historical_count_matches": true,
+      "static_tree_arity_validated": true
+    },
+    "mlpmixer_d2": {
+      "source_file": "source/baselines/mlpmixer.py",
+      "assignment_lines": [
+        30,
+        40
+      ],
+      "expanded_definition": "expanded/mlpmixer_d2.einspace.txt",
+      "expanded_definition_sha256": "b53acfb4983a77f44ef87e543a1470ae562bef5e5bb603fda75aa86a97f7a648",
+      "ordered_source_operations_sha256": "51e00b66a995bf85dc9032a9a8a322748fa2c62dd49562c08de0f6e3afc01a28",
+      "syntax_tree_sha256": "5086a535a9e2606c70016ecac21f32829d3965cc7a088cbb0a4343a36084d73a",
+      "expanded_operation_count": 72,
+      "operation_histogram": {
+        "add(2)": 2,
+        "branching(2)": 2,
+        "clone(2)": 2,
+        "computation": 18,
+        "identity": 7,
+        "im2col4k4s0p": 1,
+        "linear256": 2,
+        "linear512": 3,
+        "linear_x(0.25)": 2,
+        "linear_x(4)": 2,
+        "norm": 2,
+        "permute21": 4,
+        "pos_enc": 1,
+        "relu": 4,
+        "routing": 5,
+        "sequential": 15
+      },
+      "historical_count_target": null,
+      "historical_count_matches": null,
+      "static_tree_arity_validated": true
+    },
+    "mlpmixer_d4": {
+      "source_file": "source/baselines/mlpmixer.py",
+      "assignment_lines": [
+        41,
+        57
+      ],
+      "expanded_definition": "expanded/mlpmixer_d4.einspace.txt",
+      "expanded_definition_sha256": "e5417c51045186a3ece5087e4fa1a0b41656b68821b1bcbeb26b838d762788c2",
+      "ordered_source_operations_sha256": "76ae1032e1d570e78d5b053da650cd6dac21ad16a1badf26d0e622638a1b9605",
+      "syntax_tree_sha256": "2ba1d8bd74f0ad8fce3c41f2b7f64673a58a4e0f9a68a90c0bb9e337fcda9509",
+      "expanded_operation_count": 136,
+      "operation_histogram": {
+        "add(2)": 4,
+        "branching(2)": 4,
+        "clone(2)": 4,
+        "computation": 34,
+        "identity": 13,
+        "im2col4k4s0p": 1,
+        "linear256": 4,
+        "linear512": 5,
+        "linear_x(0.25)": 4,
+        "linear_x(4)": 4,
+        "norm": 4,
+        "permute21": 8,
+        "pos_enc": 1,
+        "relu": 8,
+        "routing": 9,
+        "sequential": 29
+      },
+      "historical_count_target": null,
+      "historical_count_matches": null,
+      "static_tree_arity_validated": true
+    },
+    "mlpmixer_d8": {
+      "source_file": "source/baselines/mlpmixer.py",
+      "assignment_lines": [
+        58,
+        86
+      ],
+      "expanded_definition": "expanded/mlpmixer_d8.einspace.txt",
+      "expanded_definition_sha256": "328bd9429115cdc01d8d70865e4d134896946e5fee0ae454ceccf690ae875bfb",
+      "ordered_source_operations_sha256": "dcec036c51c62bc66c6a4b79c2a2d7dca09803996d426c52ff57ac6914edfb62",
+      "syntax_tree_sha256": "849ff69d9a9c7f0bd7f31a796ac83c70eb5de93267f756a34f59e5cc98a4bcd1",
+      "expanded_operation_count": 264,
+      "operation_histogram": {
+        "add(2)": 8,
+        "branching(2)": 8,
+        "clone(2)": 8,
+        "computation": 66,
+        "identity": 25,
+        "im2col4k4s0p": 1,
+        "linear256": 8,
+        "linear512": 9,
+        "linear_x(0.25)": 8,
+        "linear_x(4)": 8,
+        "norm": 8,
+        "permute21": 16,
+        "pos_enc": 1,
+        "relu": 16,
+        "routing": 17,
+        "sequential": 57
+      },
+      "historical_count_target": 264,
+      "historical_count_matches": true,
+      "static_tree_arity_validated": true
+    },
+    "mlpmixer_d12": {
+      "source_file": "source/baselines/mlpmixer.py",
+      "assignment_lines": [
+        88,
+        128
+      ],
+      "expanded_definition": "expanded/mlpmixer_d12.einspace.txt",
+      "expanded_definition_sha256": "4885db26f7ff739b9d1c440c99f14c4a7e383591d9f13d3430023dc784d319b7",
+      "ordered_source_operations_sha256": "3d923de426483a660b5c736b304e8f6ce742dfad0470a6d6fcb397d909156d3c",
+      "syntax_tree_sha256": "90b508cc697c3e81249c98b96c841ddae8398a0493667b0e7ca8050e2f81ec51",
+      "expanded_operation_count": 392,
+      "operation_histogram": {
+        "add(2)": 12,
+        "branching(2)": 12,
+        "clone(2)": 12,
+        "computation": 98,
+        "identity": 37,
+        "im2col4k4s0p": 1,
+        "linear256": 12,
+        "linear512": 13,
+        "linear_x(0.25)": 12,
+        "linear_x(4)": 12,
+        "norm": 12,
+        "permute21": 24,
+        "pos_enc": 1,
+        "relu": 24,
+        "routing": 25,
+        "sequential": 85
+      },
+      "historical_count_target": 392,
+      "historical_count_matches": true,
+      "static_tree_arity_validated": true
+    },
+    "vit_d2": {
+      "source_file": "source/baselines/vit.py",
+      "assignment_lines": [
+        105,
+        115
+      ],
+      "expanded_definition": "expanded/vit_d2.einspace.txt",
+      "expanded_definition_sha256": "9a3092a4af45106bc2b723ac684ce320e2d4465607103dce044ae9fa669b8bd7",
+      "ordered_source_operations_sha256": "18795ac7e9682c98c5229ba011442040c26dedc45903006b3d5c6fc540bdc96e",
+      "syntax_tree_sha256": "1b6bcbd0d552ab42f112f6837256869ea1e3f9321518fd78a121d72d27003f51",
+      "expanded_operation_count": 108,
+      "operation_histogram": {
+        "add(2)": 4,
+        "branching(2)": 8,
+        "branching(4)": 2,
+        "cat(4, 2)": 2,
+        "clone(2)": 8,
+        "clone(4)": 2,
+        "computation": 26,
+        "dot_product(scaled=False)": 2,
+        "dot_product(scaled=True)": 2,
+        "identity": 7,
+        "im2col4k4s0p": 1,
+        "linear2048": 2,
+        "linear512": 5,
+        "linear64": 6,
+        "norm": 4,
+        "permute21": 2,
+        "pos_enc": 1,
+        "relu": 2,
+        "routing": 3,
+        "sequential": 17,
+        "softmax": 2
+      },
+      "historical_count_target": null,
+      "historical_count_matches": null,
+      "static_tree_arity_validated": true
+    },
+    "vit_d4": {
+      "source_file": "source/baselines/vit.py",
+      "assignment_lines": [
+        116,
+        132
+      ],
+      "expanded_definition": "expanded/vit_d4.einspace.txt",
+      "expanded_definition_sha256": "033a21a07b05db38bf3addddf62e3381400f4b90b9d6da2e0d688e6de670af0f",
+      "ordered_source_operations_sha256": "d814ec8ceadc5d3c28114289a710b48aa9d4599fd8b8ca6f31d10b33cfc0b437",
+      "syntax_tree_sha256": "2d5a7f2010116ddc489df6f56d13d8c77de70510229438d6e7b67995e4aea76f",
+      "expanded_operation_count": 208,
+      "operation_histogram": {
+        "add(2)": 8,
+        "branching(2)": 16,
+        "branching(4)": 4,
+        "cat(4, 2)": 4,
+        "clone(2)": 16,
+        "clone(4)": 4,
+        "computation": 50,
+        "dot_product(scaled=False)": 4,
+        "dot_product(scaled=True)": 4,
+        "identity": 13,
+        "im2col4k4s0p": 1,
+        "linear2048": 4,
+        "linear512": 9,
+        "linear64": 12,
+        "norm": 8,
+        "permute21": 4,
+        "pos_enc": 1,
+        "relu": 4,
+        "routing": 5,
+        "sequential": 33,
+        "softmax": 4
+      },
+      "historical_count_target": null,
+      "historical_count_matches": null,
+      "static_tree_arity_validated": true
+    },
+    "vit_d8": {
+      "source_file": "source/baselines/vit.py",
+      "assignment_lines": [
+        133,
+        161
+      ],
+      "expanded_definition": "expanded/vit_d8.einspace.txt",
+      "expanded_definition_sha256": "1fc4af441bb417fb8f5e299fe5fb87a23f60c976d47e39b48cf21b4f78fd2f37",
+      "ordered_source_operations_sha256": "b3b949249c9e6e8cd72b9dd432c6df8237f53e29ecd94667f7836ef98207bb80",
+      "syntax_tree_sha256": "80a0eeee795c53101a85ed290dc2bc85511b916c4d0b9def7cd9be6905ac96cd",
+      "expanded_operation_count": 408,
+      "operation_histogram": {
+        "add(2)": 16,
+        "branching(2)": 32,
+        "branching(4)": 8,
+        "cat(4, 2)": 8,
+        "clone(2)": 32,
+        "clone(4)": 8,
+        "computation": 98,
+        "dot_product(scaled=False)": 8,
+        "dot_product(scaled=True)": 8,
+        "identity": 25,
+        "im2col4k4s0p": 1,
+        "linear2048": 8,
+        "linear512": 17,
+        "linear64": 24,
+        "norm": 16,
+        "permute21": 8,
+        "pos_enc": 1,
+        "relu": 8,
+        "routing": 9,
+        "sequential": 65,
+        "softmax": 8
+      },
+      "historical_count_target": null,
+      "historical_count_matches": null,
+      "static_tree_arity_validated": true
+    },
+    "wideresnet16_4": {
+      "source_file": "source/baselines/wideresnet.py",
+      "assignment_lines": [
+        79,
+        98
+      ],
+      "expanded_definition": "expanded/wideresnet16_4.einspace.txt",
+      "expanded_definition_sha256": "2b485c3b2bb63085fef3fcc860114366c22d9acf63a2184d2ec138974327a8e4",
+      "ordered_source_operations_sha256": "04f73369e98a5c835e2749c01ed920de0438cafa609abb3fb36746bd465a1b2c",
+      "syntax_tree_sha256": "6052a020a92e7fa15545b930a7c974580c08d97cca6e800aa9fcc97f1e6f57ac",
+      "expanded_operation_count": 194,
+      "operation_histogram": {
+        "add(2)": 6,
+        "branching(2)": 6,
+        "clone(2)": 6,
+        "col2im": 16,
+        "computation": 45,
+        "identity": 3,
+        "im2col1k1s0p": 1,
+        "im2col1k2s0p": 2,
+        "im2col3k1s1p": 11,
+        "im2col3k2s1p": 2,
+        "linear128": 5,
+        "linear16": 1,
+        "linear256": 5,
+        "linear64": 5,
+        "norm": 13,
+        "relu": 13,
+        "routing": 16,
+        "sequential": 38
+      },
+      "historical_count_target": null,
+      "historical_count_matches": null,
+      "static_tree_arity_validated": true
+    },
+    "convnextv2_tiny": {
+      "source_file": "source/baselines/convnextv2.py",
+      "assignment_lines": [
+        41,
+        103
+      ],
+      "expanded_definition": "expanded/convnextv2_tiny.einspace.txt",
+      "expanded_definition_sha256": "f24bcafc401fe772d2853c3736fb04e15c899e81c355e88797df0778df7a77a5",
+      "ordered_source_operations_sha256": "d807bdf76e4521df6dbf2735146031d48d179de93669d1db33f8a14ed63b76bd",
+      "syntax_tree_sha256": "bdb0326f3bafc5b642cc17acc233c1c501f260f380a21923513764c659e3ac49",
+      "expanded_operation_count": 406,
+      "operation_histogram": {
+        "add(2)": 16,
+        "branching(2)": 16,
+        "clone(2)": 16,
+        "col2im": 20,
+        "computation": 105,
+        "identity": 17,
+        "im2col2k2s0p": 3,
+        "im2col4k4s0p": 1,
+        "im2col7k1s3p": 16,
+        "linear1536": 7,
+        "linear192": 7,
+        "linear3072": 3,
+        "linear384": 18,
+        "linear768": 10,
+        "linear96": 7,
+        "norm": 20,
+        "relu": 16,
+        "routing": 20,
+        "sequential": 88
+      },
+      "historical_count_target": null,
+      "historical_count_matches": null,
+      "static_tree_arity_validated": true
+    }
+  },
+  "table_pairs": [
+    [
+      "resnet18_no_maxpool",
+      "mlpmixer_d8"
+    ],
+    [
+      "resnet18_no_maxpool",
+      "mlpmixer_d12"
+    ],
+    [
+      "resnet34_no_maxpool",
+      "mlpmixer_d8"
+    ],
+    [
+      "resnet34_no_maxpool",
+      "mlpmixer_d12"
+    ]
+  ],
+  "runtime_model_build_validated": false,
+  "benchmark_executed": false,
+  "historical_collapse_corners": null,
+  "historical_input_params": null,
+  "historical_source_commit": null
+}

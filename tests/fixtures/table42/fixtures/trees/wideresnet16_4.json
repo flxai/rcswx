@@ -1,0 +1,881 @@
+{
+  "operation": "sequential",
+  "children": [
+    {
+      "operation": "sequential",
+      "children": [
+        {
+          "operation": "sequential",
+          "children": [
+            {
+              "operation": "routing",
+              "children": [
+                {
+                  "operation": "im2col3k1s1p",
+                  "children": []
+                },
+                {
+                  "operation": "computation",
+                  "children": [
+                    {
+                      "operation": "linear16",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "operation": "col2im",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "operation": "computation",
+              "children": [
+                {
+                  "operation": "norm",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "operation": "computation",
+          "children": [
+            {
+              "operation": "relu",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "sequential",
+      "children": [
+        {
+          "operation": "sequential",
+          "children": [
+            {
+              "operation": "sequential",
+              "children": [
+                {
+                  "operation": "sequential",
+                  "children": [
+                    {
+                      "operation": "branching(2)",
+                      "children": [
+                        {
+                          "operation": "clone(2)",
+                          "children": []
+                        },
+                        {
+                          "operation": "sequential",
+                          "children": [
+                            {
+                              "operation": "sequential",
+                              "children": [
+                                {
+                                  "operation": "sequential",
+                                  "children": [
+                                    {
+                                      "operation": "routing",
+                                      "children": [
+                                        {
+                                          "operation": "im2col3k1s1p",
+                                          "children": []
+                                        },
+                                        {
+                                          "operation": "computation",
+                                          "children": [
+                                            {
+                                              "operation": "linear64",
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "operation": "col2im",
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "operation": "computation",
+                                      "children": [
+                                        {
+                                          "operation": "norm",
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "relu",
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "routing",
+                              "children": [
+                                {
+                                  "operation": "im2col3k1s1p",
+                                  "children": []
+                                },
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "linear64",
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "col2im",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "routing",
+                          "children": [
+                            {
+                              "operation": "im2col1k1s0p",
+                              "children": []
+                            },
+                            {
+                              "operation": "computation",
+                              "children": [
+                                {
+                                  "operation": "linear64",
+                                  "children": []
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "col2im",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "add(2)",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "sequential",
+                      "children": [
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "norm",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "relu",
+                              "children": []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "operation": "sequential",
+                  "children": [
+                    {
+                      "operation": "branching(2)",
+                      "children": [
+                        {
+                          "operation": "clone(2)",
+                          "children": []
+                        },
+                        {
+                          "operation": "sequential",
+                          "children": [
+                            {
+                              "operation": "sequential",
+                              "children": [
+                                {
+                                  "operation": "sequential",
+                                  "children": [
+                                    {
+                                      "operation": "routing",
+                                      "children": [
+                                        {
+                                          "operation": "im2col3k1s1p",
+                                          "children": []
+                                        },
+                                        {
+                                          "operation": "computation",
+                                          "children": [
+                                            {
+                                              "operation": "linear64",
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "operation": "col2im",
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "operation": "computation",
+                                      "children": [
+                                        {
+                                          "operation": "norm",
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "relu",
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "routing",
+                              "children": [
+                                {
+                                  "operation": "im2col3k1s1p",
+                                  "children": []
+                                },
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "linear64",
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "col2im",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "identity",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "add(2)",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "sequential",
+                      "children": [
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "norm",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "relu",
+                              "children": []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "operation": "sequential",
+              "children": [
+                {
+                  "operation": "sequential",
+                  "children": [
+                    {
+                      "operation": "branching(2)",
+                      "children": [
+                        {
+                          "operation": "clone(2)",
+                          "children": []
+                        },
+                        {
+                          "operation": "sequential",
+                          "children": [
+                            {
+                              "operation": "sequential",
+                              "children": [
+                                {
+                                  "operation": "sequential",
+                                  "children": [
+                                    {
+                                      "operation": "routing",
+                                      "children": [
+                                        {
+                                          "operation": "im2col3k2s1p",
+                                          "children": []
+                                        },
+                                        {
+                                          "operation": "computation",
+                                          "children": [
+                                            {
+                                              "operation": "linear128",
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "operation": "col2im",
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "operation": "computation",
+                                      "children": [
+                                        {
+                                          "operation": "norm",
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "relu",
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "routing",
+                              "children": [
+                                {
+                                  "operation": "im2col3k1s1p",
+                                  "children": []
+                                },
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "linear128",
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "col2im",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "routing",
+                          "children": [
+                            {
+                              "operation": "im2col1k2s0p",
+                              "children": []
+                            },
+                            {
+                              "operation": "computation",
+                              "children": [
+                                {
+                                  "operation": "linear128",
+                                  "children": []
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "col2im",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "add(2)",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "sequential",
+                      "children": [
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "norm",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "relu",
+                              "children": []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "operation": "sequential",
+                  "children": [
+                    {
+                      "operation": "branching(2)",
+                      "children": [
+                        {
+                          "operation": "clone(2)",
+                          "children": []
+                        },
+                        {
+                          "operation": "sequential",
+                          "children": [
+                            {
+                              "operation": "sequential",
+                              "children": [
+                                {
+                                  "operation": "sequential",
+                                  "children": [
+                                    {
+                                      "operation": "routing",
+                                      "children": [
+                                        {
+                                          "operation": "im2col3k1s1p",
+                                          "children": []
+                                        },
+                                        {
+                                          "operation": "computation",
+                                          "children": [
+                                            {
+                                              "operation": "linear128",
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "operation": "col2im",
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "operation": "computation",
+                                      "children": [
+                                        {
+                                          "operation": "norm",
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "relu",
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "routing",
+                              "children": [
+                                {
+                                  "operation": "im2col3k1s1p",
+                                  "children": []
+                                },
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "linear128",
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "col2im",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "identity",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "add(2)",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "sequential",
+                      "children": [
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "norm",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "relu",
+                              "children": []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "operation": "sequential",
+          "children": [
+            {
+              "operation": "sequential",
+              "children": [
+                {
+                  "operation": "branching(2)",
+                  "children": [
+                    {
+                      "operation": "clone(2)",
+                      "children": []
+                    },
+                    {
+                      "operation": "sequential",
+                      "children": [
+                        {
+                          "operation": "sequential",
+                          "children": [
+                            {
+                              "operation": "sequential",
+                              "children": [
+                                {
+                                  "operation": "routing",
+                                  "children": [
+                                    {
+                                      "operation": "im2col3k2s1p",
+                                      "children": []
+                                    },
+                                    {
+                                      "operation": "computation",
+                                      "children": [
+                                        {
+                                          "operation": "linear256",
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "operation": "col2im",
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "norm",
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "computation",
+                              "children": [
+                                {
+                                  "operation": "relu",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "routing",
+                          "children": [
+                            {
+                              "operation": "im2col3k1s1p",
+                              "children": []
+                            },
+                            {
+                              "operation": "computation",
+                              "children": [
+                                {
+                                  "operation": "linear256",
+                                  "children": []
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "col2im",
+                              "children": []
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "routing",
+                      "children": [
+                        {
+                          "operation": "im2col1k2s0p",
+                          "children": []
+                        },
+                        {
+                          "operation": "computation",
+                          "children": [
+                            {
+                              "operation": "linear256",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "col2im",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "add(2)",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "operation": "sequential",
+                  "children": [
+                    {
+                      "operation": "computation",
+                      "children": [
+                        {
+                          "operation": "norm",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "computation",
+                      "children": [
+                        {
+                          "operation": "relu",
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "operation": "sequential",
+              "children": [
+                {
+                  "operation": "branching(2)",
+                  "children": [
+                    {
+                      "operation": "clone(2)",
+                      "children": []
+                    },
+                    {
+                      "operation": "sequential",
+                      "children": [
+                        {
+                          "operation": "sequential",
+                          "children": [
+                            {
+                              "operation": "sequential",
+                              "children": [
+                                {
+                                  "operation": "routing",
+                                  "children": [
+                                    {
+                                      "operation": "im2col3k1s1p",
+                                      "children": []
+                                    },
+                                    {
+                                      "operation": "computation",
+                                      "children": [
+                                        {
+                                          "operation": "linear256",
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "operation": "col2im",
+                                      "children": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "operation": "computation",
+                                  "children": [
+                                    {
+                                      "operation": "norm",
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "computation",
+                              "children": [
+                                {
+                                  "operation": "relu",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "operation": "routing",
+                          "children": [
+                            {
+                              "operation": "im2col3k1s1p",
+                              "children": []
+                            },
+                            {
+                              "operation": "computation",
+                              "children": [
+                                {
+                                  "operation": "linear256",
+                                  "children": []
+                                }
+                              ]
+                            },
+                            {
+                              "operation": "col2im",
+                              "children": []
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "computation",
+                      "children": [
+                        {
+                          "operation": "identity",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "add(2)",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "operation": "sequential",
+                  "children": [
+                    {
+                      "operation": "computation",
+                      "children": [
+                        {
+                          "operation": "norm",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "operation": "computation",
+                      "children": [
+                        {
+                          "operation": "relu",
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
