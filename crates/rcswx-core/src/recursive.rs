@@ -158,6 +158,9 @@ pub struct Stats {
     pub cells_created: usize,
     pub histories_created: usize,
     pub checkpoints: usize,
+    /// Cumulative tracked payload requests, not live heap usage or process RSS.
+    pub allocation_bytes: usize,
+    pub output_steps: usize,
 }
 pub struct Alignment {
     pub distance: f64,
@@ -251,11 +254,7 @@ fn parameter_cost(left: &str, right: &str) -> f64 {
     if left.split('(').next() != right.split('(').next() {
         return 1.0;
     }
-    if left == right {
-        0.0
-    } else {
-        0.5
-    }
+    if left == right { 0.0 } else { 0.5 }
 }
 pub fn mutation_cost(left: &Token, right: &Token) -> Result<f64> {
     if left.name.contains("wrap_") || right.name.contains("wrap_") {
@@ -286,11 +285,62 @@ struct Kernel<'a> {
     original1: &'a [Token],
     original2: &'a [Token],
     collapse_corners: bool,
-    check: &'a mut dyn FnMut() -> Result<()>,
+    check: &'a mut dyn FnMut(&Stats) -> Result<()>,
+    observe_allocations: bool,
     stats: Stats,
 }
 impl Kernel<'_> {
+    fn account(
+        &mut self,
+        cells: usize,
+        histories: usize,
+        bytes: usize,
+        output: usize,
+    ) -> Result<()> {
+        self.stats.cells_created = self
+            .stats
+            .cells_created
+            .checked_add(cells)
+            .ok_or(Failure::Memory)?;
+        self.stats.histories_created = self
+            .stats
+            .histories_created
+            .checked_add(histories)
+            .ok_or(Failure::Memory)?;
+        self.stats.allocation_bytes = self
+            .stats
+            .allocation_bytes
+            .checked_add(bytes)
+            .ok_or(Failure::Memory)?;
+        self.stats.output_steps = self
+            .stats
+            .output_steps
+            .checked_add(output)
+            .ok_or(Failure::Memory)?;
+        if self.observe_allocations {
+            (self.check)(&self.stats)?;
+        }
+        Ok(())
+    }
+
     fn initialize(&mut self, first: &[Token], second: &[Token], complete: bool) -> Result<Matrix> {
+        let cells = first
+            .len()
+            .checked_mul(second.len())
+            .ok_or(Failure::Memory)?;
+        let cell_bytes = std::mem::size_of::<Cell>()
+            + 2 * std::mem::size_of::<usize>()
+            + std::mem::size_of::<CellRef>();
+        let bytes = cells
+            .checked_mul(cell_bytes)
+            .and_then(|bytes| {
+                first
+                    .len()
+                    .checked_mul(std::mem::size_of::<Vec<CellRef>>())
+                    .and_then(|rows| bytes.checked_add(rows))
+            })
+            .ok_or(Failure::Memory)?;
+        self.account(cells, 0, bytes, 0)?;
         let mut matrix = Vec::new();
         matrix
             .try_reserve_exact(first.len())
@@ -301,7 +351,6 @@ impl Kernel<'_> {
                 .map_err(|_| Failure::Memory)?;
             for _ in second {
                 row.push(Rc::new(RefCell::new(Cell::empty())));
-                self.stats.cells_created += 1;
             }
             matrix.push(row);
         }
@@ -318,6 +367,12 @@ impl Kernel<'_> {
             }
             let start = cell(&matrix, 0, 0)?;
             start.borrow_mut().value = 0.0;
+            self.account(
+                0,
+                1,
+                std::mem::size_of::<History>() + 2 * std::mem::size_of::<usize>(),
+                0,
+            )?;
             start.borrow_mut().paths = vec![Rc::new(History {
                 step: RefCell::new(Step {
                     id: 0,
@@ -333,18 +388,21 @@ impl Kernel<'_> {
                 previous: None,
                 len: 1,
             })];
-            self.stats.histories_created += 1;
         }
         Ok(matrix)
     }
 
-    fn deep_copy(&mut self, matrix: &Matrix) -> Matrix {
-        fn history(path: &Path, memo: &mut HashMap<usize, Path>, count: &mut usize) -> Path {
+    fn deep_copy(&mut self, matrix: &Matrix) -> Result<Matrix> {
+        fn history(
+            kernel: &mut Kernel<'_>,
+            path: &Path,
+            memo: &mut HashMap<usize, Path>,
+        ) -> Result<Path> {
             let key = Rc::as_ptr(path) as usize;
             if let Some(existing) = memo.get(&key) {
-                return existing.clone();
+                return Ok(existing.clone());
             }
-            // Iterative prefix cloning avoids a Rust recursion limit for long traces.
+            // Iterative prefix cloning preserves the shared history graph.
             let mut pending = vec![];
             let mut next = Some(path.clone());
             while let Some(current) = next {
@@ -359,48 +417,101 @@ impl Kernel<'_> {
                     .previous
                     .as_ref()
                     .map(|p| memo[&(Rc::as_ptr(p) as usize)].clone());
+                kernel.account(
+                    0,
+                    1,
+                    std::mem::size_of::<History>() + 2 * std::mem::size_of::<usize>(),
+                    0,
+                )?;
                 let cloned = Rc::new(History {
                     step: RefCell::new(original.step.borrow().clone()),
                     previous,
                     len: original.len,
                 });
                 memo.insert(Rc::as_ptr(&original) as usize, cloned);
-                *count += 1;
             }
-            memo[&key].clone()
+            Ok(memo[&key].clone())
         }
         let mut cells = HashMap::<usize, CellRef>::new();
         let mut paths = HashMap::<usize, Path>::new();
-        matrix
-            .iter()
-            .map(|row| {
-                row.iter()
-                    .map(|original| {
-                        let key = Rc::as_ptr(original) as usize;
-                        if let Some(existing) = cells.get(&key) {
-                            return existing.clone();
-                        }
-                        let source = original.borrow();
-                        let cloned = Rc::new(RefCell::new(Cell {
-                            top: source.top.clone(),
-                            left: source.left.clone(),
-                            corner: source.corner.clone(),
-                            value: source.value,
-                            paths: source
-                                .paths
-                                .iter()
-                                .map(|path| {
-                                    history(path, &mut paths, &mut self.stats.histories_created)
-                                })
-                                .collect(),
-                        }));
-                        self.stats.cells_created += 1;
-                        cells.insert(key, cloned.clone());
-                        cloned
+        let mut result = Vec::new();
+        self.account(
+            0,
+            0,
+            matrix
+                .len()
+                .checked_mul(std::mem::size_of::<Vec<CellRef>>())
+                .ok_or(Failure::Memory)?,
+            0,
+        )?;
+        result
+            .try_reserve_exact(matrix.len())
+            .map_err(|_| Failure::Memory)?;
+        for row in matrix {
+            let mut cloned_row = Vec::new();
+            self.account(
+                0,
+                0,
+                row.len()
+                    .checked_mul(std::mem::size_of::<CellRef>())
+                    .ok_or(Failure::Memory)?,
+                0,
+            )?;
+            cloned_row
+                .try_reserve_exact(row.len())
+                .map_err(|_| Failure::Memory)?;
+            for original in row {
+                let key = Rc::as_ptr(original) as usize;
+                if let Some(existing) = cells.get(&key) {
+                    cloned_row.push(existing.clone());
+                    continue;
+                }
+                let source = original.borrow();
+                let mut cloned_paths = Vec::new();
+                self.account(
+                    0,
+                    0,
+                    source
+                        .paths
+                        .len()
+                        .checked_mul(std::mem::size_of::<Path>())
+                        .ok_or(Failure::Memory)?,
+                    0,
+                )?;
+                cloned_paths
+                    .try_reserve_exact(source.paths.len())
+                    .map_err(|_| Failure::Memory)?;
+                for path in &source.paths {
+                    cloned_paths.push(history(self, path, &mut paths)?);
+                }
+                let values = source
+                    .top
+                    .len()
+                    .checked_add(source.left.len())
+                    .and_then(|n| n.checked_add(source.corner.len()))
+                    .ok_or(Failure::Memory)?;
+                let bytes = values
+                    .checked_mul(std::mem::size_of::<f64>())
+                    .and_then(|n| {
+                        n.checked_add(
+                            std::mem::size_of::<Cell>() + 2 * std::mem::size_of::<usize>(),
+                        )
                     })
-                    .collect()
-            })
-            .collect()
+                    .ok_or(Failure::Memory)?;
+                self.account(1, 0, bytes, 0)?;
+                let cloned = Rc::new(RefCell::new(Cell {
+                    top: source.top.clone(),
+                    left: source.left.clone(),
+                    corner: source.corner.clone(),
+                    value: source.value,
+                    paths: cloned_paths,
+                }));
+                cells.insert(key, cloned.clone());
+                cloned_row.push(cloned);
+            }
+            result.push(cloned_row);
+        }
+        Ok(result)
     }
 
     fn closing_cost(path: &Path, token: &Token, first: bool, previous_value: f64) -> f64 {
@@ -622,6 +733,14 @@ impl Kernel<'_> {
                         | Kind::MutEnd
                         | Kind::MutSep
                 );
+                self.account(
+                    0,
+                    1,
+                    std::mem::size_of::<History>()
+                        + 2 * std::mem::size_of::<usize>()
+                        + std::mem::size_of::<Path>(),
+                    0,
+                )?;
                 let history = Rc::new(History {
                     step: RefCell::new(Step {
                         id: parent.len,
@@ -641,7 +760,6 @@ impl Kernel<'_> {
                     len: parent.len + 1,
                     previous: Some(parent),
                 });
-                self.stats.histories_created += 1;
                 destination.borrow_mut().paths.push(history);
             }
             let mut data = destination.borrow_mut();
@@ -669,7 +787,7 @@ impl Kernel<'_> {
         let (mut max_i_saved, mut max_j_saved) = (None, None);
         while cell(&matrix, -1, -1)?.borrow().value.is_nan() {
             self.stats.checkpoints += 1;
-            (self.check)()?;
+            (self.check)(&self.stats)?;
             let compute_i = at(first, prev_i as isize)?.name == "branching(2)" && prev_i > 0;
             let compute_j = at(second, prev_j as isize)?.name == "branching(2)" && prev_j > 0;
             let mut mid_i = None;
@@ -722,13 +840,13 @@ impl Kernel<'_> {
             max_j_saved = Some(max_j);
             if (compute_i || compute_j) && (prev_i, prev_j) != (0, 0) {
                 if iswap.is_none() {
-                    iswap = Some(self.deep_copy(&matrix));
+                    iswap = Some(self.deep_copy(&matrix)?);
                 }
                 if jswap.is_none() {
-                    jswap = Some(self.deep_copy(&matrix));
+                    jswap = Some(self.deep_copy(&matrix)?);
                 }
                 if ijswap.is_none() {
-                    ijswap = Some(self.deep_copy(&matrix));
+                    ijswap = Some(self.deep_copy(&matrix)?);
                 }
                 let im = iswap.as_mut().ok_or(Failure::Index)?;
                 let jm = jswap.as_mut().ok_or(Failure::Index)?;
@@ -1019,31 +1137,70 @@ pub fn align(
     collapse_corners: bool,
     check: &mut dyn FnMut() -> Result<()>,
 ) -> Result<Alignment> {
+    align_internal(first, second, collapse_corners, &mut |_| check(), false)
+}
+
+/// Observe resource counters before retained matrix/history/output allocation.
+/// `checkpoints` advances only at the original host-callback boundary.
+pub fn align_observed(
+    first: &[Token],
+    second: &[Token],
+    collapse_corners: bool,
+    observe: &mut dyn FnMut(&Stats) -> Result<()>,
+) -> Result<Alignment> {
+    align_internal(first, second, collapse_corners, observe, true)
+}
+
+fn align_internal(
+    first: &[Token],
+    second: &[Token],
+    collapse_corners: bool,
+    check: &mut dyn FnMut(&Stats) -> Result<()>,
+    observe_allocations: bool,
+) -> Result<Alignment> {
     let mut kernel = Kernel {
         original1: first,
         original2: second,
         collapse_corners,
         check,
+        observe_allocations,
         stats: Stats::default(),
     };
     let initial = kernel.initialize(first, second, true)?;
     let matrix = kernel.calculate(initial, first, second, 0, 0)?;
     let end = cell(&matrix, -1, -1)?;
     let end = end.borrow();
-    let paths = end
-        .paths
-        .iter()
-        .map(|path| {
-            let mut steps = Vec::with_capacity(path.len);
-            let mut current = Some(path.clone());
-            while let Some(history) = current {
-                steps.push(history.step.borrow().clone());
-                current = history.previous.clone();
-            }
-            steps.reverse();
-            steps
-        })
-        .collect();
+    let mut paths = Vec::new();
+    kernel.account(
+        0,
+        0,
+        end.paths
+            .len()
+            .checked_mul(std::mem::size_of::<Vec<Step>>())
+            .ok_or(Failure::Memory)?,
+        0,
+    )?;
+    paths
+        .try_reserve_exact(end.paths.len())
+        .map_err(|_| Failure::Memory)?;
+    for path in &end.paths {
+        let bytes = path
+            .len
+            .checked_mul(std::mem::size_of::<Step>())
+            .ok_or(Failure::Memory)?;
+        kernel.account(0, 0, bytes, path.len)?;
+        let mut steps = Vec::new();
+        steps
+            .try_reserve_exact(path.len)
+            .map_err(|_| Failure::Memory)?;
+        let mut current = Some(path.clone());
+        while let Some(history) = current {
+            steps.push(history.step.borrow().clone());
+            current = history.previous.clone();
+        }
+        steps.reverse();
+        paths.push(steps);
+    }
     Ok(Alignment {
         distance: end.value,
         paths,

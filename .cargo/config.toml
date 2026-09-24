@@ -1,0 +1,4 @@
+# `wasm-bindgen-test-runner` is supplied by the locked Nix development shell.
+# It executes wasm32-unknown-unknown integration tests in Node.
+[target.wasm32-unknown-unknown]
+runner = "wasm-bindgen-test-runner"

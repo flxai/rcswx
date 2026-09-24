@@ -3,3 +3,14 @@ name = "rcswx-core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["raw_value"] }
+num-bigint = "0.4"
+libm = "0.2"
+rand_chacha = { version = "0.9", default-features = false }
+rand_core = { version = "0.9", default-features = false }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "=0.3.77"

@@ -1,14 +1,12 @@
 """Inspect the selected edits and alignment-based crossover distances."""
 
-import numpy as np
 from parents import describe, make_parents
 from rcswx import crossover_with_report
 
 
 def main() -> None:
     a, b = make_parents()
-    np.random.seed(0)
-    result = crossover_with_report(a, b)
+    result = crossover_with_report(a, b, seed=0)
     report = result.report
 
     print("Offspring:", describe(result.child))

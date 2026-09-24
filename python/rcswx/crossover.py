@@ -1,4 +1,6 @@
-"""Raw genotype crossover conveniences; construction is an explicit next layer."""
+"""Raw crossover conveniences over retained native structural plans."""
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 
@@ -11,14 +13,33 @@ class CrossoverResult:
     report: dict
 
 
-def crossover_with_report(parent1, parent2, *, skewness=0, limiter=None):
-    """Return a genotype and reference distance/selection metadata.
+def _rng_label(sampler: str) -> str:
+    if sampler == "native":
+        return "chacha12-v1"
+    if sampler == "reference":
+        return "numpy-ambient"
+    raise ValueError("sampler must be 'native' or 'reference'")
 
-    Consumes the caller's NumPy RNG exactly where the reference selector does.
-    No-op crossover may alias parent1. No weights, task head, or model are copied.
-    """
+
+def crossover_with_report(
+    parent1,
+    parent2,
+    *,
+    skewness=0,
+    limiter=None,
+    sampler="native",
+    seed=None,
+    rng=None,
+):
+    """Return a child and the historical selected-operation distance report."""
     child, selected, operations, distance1, distance2, between = raw_crossover(
-        parent1, parent2, skewness=skewness, limiter=limiter
+        parent1,
+        parent2,
+        skewness=skewness,
+        limiter=limiter,
+        sampler=sampler,
+        seed=seed,
+        rng=rng,
     )
     return CrossoverResult(
         child,
@@ -29,10 +50,23 @@ def crossover_with_report(parent1, parent2, *, skewness=0, limiter=None):
             "crossover_distance_to_parent2": distance2,
             "crossover_distance_between_parents": between,
             "crossover_skewness": skewness,
+            "crossover_sampler": sampler,
+            "crossover_rng": _rng_label(sampler),
+            "crossover_numeric_policy": (
+                "native-skew-normal-v1" if sampler == "native" else "scipy-reference"
+            ),
         },
     )
 
 
-def crossover(parent1, parent2, *, skewness=0, limiter=None):
-    """Return only the raw offspring genotype, preserving original ownership."""
-    return raw_crossover(parent1, parent2, skewness=skewness, limiter=limiter)[0]
+def crossover(parent1, parent2, *, skewness=0, limiter=None, sampler="native", seed=None, rng=None):
+    """Return only the native-applied offspring, preserving raw no-op aliasing."""
+    return raw_crossover(
+        parent1,
+        parent2,
+        skewness=skewness,
+        limiter=limiter,
+        sampler=sampler,
+        seed=seed,
+        rng=rng,
+    )[0]
