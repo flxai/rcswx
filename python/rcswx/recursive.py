@@ -191,7 +191,6 @@ class _LegacySnapshot:
         for node, identifier in zip(self.nodes, ids, strict=True):
             # Reference preparation assigns Python integers, including arbitrary-width IDs.
             node.id = int(identifier)
-        self.architecture = _LegacySnapshot.from_root(self.root).architecture
 
     def fingerprint(self) -> tuple[tuple[int, str, str, tuple[int, ...]], ...]:
         return tuple(
