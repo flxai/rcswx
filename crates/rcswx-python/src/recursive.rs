@@ -1,3 +1,4 @@
+use crate::execution::WorkerCount;
 use pyo3::exceptions::{
     PyIndexError, PyMemoryError, PyRuntimeError, PyUnboundLocalError, PyValueError,
 };
@@ -33,17 +34,19 @@ fn failure(error: Failure, callback: Option<PyErr>) -> PyErr {
         Failure::Callback => {
             callback.unwrap_or_else(|| PyRuntimeError::new_err("missing memory-check exception"))
         }
+        Failure::Operational(error) => crate::engine::python_error(error, callback),
     }
 }
 
 #[pyfunction]
-#[pyo3(signature = (tokens1, tokens2, collapse_corners=false, memory_check=None))]
+#[pyo3(signature = (tokens1, tokens2, collapse_corners=false, memory_check=None, *, workers=WorkerCount::SERIAL))]
 fn recursive_align(
     py: Python<'_>,
     tokens1: Vec<TokenRecord>,
     tokens2: Vec<TokenRecord>,
     collapse_corners: bool,
     memory_check: Option<Py<PyAny>>,
+    workers: WorkerCount,
 ) -> PyResult<AlignmentRecord> {
     let convert = |rows: Vec<TokenRecord>| {
         rows.into_iter()
@@ -60,9 +63,17 @@ fn recursive_align(
     let (result, callback_error) = py.detach(move || {
         let mut callback_error = None;
         let result = catch_unwind(AssertUnwindSafe(|| {
+            let mut execution =
+                rcswx_core::execution::Execution::new(workers.0).map_err(Failure::Operational)?;
             let mut check = || {
-                if let Some(callback) = &memory_check {
-                    match Python::attach(|py| callback.call0(py)?.is_truthy(py)) {
+                rcswx_core::execution::callback(|| {
+                    match Python::attach(|py| {
+                        py.check_signals()?;
+                        match &memory_check {
+                            Some(callback) => callback.call0(py)?.is_truthy(py),
+                            None => Ok(true),
+                        }
+                    }) {
                         Ok(true) => Ok(()),
                         Ok(false) => Err(Failure::Memory),
                         Err(error) => {
@@ -70,11 +81,15 @@ fn recursive_align(
                             Err(Failure::Callback)
                         }
                     }
-                } else {
-                    Ok(())
-                }
+                })
             };
-            core::align(&first, &second, collapse_corners, &mut check)
+            core::align_with_execution(
+                &first,
+                &second,
+                collapse_corners,
+                &mut check,
+                &mut execution,
+            )
         }));
         (result, callback_error)
     });

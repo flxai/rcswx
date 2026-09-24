@@ -7,12 +7,14 @@ from .recursive import Alignment, Selection, _same_raw_parent, apply_edits
 
 
 def edit_path(
-    parent1, parent2, *, collapse_corners=False, limiter=None, profile=False, limits=None
+    parent1, parent2, *, collapse_corners=False, limiter=None, profile=False, limits=None, workers=1
 ) -> Alignment:
     """Return a retained native alignment plan for two portable or legacy trees.
 
     Legacy preparation retains the reference-visible renumbering of the second
     parent.  Portable values are immutable and have no host runtime dependency.
+    ``workers=1`` is serial. Other counts require a parallel-capable native build;
+    ``-1`` uses its pool capacity and positive counts cap this call's compute jobs.
     """
     return Alignment(
         parent1,
@@ -21,6 +23,7 @@ def edit_path(
         limiter=limiter,
         profile=profile,
         limits=limits,
+        workers=workers,
     )
 
 

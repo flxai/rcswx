@@ -335,8 +335,17 @@ class Alignment:
     """Retained native edit plan plus lazily materialized historical views."""
 
     def __init__(
-        self, parent1, parent2, collapse_corners=False, limiter=None, profile=False, limits=None
+        self,
+        parent1,
+        parent2,
+        collapse_corners=False,
+        limiter=None,
+        profile=False,
+        limits=None,
+        *,
+        workers=1,
     ):
+        workers = _core.validate_workers(workers)
         self.profile = profile
         self.limits = limits
         self._materialization_seconds = 0.0
@@ -376,7 +385,7 @@ class Alignment:
             # This effect intentionally occurs before native analysis, including failure paths.
             self._second_legacy.apply_parent2_ids(self._prepared.parent2_ids)
         self._native = self._prepared.analyze(
-            _plan_id(), collapse_corners, _memory_check(self.limiter)
+            _plan_id(), collapse_corners, _memory_check(self.limiter), workers=workers
         )
         self.id = self._native.id
         self.distance = self._native.distance
@@ -596,6 +605,11 @@ class Alignment:
                 raise ValueError("selected operation does not belong to this plan") from error
             result.append(remaining.pop(position))
         return tuple(result)
+
+    @property
+    def execution(self) -> dict[str, bool | int | None]:
+        """Call-local execution diagnostics, separate from canonical algorithm stats."""
+        return json.loads(self._native.execution_json())
 
     @property
     def timings(self) -> dict[str, float]:

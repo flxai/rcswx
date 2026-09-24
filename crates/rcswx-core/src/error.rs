@@ -10,6 +10,7 @@ pub enum Error {
     Unbound(&'static str),
     Reference(String),
     Numerical(String),
+    Execution(String),
     Memory,
     Limit(&'static str),
     Cancelled,
@@ -27,6 +28,7 @@ impl From<crate::recursive::Failure> for Error {
             crate::recursive::Failure::Unbound(name) => Self::Unbound(name),
             crate::recursive::Failure::Memory => Self::Memory,
             crate::recursive::Failure::Callback => Self::Callback,
+            crate::recursive::Failure::Operational(error) => error,
         }
     }
 }
@@ -34,9 +36,10 @@ impl From<crate::recursive::Failure> for Error {
 impl fmt::Display for Error {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidInput(message) | Self::Reference(message) | Self::Numerical(message) => {
-                formatter.write_str(message)
-            }
+            Self::InvalidInput(message)
+            | Self::Reference(message)
+            | Self::Numerical(message)
+            | Self::Execution(message) => formatter.write_str(message),
             Self::Index => formatter.write_str("list index out of range"),
             Self::EmptyMinimum => formatter.write_str("min() arg is an empty sequence"),
             Self::MissingMutationTarget => formatter.write_str("Nodes to mutate not found"),

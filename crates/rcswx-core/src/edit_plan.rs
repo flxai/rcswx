@@ -864,19 +864,39 @@ pub fn analyze(
     id: String,
     budget: &mut Budget<'_>,
 ) -> Result<EditPlan> {
+    analyze_with_execution(
+        prepared,
+        collapse_corners,
+        id,
+        budget,
+        &mut crate::execution::Execution::serial(),
+        None,
+    )
+}
+
+/// Analyze under a call-local execution policy; diagnostics remain on that policy.
+pub fn analyze_with_execution(
+    prepared: PreparedPair,
+    collapse_corners: bool,
+    id: String,
+    budget: &mut Budget<'_>,
+    execution: &mut crate::execution::Execution,
+    stage: Option<&mut dyn FnMut(&'static str, bool)>,
+) -> Result<EditPlan> {
     analyze_internal(
         prepared,
         collapse_corners,
         id,
         budget,
-        None,
+        stage,
+        execution,
         #[cfg(feature = "trace")]
         None,
     )
 }
 
 /// Analyze a prepared pair while allowing a host to time native stages.
-/// The core provides boundaries only; it neither imports nor reads a clock.
+/// Profiling provides boundaries only; stage timing remains host-owned.
 pub fn analyze_profiled(
     prepared: PreparedPair,
     collapse_corners: bool,
@@ -884,14 +904,13 @@ pub fn analyze_profiled(
     budget: &mut Budget<'_>,
     stage: &mut dyn FnMut(&'static str, bool),
 ) -> Result<EditPlan> {
-    analyze_internal(
+    analyze_with_execution(
         prepared,
         collapse_corners,
         id,
         budget,
+        &mut crate::execution::Execution::serial(),
         Some(stage),
-        #[cfg(feature = "trace")]
-        None,
     )
 }
 
@@ -904,6 +923,25 @@ pub fn analyze_traced(
     budget: &mut Budget<'_>,
     recorder: &mut crate::trace::Recorder,
 ) -> Result<EditPlan> {
+    analyze_traced_with_execution(
+        prepared,
+        collapse_corners,
+        id,
+        budget,
+        &mut crate::execution::Execution::serial(),
+        recorder,
+    )
+}
+
+#[cfg(feature = "trace")]
+pub fn analyze_traced_with_execution(
+    prepared: PreparedPair,
+    collapse_corners: bool,
+    id: String,
+    budget: &mut Budget<'_>,
+    execution: &mut crate::execution::Execution,
+    recorder: &mut crate::trace::Recorder,
+) -> Result<EditPlan> {
     recorder.emit("preparation", || {
         let tokens = |tokens: &[crate::tokens::PreparedToken]| tokens.iter().enumerate().map(|(index,t)| serde_json::json!({
             "index":index,"id":prepared.identities[t.token.id as usize],"name":t.token.name,
@@ -912,7 +950,15 @@ pub fn analyze_traced(
         serde_json::json!({"collapse_corners":collapse_corners,"direction":"parent2_to_parent1",
             "identities":prepared.identities,"first_tokens":tokens(&prepared.first_tokens),"second_tokens":tokens(&prepared.second_tokens)})
     });
-    let result = analyze_internal(prepared, collapse_corners, id, budget, None, Some(recorder));
+    let result = analyze_internal(
+        prepared,
+        collapse_corners,
+        id,
+        budget,
+        None,
+        execution,
+        Some(recorder),
+    );
     if let Ok(plan) = &result {
         recorder.emit("plan", || {
             serde_json::json!({
@@ -943,8 +989,15 @@ fn analyze_internal(
     id: String,
     budget: &mut Budget<'_>,
     mut stage: Option<&mut dyn FnMut(&'static str, bool)>,
+    execution: &mut crate::execution::Execution,
     #[cfg(feature = "trace")] recorder: Option<&mut crate::trace::Recorder>,
 ) -> Result<EditPlan> {
+    execution.allocation_limit(
+        budget
+            .limits
+            .max_allocation_bytes
+            .map(|limit| limit.saturating_sub(budget.allocation_bytes)),
+    );
     let first_tokens = kernel_tokens(&prepared.first_tokens)?;
     let second_tokens = kernel_tokens(&prepared.second_tokens)?;
     if let Some(callback) = stage.as_deref_mut() {
@@ -957,7 +1010,7 @@ fn analyze_internal(
     let mut previous_allocation = 0;
     let mut budget_error = None;
     let alignment = {
-        let mut observe = |stats: &recursive::Stats| {
+        let mut observe = |stats: &recursive::Stats, wait_poll: bool| {
             let Some(cells) = stats.cells_created.checked_sub(previous_cells) else {
                 budget_error = Some(Error::Limit("work"));
                 return Err(Failure::Callback);
@@ -995,6 +1048,12 @@ fn analyze_internal(
                     return Err(Failure::Callback);
                 }
             }
+            if wait_poll {
+                if let Err(error) = budget.poll_wait() {
+                    budget_error = Some(error);
+                    return Err(Failure::Callback);
+                }
+            }
             previous_cells = stats.cells_created;
             previous_histories = stats.histories_created;
             previous_checkpoints = stats.checkpoints;
@@ -1004,27 +1063,30 @@ fn analyze_internal(
         };
         #[cfg(feature = "trace")]
         if let Some(recorder) = recorder {
-            recursive::align_traced(
+            recursive::align_traced_with_execution(
                 &first_tokens,
                 &second_tokens,
                 collapse_corners,
                 &mut observe,
+                execution,
                 recorder,
             )
         } else {
-            recursive::align_observed(
+            recursive::align_observed_with_execution(
                 &first_tokens,
                 &second_tokens,
                 collapse_corners,
                 &mut observe,
+                execution,
             )
         }
         #[cfg(not(feature = "trace"))]
-        recursive::align_observed(
+        recursive::align_observed_with_execution(
             &first_tokens,
             &second_tokens,
             collapse_corners,
             &mut observe,
+            execution,
         )
     };
     if let Some(callback) = stage.as_deref_mut() {
@@ -1155,6 +1217,7 @@ mod tests {
             output: 0,
             allocation_bytes: 0,
             check: &mut check,
+            wait_check: None,
         };
         let plan = analyze(prepared, false, "plan".into(), &mut budget).unwrap();
         assert_eq!(plan.distance, 0.5);

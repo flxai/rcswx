@@ -37,6 +37,7 @@ fn allocation_budget_interrupts_before_kernel_host_work() {
         output: 0,
         allocation_bytes: 0,
         check: &mut host,
+        wait_check: None,
     };
     let mut cause = None;
     let result = recursive::align_observed(&first, &second, false, &mut |stats| match budget
@@ -81,6 +82,7 @@ fn host_cancellation_is_not_a_reference_or_numeric_failure() {
         output: 0,
         allocation_bytes: 0,
         check: &mut host,
+        wait_check: None,
     };
     assert_eq!(budget.checkpoint(1, 0, 0), Err(Error::Cancelled));
     assert_eq!(budget.work, 1);

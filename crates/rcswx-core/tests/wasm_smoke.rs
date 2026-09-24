@@ -40,6 +40,7 @@ fn unlimited_budget(check: &mut dyn FnMut() -> Result<()>) -> Budget<'_> {
         output: 0,
         allocation_bytes: 0,
         check,
+        wait_check: None,
     }
 }
 
@@ -73,6 +74,16 @@ fn histories(plan: &EditPlan) -> Vec<Vec<EditSignature<'_>>> {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
 fn decode_analyze_apply_and_sample_without_host_services() {
+    #[cfg(target_arch = "wasm32")]
+    {
+        use rcswx_core::execution::{Execution, Workers};
+        assert!(!Execution::serial().report().parallel_capable);
+        assert!(Workers::new(1).is_ok());
+        assert!(matches!(
+            Workers::new(2),
+            Err(rcswx_core::error::Error::Execution(_))
+        ));
+    }
     // This fixture is frozen from the pinned Python 3.12 reference run in
     // /home/flx/tmp/rcswx-consolidation-20260923/wasm-oracle-fixture.json.
     let first = decoded_architecture("sequential", "relu");

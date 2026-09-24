@@ -4,6 +4,7 @@ pub mod apply;
 pub mod architecture;
 pub mod edit_plan;
 pub mod error;
+pub mod execution;
 pub mod recursive;
 pub mod sampling;
 pub mod selection;

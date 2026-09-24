@@ -44,6 +44,7 @@ fn with_budget<T>(f: impl FnOnce(&mut Budget<'_>) -> T) -> T {
         output: 0,
         allocation_bytes: 0,
         check: &mut check,
+        wait_check: None,
     })
 }
 fn pair() -> rcswx_core::tokens::PreparedPair {

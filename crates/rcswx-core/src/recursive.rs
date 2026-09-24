@@ -6,16 +6,29 @@
 //! Derived from einsearch 3f44ddf086bee0c213404e240ee0adf99e3e1501.
 //! See LICENSE.einsearch for the original MIT attribution.
 
+use crate::execution::{self, Execution};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+#[cfg(not(all(feature = "parallel", not(target_arch = "wasm32"))))]
 use std::rc::Rc as HistoryRef;
-#[cfg(feature = "trace")]
+#[cfg(all(
+    feature = "trace",
+    not(all(feature = "parallel", not(target_arch = "wasm32")))
+))]
 use std::rc::Weak as HistoryWeak;
+#[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
+use std::sync::Arc as HistoryRef;
+#[cfg(all(feature = "trace", feature = "parallel", not(target_arch = "wasm32")))]
+use std::sync::Weak as HistoryWeak;
 use std::sync::atomic::{AtomicU8, Ordering};
 
 #[path = "recursive_cell.rs"]
 mod cell_eval;
+
+#[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
+#[path = "recursive_wave.rs"]
+mod wave;
 
 #[cfg(feature = "trace")]
 #[path = "recursive_trace.rs"]
@@ -28,6 +41,7 @@ pub enum Failure {
     Unbound(&'static str),
     Memory,
     Callback,
+    Operational(crate::error::Error),
 }
 pub type Result<T> = std::result::Result<T, Failure>;
 
@@ -203,6 +217,27 @@ impl Cell {
 type CellRef = Rc<RefCell<Cell>>;
 type Matrix = Vec<Vec<CellRef>>;
 
+#[derive(Clone, Copy)]
+struct Diagonal {
+    sum: usize,
+    low: usize,
+    high: usize,
+    origin: (usize, usize),
+}
+impl Diagonal {
+    fn len(self) -> usize {
+        self.high - self.low + 1
+    }
+    fn position(self, offset: usize) -> (usize, usize) {
+        let row = if self.sum % 2 == 0 {
+            self.low + offset
+        } else {
+            self.high - offset
+        };
+        (self.origin.0 + row, self.origin.1 + self.sum - row)
+    }
+}
+
 #[derive(Default, Debug)]
 pub struct Stats {
     pub cells_created: usize,
@@ -331,7 +366,8 @@ struct Kernel<'a> {
     original1: &'a [Token],
     original2: &'a [Token],
     collapse_corners: bool,
-    check: &'a mut dyn FnMut(&Stats) -> Result<()>,
+    check: &'a mut dyn FnMut(&Stats, bool) -> Result<()>,
+    execution: &'a mut Execution,
     observe_allocations: bool,
     stats: Stats,
     #[cfg(feature = "trace")]
@@ -366,7 +402,7 @@ impl Kernel<'_> {
             .checked_add(output)
             .ok_or(Failure::Memory)?;
         if self.observe_allocations {
-            (self.check)(&self.stats)?;
+            (self.check)(&self.stats, false)?;
         }
         Ok(())
     }
@@ -619,11 +655,22 @@ impl Kernel<'_> {
         Ok(result)
     }
 
-    fn closing_cost(path: &Path, token: &Token, first: bool, previous_value: f64) -> f64 {
+    fn closing_cost(
+        path: &Path,
+        token: &Token,
+        first: bool,
+        previous_value: f64,
+        cancelled: Option<&std::sync::atomic::AtomicBool>,
+    ) -> Result<f64> {
         let mut level = 0i64;
         let mut closed = 0i64;
         let mut current = Some(path.as_ref());
+        let mut walked = 0_usize;
         while let Some(history) = current {
+            if walked % 64 == 0 {
+                cell_eval::check_cancel(cancelled)?;
+            }
+            walked += 1;
             let op = &history.step;
             let own_id = if first { op.node1_id } else { op.node2_id };
             let own_kind = if first { op.kind.add() } else { op.kind.rem() };
@@ -656,16 +703,27 @@ impl Kernel<'_> {
         }
         let required = token.parent_arity as i64 - 2 - i64::from(token.name == "wrap_sep");
         if level == 0 && required == closed {
-            previous_value
+            Ok(previous_value)
         } else {
-            f64::INFINITY
+            Ok(f64::INFINITY)
         }
     }
-    fn closing_mutation(path: &Path, first: &Token, second: &Token, previous_value: f64) -> f64 {
+    fn closing_mutation(
+        path: &Path,
+        first: &Token,
+        second: &Token,
+        previous_value: f64,
+        cancelled: Option<&std::sync::atomic::AtomicBool>,
+    ) -> Result<f64> {
         let mut closed1 = 0i64;
         let mut closed2 = 0i64;
         let mut current = Some(path.as_ref());
+        let mut walked = 0_usize;
         while let Some(history) = current {
+            if walked % 64 == 0 {
+                cell_eval::check_cancel(cancelled)?;
+            }
+            walked += 1;
             let op = &history.step;
             if op.node1_id == Some(first.id) && op.kind.mutation() {
                 closed1 += 1;
@@ -687,10 +745,21 @@ impl Kernel<'_> {
         let required1 = first.parent_arity as i64 - 2 - i64::from(first.name == "wrap_sep");
         let required2 = second.parent_arity as i64 - 2 - i64::from(second.name == "wrap_sep");
         if required1 == closed1 && required2 == closed2 {
-            previous_value
+            Ok(previous_value)
         } else {
-            f64::INFINITY
+            Ok(f64::INFINITY)
         }
+    }
+
+    fn account_history(&mut self) -> Result<()> {
+        self.account(
+            0,
+            1,
+            std::mem::size_of::<History>()
+                + 2 * std::mem::size_of::<usize>()
+                + std::mem::size_of::<Path>(),
+            0,
+        )
     }
 
     fn fill_cell(
@@ -705,6 +774,7 @@ impl Kernel<'_> {
         if !destination.borrow().value.is_nan() {
             return Ok(false);
         }
+        self.execution.report.serial_cells += 1;
         let one = at(first, i as isize)?;
         let two = at(second, j as isize)?;
         let top = cell(matrix, i as isize - 1, j as isize)?;
@@ -722,18 +792,9 @@ impl Kernel<'_> {
                 second: two,
                 position: (i + start_i, j + start_j),
             };
-            cell_eval::Draft::evaluate(&input, || {
-                self.account(
-                    0,
-                    1,
-                    std::mem::size_of::<History>()
-                        + 2 * std::mem::size_of::<usize>()
-                        + std::mem::size_of::<Path>(),
-                    0,
-                )
-            })
+            cell_eval::Draft::evaluate(&input, || self.account_history(), None)
         };
-        self.publish_cell(matrix, i, j, draft)?;
+        self.publish_cell(matrix, i, j, draft, false)?;
         Ok(true)
     }
 
@@ -743,8 +804,14 @@ impl Kernel<'_> {
         i: usize,
         j: usize,
         mut draft: cell_eval::Draft,
+        account_paths: bool,
     ) -> Result<()> {
         let destination = cell(matrix, i as isize, j as isize)?;
+        if account_paths {
+            for _ in 0..draft.history_requests {
+                self.account_history()?;
+            }
+        }
         {
             let mut data = destination.borrow_mut();
             if let Some(top) = draft.candidates[0].take() {
@@ -787,6 +854,11 @@ impl Kernel<'_> {
         start_j: usize,
         #[cfg(feature = "trace")] positions: Option<(Vec<usize>, Vec<usize>)>,
     ) -> Result<Matrix> {
+        #[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
+        let fresh_root =
+            std::ptr::eq(first, self.original1) && std::ptr::eq(second, self.original2);
+        #[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
+        let parallel = self.execution.report.worker_limit > 1;
         #[cfg(feature = "trace")]
         if let (Some(trace), Some(positions)) = (&mut self.trace, &positions) {
             trace.begin(&matrix, positions, start_i, start_j);
@@ -798,7 +870,7 @@ impl Kernel<'_> {
         let (mut max_i_saved, mut max_j_saved) = (None, None);
         while cell(&matrix, -1, -1)?.borrow().value.is_nan() {
             self.stats.checkpoints += 1;
-            (self.check)(&self.stats)?;
+            execution::callback(|| (self.check)(&self.stats, false))?;
             let compute_i = at(first, prev_i as isize)?.name == "branching(2)" && prev_i > 0;
             let compute_j = at(second, prev_j as isize)?.name == "branching(2)" && prev_j > 0;
             let mut mid_i = None;
@@ -1095,44 +1167,107 @@ impl Kernel<'_> {
             } else {
                 let rows = max_i.checked_sub(prev_i).ok_or(Failure::Index)?;
                 let cols = max_j.checked_sub(prev_j).ok_or(Failure::Index)?;
+                #[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
+                let round_cells = wave::ROUND_CELLS;
+                #[cfg(all(test, feature = "parallel", not(target_arch = "wasm32")))]
+                let round_cells = round_cells.min(self.execution.round_cells.max(1));
                 for diagonal in 0..rows + cols - 1 {
                     let low = diagonal.saturating_sub(cols - 1);
                     let high = diagonal.min(rows - 1);
-                    for offset in 0..=high - low {
-                        let row = if diagonal % 2 == 0 {
-                            low + offset
+                    let geometry = Diagonal {
+                        sum: diagonal,
+                        low,
+                        high,
+                        origin: (prev_i, prev_j),
+                    };
+                    let mut offset = 0;
+                    while offset < geometry.len() {
+                        let count = geometry.len() - offset;
+                        #[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
+                        let count = if parallel {
+                            count.min(round_cells)
                         } else {
-                            high - offset
+                            count
                         };
-                        let i = prev_i + row;
-                        let j = prev_j + diagonal - row;
-                        if self.fill_cell(&matrix, first, second, (i, j), (start_i, start_j))? {
-                            for auxiliary in
-                                [&mut iswap, &mut jswap, &mut ijswap].into_iter().flatten()
-                            {
-                                set(auxiliary, i, j, cell(&matrix, i as isize, j as isize)?)?;
+                        #[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
+                        let mut batch = if parallel {
+                            wave::evaluate(
+                                self,
+                                wave::Round {
+                                    matrix: &matrix,
+                                    tokens: (first, second),
+                                    diagonal: geometry,
+                                    offset,
+                                    count,
+                                    start: (start_i, start_j),
+                                    auxiliaries: [iswap.as_ref(), jswap.as_ref(), ijswap.as_ref()],
+                                    fresh: fresh_root
+                                        && iswap.is_none()
+                                        && jswap.is_none()
+                                        && ijswap.is_none(),
+                                },
+                            )?
+                        } else {
+                            None
+                        };
+                        #[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
+                        let mut next_draft = 0;
+                        for rank in 0..count {
+                            let (i, j) = geometry.position(offset + rank);
+                            #[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
+                            let computed = if let Some(batch) = &mut batch {
+                                if batch.ranks.get(next_draft) == Some(&rank) {
+                                    let draft =
+                                        batch.drafts[next_draft].take().ok_or_else(|| {
+                                            Failure::Operational(crate::error::Error::Execution(
+                                                "joined native round is missing a cell".into(),
+                                            ))
+                                        })?;
+                                    self.publish_cell(&matrix, i, j, draft, true)?;
+                                    next_draft += 1;
+                                    true
+                                } else {
+                                    false
+                                }
+                            } else {
+                                self.fill_cell(&matrix, first, second, (i, j), (start_i, start_j))?
+                            };
+                            #[cfg(not(all(feature = "parallel", not(target_arch = "wasm32"))))]
+                            let computed =
+                                self.fill_cell(&matrix, first, second, (i, j), (start_i, start_j))?;
+                            if computed {
+                                for auxiliary in
+                                    [&mut iswap, &mut jswap, &mut ijswap].into_iter().flatten()
+                                {
+                                    set(auxiliary, i, j, cell(&matrix, i as isize, j as isize)?)?;
+                                }
+                                if self.collapse_corners
+                                    && (((j + start_j) as f64 - (i + start_i) as f64
+                                        >= self.original2.len() as f64 * 0.25)
+                                        || ((i + start_i) as f64 - (j + start_j) as f64
+                                            >= self.original1.len() as f64 * 0.25))
+                                {
+                                    self.clean(&cell(&matrix, i as isize, j as isize)?, false)?;
+                                    for auxiliary in [&iswap, &jswap, &ijswap].into_iter().flatten()
+                                    {
+                                        self.clean(
+                                            &cell(auxiliary, i as isize, j as isize)?,
+                                            false,
+                                        )?;
+                                    }
+                                }
                             }
-                            if self.collapse_corners
-                                && (((j + start_j) as f64 - (i + start_i) as f64
-                                    >= self.original2.len() as f64 * 0.25)
-                                    || ((i + start_i) as f64 - (j + start_j) as f64
-                                        >= self.original1.len() as f64 * 0.25))
-                            {
-                                self.clean(&cell(&matrix, i as isize, j as isize)?, false)?;
+                            if i > 1 && j > 1 {
+                                self.clean(&cell(&matrix, i as isize - 1, j as isize - 1)?, true)?;
                                 for auxiliary in [&iswap, &jswap, &ijswap].into_iter().flatten() {
-                                    self.clean(&cell(auxiliary, i as isize, j as isize)?, false)?;
+                                    self.clean(
+                                        &cell(auxiliary, i as isize - 1, j as isize - 1)?,
+                                        true,
+                                    )?;
                                 }
                             }
                         }
-                        if i > 1 && j > 1 {
-                            self.clean(&cell(&matrix, i as isize - 1, j as isize - 1)?, true)?;
-                            for auxiliary in [&iswap, &jswap, &ijswap].into_iter().flatten() {
-                                self.clean(
-                                    &cell(auxiliary, i as isize - 1, j as isize - 1)?,
-                                    true,
-                                )?;
-                            }
-                        }
+                        offset += count;
                     }
                 }
             }
@@ -1179,12 +1314,29 @@ pub fn align(
     collapse_corners: bool,
     check: &mut dyn FnMut() -> Result<()>,
 ) -> Result<Alignment> {
+    align_with_execution(
+        first,
+        second,
+        collapse_corners,
+        check,
+        &mut Execution::serial(),
+    )
+}
+
+pub fn align_with_execution(
+    first: &[Token],
+    second: &[Token],
+    collapse_corners: bool,
+    check: &mut dyn FnMut() -> Result<()>,
+    execution: &mut Execution,
+) -> Result<Alignment> {
     align_internal(
         first,
         second,
         collapse_corners,
-        &mut |_| check(),
+        &mut |_, _| check(),
         false,
+        execution,
         #[cfg(feature = "trace")]
         None,
     )
@@ -1198,12 +1350,31 @@ pub fn align_observed(
     collapse_corners: bool,
     observe: &mut dyn FnMut(&Stats) -> Result<()>,
 ) -> Result<Alignment> {
+    align_observed_with_execution(
+        first,
+        second,
+        collapse_corners,
+        &mut |stats, _| observe(stats),
+        &mut Execution::serial(),
+    )
+}
+
+/// A true observer flag requests an elapsed-time host poll without advancing
+/// canonical checkpoints. Resource and execution diagnostics stay independent.
+pub(crate) fn align_observed_with_execution(
+    first: &[Token],
+    second: &[Token],
+    collapse_corners: bool,
+    observe: &mut dyn FnMut(&Stats, bool) -> Result<()>,
+    execution: &mut Execution,
+) -> Result<Alignment> {
     align_internal(
         first,
         second,
         collapse_corners,
         observe,
         true,
+        execution,
         #[cfg(feature = "trace")]
         None,
     )
@@ -1217,12 +1388,32 @@ pub fn align_traced(
     observe: &mut dyn FnMut(&Stats) -> Result<()>,
     recorder: &mut crate::trace::Recorder,
 ) -> Result<Alignment> {
+    align_traced_with_execution(
+        first,
+        second,
+        collapse_corners,
+        &mut |stats, _| observe(stats),
+        &mut Execution::serial(),
+        recorder,
+    )
+}
+
+#[cfg(feature = "trace")]
+pub(crate) fn align_traced_with_execution(
+    first: &[Token],
+    second: &[Token],
+    collapse_corners: bool,
+    observe: &mut dyn FnMut(&Stats, bool) -> Result<()>,
+    execution: &mut Execution,
+    recorder: &mut crate::trace::Recorder,
+) -> Result<Alignment> {
     align_internal(
         first,
         second,
         collapse_corners,
         observe,
         true,
+        execution,
         Some(recorder),
     )
 }
@@ -1231,15 +1422,18 @@ fn align_internal(
     first: &[Token],
     second: &[Token],
     collapse_corners: bool,
-    check: &mut dyn FnMut(&Stats) -> Result<()>,
+    check: &mut dyn FnMut(&Stats, bool) -> Result<()>,
     observe_allocations: bool,
+    execution: &mut Execution,
     #[cfg(feature = "trace")] recorder: Option<&mut crate::trace::Recorder>,
 ) -> Result<Alignment> {
+    execution::Workers::new(execution.report().requested_workers).map_err(Failure::Operational)?;
     let mut kernel = Kernel {
         original1: first,
         original2: second,
         collapse_corners,
         check,
+        execution,
         observe_allocations,
         stats: Stats::default(),
         #[cfg(feature = "trace")]
