@@ -10,3 +10,8 @@ dist/
 *.egg-info/
 result
 benchmark-results/
+crates/rcswx-wasm/pkg/
+examples/web/node_modules/
+examples/web/test-results/
+examples/web/playwright-report/
+examples/web/public/THIRD_PARTY_NOTICES
