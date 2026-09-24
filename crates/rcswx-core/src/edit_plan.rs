@@ -916,9 +916,20 @@ pub fn analyze_traced(
     if let Ok(plan) = &result {
         recorder.emit("plan", || {
             serde_json::json!({
-                "path_index":plan.path_index,"paths":plan.paths,"operations":plan.operations,
+                "path_index":plan.path_index,"paths":plan.paths.iter().map(|path|
+                    path.iter().map(|edit| {
+                        let mut value = serde_json::to_value(edit).expect("edit serialization is infallible");
+                        value["value"] = crate::trace::number(edit.value, false);
+                        value
+                    }).collect::<Vec<_>>()).collect::<Vec<_>>(),"operations":plan.operations,
                 "operations_unordered":plan.operations_unordered,"nontrivial":plan.nontrivial,
-                "distance":crate::trace::number(plan.distance,false),"stats":plan.stats
+                "distance":crate::trace::number(plan.distance,false),
+                // Native allocation-byte accounting depends on pointer width;
+                // keep it on EditPlan, not in portable computation recordings.
+                "stats": {
+                    "cells_created":plan.stats["cells_created"],"histories_created":plan.stats["histories_created"],
+                    "checkpoints":plan.stats["checkpoints"],"output_steps":plan.stats["output_steps"]
+                }
             })
         });
     }
@@ -932,7 +943,7 @@ fn analyze_internal(
     id: String,
     budget: &mut Budget<'_>,
     mut stage: Option<&mut dyn FnMut(&'static str, bool)>,
-    #[cfg(feature = "trace")] mut recorder: Option<&mut crate::trace::Recorder>,
+    #[cfg(feature = "trace")] recorder: Option<&mut crate::trace::Recorder>,
 ) -> Result<EditPlan> {
     let first_tokens = kernel_tokens(&prepared.first_tokens)?;
     let second_tokens = kernel_tokens(&prepared.second_tokens)?;
@@ -992,7 +1003,7 @@ fn analyze_internal(
             Ok(())
         };
         #[cfg(feature = "trace")]
-        if let Some(recorder) = recorder.as_deref_mut() {
+        if let Some(recorder) = recorder {
             recursive::align_traced(
                 &first_tokens,
                 &second_tokens,

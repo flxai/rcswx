@@ -487,6 +487,10 @@ impl Kernel<'_> {
                     previous,
                     len: original.len,
                 });
+                #[cfg(feature = "trace")]
+                if let Some(trace) = &mut kernel.trace {
+                    trace.history_clone(&original, &cloned);
+                }
                 memo.insert(Rc::as_ptr(&original) as usize, cloned);
             }
             Ok(memo[&key].clone())
@@ -565,6 +569,10 @@ impl Kernel<'_> {
                     value: source.value,
                     paths: cloned_paths,
                 }));
+                #[cfg(feature = "trace")]
+                if let Some(trace) = &mut self.trace {
+                    trace.cell_clone(original, &cloned);
+                }
                 cells.insert(key, cloned.clone());
                 cloned_row.push(cloned);
             }
