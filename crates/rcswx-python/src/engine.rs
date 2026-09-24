@@ -66,20 +66,35 @@ where
 {
     py.detach(move || {
         let mut callback_error = None;
-        let result = {
-            let mut check = || {
-                if let Some(callback) = &memory_check {
-                    match Python::attach(|py| {
-                        callback.call0(py).and_then(|value| value.is_truthy(py))
-                    }) {
-                        Ok(true) => Ok(()),
-                        Ok(false) => Err(Error::Memory),
-                        Err(error) => {
-                            callback_error = Some(error);
-                            Err(Error::Callback)
-                        }
+        let mut poll = || {
+            if let Some(callback) = &memory_check {
+                match Python::attach(|py| callback.call0(py).and_then(|value| value.is_truthy(py)))
+                {
+                    Ok(true) => Ok(()),
+                    Ok(false) => Err(Error::Memory),
+                    Err(error) => {
+                        callback_error = Some(error);
+                        Err(Error::Callback)
                     }
+                }
+            } else {
+                Ok(())
+            }
+        };
+        let result = {
+            // Core checkpoints account every unit of work/allocation. Host RSS
+            // polling is much more expensive: check initially, periodically,
+            // and before publishing success, not for every enumeration visit.
+            let mut until_poll = 0;
+            let mut check = || {
+                if memory_check.is_none() {
+                    return Ok(());
+                }
+                if until_poll == 0 {
+                    until_poll = 1023;
+                    poll()
                 } else {
+                    until_poll -= 1;
                     Ok(())
                 }
             };
@@ -92,6 +107,7 @@ where
             };
             operation(&mut budget)
         };
+        let result = result.and_then(|value| poll().map(|()| value));
         (result, callback_error)
     })
 }
