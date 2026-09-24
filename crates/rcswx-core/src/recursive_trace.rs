@@ -9,6 +9,7 @@ struct Identity<T> {
     id: usize,
     revision: usize,
     value: Value,
+    computed: bool,
 }
 pub(super) struct Observer<'a> {
     pub recorder: &'a mut Recorder,
@@ -66,6 +67,7 @@ impl<'a> Observer<'a> {
                         id,
                         revision: 0,
                         value: Value::Null,
+                        computed: false,
                     },
                 );
             }
@@ -85,6 +87,9 @@ impl<'a> Observer<'a> {
         last
     }
     pub fn cell(&mut self, cell: &CellRef) -> usize {
+        self.observe_cell(cell, false)
+    }
+    fn observe_cell(&mut self, cell: &CellRef, computed: bool) -> usize {
         if !self.active() {
             return 0;
         }
@@ -97,8 +102,6 @@ impl<'a> Observer<'a> {
         if !self.active() {
             return 0;
         }
-        let values = |v: &[f64]| v.iter().map(|&n| number(n, false)).collect::<Vec<_>>();
-        let value = json!({"value":number(data.value,data.value.is_nan() && data.paths.is_empty()),"top":values(&data.top),"left":values(&data.left),"corner":values(&data.corner),"histories":histories});
         let key = Rc::as_ptr(cell) as usize;
         let valid = self
             .cells
@@ -114,10 +117,15 @@ impl<'a> Observer<'a> {
                     id,
                     revision: 0,
                     value: Value::Null,
+                    computed: false,
                 },
             );
         }
         let entry = self.cells.get_mut(&key).unwrap();
+        entry.computed |= computed || !data.value.is_nan();
+        let values = |v: &[f64]| v.iter().map(|&n| number(n, false)).collect::<Vec<_>>();
+        let value = json!({"value":number(data.value,!entry.computed),"top":values(&data.top),
+            "left":values(&data.left),"corner":values(&data.corner),"histories":histories});
         if entry.value != value {
             let revision = entry.revision;
             entry.revision += 1;
@@ -185,7 +193,7 @@ impl<'a> Observer<'a> {
         .into_iter()
         .map(|(i, j)| cell(matrix, i, j).ok().map(|c| self.cell(&c)))
         .collect::<Vec<_>>();
-        let destination = self.cell(&matrix[i][j]);
+        let destination = self.observe_cell(&matrix[i][j], true);
         self.recorder.emit("computed",||json!({"subproblem":self.stack.last(),"i":i,"j":j,"cell":destination,"predecessors":predecessor}));
     }
     pub fn retained(&mut self, paths: &[Path]) {
@@ -198,6 +206,24 @@ impl<'a> Observer<'a> {
             .collect::<Vec<_>>();
         self.recorder
             .emit("retained_histories", || json!({"histories":ids}));
+    }
+    pub fn history_clone(&mut self, source: &Path, target: &Path) {
+        if !self.active() {
+            return;
+        }
+        let source = self.history(source);
+        let target = self.history(target);
+        self.recorder
+            .emit("history_clone", || json!({"source":source,"target":target}));
+    }
+    pub fn cell_clone(&mut self, source: &CellRef, target: &CellRef) {
+        if !self.active() {
+            return;
+        }
+        let source = self.cell(source);
+        let target = self.cell(target);
+        self.recorder
+            .emit("cell_clone", || json!({"source":source,"target":target}));
     }
 }
 /// Apply the exact same slice permutation as the token branch-order search.

@@ -246,3 +246,37 @@ fn synthesized_origins_follow_handles_and_baselines_are_repeatable() {
     assert!(a.origins[0].sources.iter().any(|s| s.parent == 1));
     assert!(a.origins[0].sources.iter().any(|s| s.parent == 2));
 }
+
+#[test]
+fn ties_retain_both_ordered_histories_and_tag_infinite_candidates() {
+    let prepared = prepare(
+        tree(json!(["sequential", ["relu"]])),
+        tree(json!(["sequential", ["sigmoid"]])),
+    )
+    .unwrap();
+    let mut recorder = Recorder::new(TraceLevel::Full, TraceLimits::default());
+    let plan =
+        with_budget(|budget| analyze_traced(prepared, false, "ties".into(), budget, &mut recorder))
+            .unwrap();
+    assert_eq!(plan.paths.len(), 2);
+    assert_eq!(plan.paths[0][1].op_type, "rem");
+    assert_eq!(plan.paths[1][1].op_type, "add_module");
+    let recording = recorder.finish();
+    let retained = recording
+        .events
+        .iter()
+        .find(|event| event.kind == "retained_histories")
+        .unwrap();
+    assert_eq!(retained.data["histories"].as_array().unwrap().len(), 2);
+    let terminal = recording
+        .events
+        .iter()
+        .filter(|event| event.kind == "cell")
+        .find(|event| event.data["value"]["histories"].as_array().unwrap().len() == 2)
+        .unwrap();
+    assert_eq!(terminal.data["value"]["value"], 2.0);
+    assert_eq!(
+        terminal.data["value"]["corner"][0]["state"],
+        "positive_infinity"
+    );
+}
