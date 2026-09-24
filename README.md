@@ -72,6 +72,13 @@ subsequent selection or application. Portable architectures are immutable.
 process RSS. `profile=True` enables diagnostic stage timings; leave it disabled
 for primary performance measurements.
 
+On legacy/PyTorch trees, the `Limiter`'s `memory_crossover` RSS guard remains
+host-side. Retained native operations poll it at their first checkpoint, every
+1,024 checkpoints thereafter, and before returning a successful native result.
+Work/output/allocation quotas still account every checkpoint in Rust; they are
+not throttled with host polling. RSS checks are sampled and can overshoot a
+threshold between polls, so they are not a hard process-memory ceiling.
+
 Native ChaCha12 sampling is the default. It is seeded through RCSWX and does
 not consume NumPy's global RNG; a structural seed never seeds PyTorch weight
 initialization. Select the historical numerical route explicitly with

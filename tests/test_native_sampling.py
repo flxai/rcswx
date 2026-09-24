@@ -115,3 +115,80 @@ def test_native_categorical_distribution_smoke():
         mask, _cost = _core.native_select(records, 0.0, _core.NativeRng(seed))
         selected += mask == "1"
     assert abs(selected - samples / 2) < 160
+
+
+def budgeted_choice_plan(count, **limits):
+    from rcswx import Alignment, Architecture
+
+    def tree(name, width):
+        if width == 1:
+            return ("computation", (name,))
+        middle = width // 2
+        return ("sequential", tree(name, middle), tree(name, width - middle))
+
+    return Alignment(
+        Architecture.from_tree(tree("relu", count)),
+        Architecture.from_tree(tree("sigmoid", count)),
+        limits=limits or None,
+    )._native
+
+
+def test_budgeted_enumeration_batches_host_checks_without_changing_choices():
+    plan = budgeted_choice_plan(12)
+    expected = plan.combinations()
+    calls = 0
+
+    def check():
+        nonlocal calls
+        calls += 1
+        return True
+
+    actual = plan.combinations(check)
+    assert actual == expected
+    assert len(actual[0]) == 4096
+    # Regression guard: an RSS query must not accompany every mask/tree visit.
+    assert 1 < calls <= 64
+
+
+def test_budgeted_enumeration_rejects_initial_host_memory_failure():
+    with pytest.raises(MemoryError):
+        budgeted_choice_plan(1).combinations(lambda: False)
+
+
+@pytest.mark.parametrize("count", [1, 12])
+def test_budgeted_enumeration_rechecks_memory_before_success(count):
+    plan = budgeted_choice_plan(count)
+    calls = 0
+
+    def check():
+        nonlocal calls
+        calls += 1
+        return calls < 2
+
+    # A short operation needs its final poll; a longer one needs periodic polls.
+    with pytest.raises(MemoryError):
+        plan.combinations(check)
+
+
+def test_budgeted_enumeration_preserves_host_exception():
+    # Without periodic polls, enumeration would hit its output quota instead.
+    plan = budgeted_choice_plan(12, max_output=1024)
+    failure = RuntimeError("host cancelled enumeration")
+    calls = 0
+
+    def check():
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise failure
+        return True
+
+    with pytest.raises(RuntimeError) as raised:
+        plan.combinations(check)
+    assert raised.value is failure
+
+
+def test_batched_host_polling_does_not_disable_native_output_limit():
+    plan = budgeted_choice_plan(12, max_output=1024)
+    with pytest.raises(MemoryError, match="output limit"):
+        plan.combinations(lambda: True)
