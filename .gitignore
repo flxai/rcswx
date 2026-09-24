@@ -10,6 +10,11 @@ dist/
 *.egg-info/
 result
 benchmark-results/
+crates/rcswx-wasm/pkg/
+examples/web/node_modules/
+examples/web/test-results/
+examples/web/playwright-report/
+examples/web/public/THIRD_PARTY_NOTICES
 # Purged artifacts stay outside versioned source.
 crates/rcswx-core/tests/fixtures/wavefront-oracle-v1.json
 examples/web/fixtures/recordings.json
