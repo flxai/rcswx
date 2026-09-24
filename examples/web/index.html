@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RCSWX — structural crossover explorer</title>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">Recursive Constrained Smith–Waterman crossover</p>
+        <h1>From alignment to offspring</h1>
+        <p>
+          Explore one algorithm from
+          <a href="https://openreview.net/forum?id=YK8HlgLJd7"
+            >Evolutionary Architecture Search through Grammar-Based Sequence
+            Alignment</a
+          >, not a reproduction of the paper’s experiments.
+        </p>
+        <p>
+          The slider starts at <strong>Parent 2</strong> and applies exact
+          cumulative prefixes toward <strong>Parent 1</strong>. These are
+          structural results, not executed or shape-validated models.
+        </p>
+      </header>
+      <section aria-label="Example and computation controls" class="toolbar">
+        <label
+          >Approved parent pair
+          <select id="pair" data-testid="pair"></select
+        ></label>
+        <div class="actions">
+          <button id="live" data-testid="live">Enable live computation</button
+          ><button id="cancel">Cancel shared worker</button
+          ><button id="export">Export recording</button>
+        </div>
+        <p id="description"></p>
+        <p id="status" role="status" data-testid="status">
+          Precomputed examples are available without WebAssembly; live
+          computation starts only when requested.
+        </p>
+        <p id="metrics" class="muted"></p>
+      </section>
+      <section aria-labelledby="parents-heading">
+        <h2 id="parents-heading">Prepared parents</h2>
+        <p class="muted">
+          Logical IDs may repeat; linked highlighting follows occurrences. Hover
+          or focus a node, token, or matrix cell.
+        </p>
+        <div class="parents">
+          <article>
+            <h3>Parent 2 · starting structure</h3>
+            <div id="parent2"></div>
+            <div id="tokens2" class="tokens" aria-label="Parent 2 tokens"></div>
+          </article>
+          <article>
+            <h3>Parent 1 · target structure</h3>
+            <div id="parent1"></div>
+            <div id="tokens1" class="tokens" aria-label="Parent 1 tokens"></div>
+          </article>
+        </div>
+      </section>
+      <section aria-labelledby="offspring-heading">
+        <h2 id="offspring-heading">Apply an edit prefix</h2>
+        <div class="slider-row">
+          <button id="previous" aria-label="Previous offspring step">
+            Previous</button
+          ><label class="slider-label"
+            ><span id="step-label" data-testid="step-label">Step 0 of 0</span
+            ><input
+              id="step"
+              data-testid="step"
+              type="range"
+              min="0"
+              max="0"
+              step="1"
+              value="0"
+              aria-label="Offspring step" /></label
+          ><button id="next" aria-label="Next offspring step">Next</button>
+        </div>
+        <p id="selection" data-testid="selection"></p>
+        <div id="child" data-testid="child"></div>
+        <details>
+          <summary>Application actions and source occurrences</summary>
+          <pre id="application"></pre>
+        </details>
+      </section>
+      <section aria-labelledby="recording-heading">
+        <h2 id="recording-heading">Replay the actual computation</h2>
+        <p>
+          The recording cursor explains computation order; it does not select
+          offspring edits. Shared cells, candidate histories and recursive
+          branch orders come from Rust observations.
+        </p>
+        <div class="toolbar">
+          <label
+            >Subproblem
+            <select id="subproblem" data-testid="subproblem"></select></label
+          ><button id="replay">Play recording</button
+          ><label class="slider-label"
+            ><span id="cursor-label"></span
+            ><input
+              id="cursor"
+              type="range"
+              min="0"
+              max="0"
+              step="1"
+              value="0"
+              aria-label="Recording event"
+          /></label>
+        </div>
+        <p id="trace-status"></p>
+        <div id="matrix" class="matrix" data-testid="matrix"></div>
+        <pre id="cell-details" aria-live="polite">
+Focus a matrix cell to inspect candidates and shared history identities.</pre>
+        <details open>
+          <summary>Complete selected raw path</summary>
+          <ol id="path"></ol>
+        </details>
+      </section>
+      <section aria-labelledby="sample-heading">
+        <h2 id="sample-heading">Sample separately</h2>
+        <p>
+          Sampling uses the native legality and probability law. Moving the
+          slider never consumes randomness.
+        </p>
+        <div class="toolbar">
+          <label
+            >Decimal seed
+            <input
+              id="seed"
+              value="42"
+              inputmode="numeric"
+              autocomplete="off" /></label
+          ><label
+            >Skewness
+            <input id="skewness" type="number" value="0" step="0.5" /></label
+          ><button id="sample" data-testid="sample" disabled>
+            Sample child
+          </button>
+        </div>
+        <p id="sample-status" role="status"></p>
+      </section>
+      <footer>
+        <p>
+          No inputs leave this page. No server, tensors or model training are
+          involved.
+          <a href="https://github.com/flxai/rcswx"
+            >Source and consumer documentation</a
+          >
+          · <a href="./THIRD_PARTY_NOTICES">Dependency notices</a>
+        </p>
+      </footer>
+      <noscript
+        ><p>
+          The interactive views require JavaScript. A cumulative prefix selects
+          the first k applicable edits from one retained path; empty selection
+          copies prepared Parent 2. Branch-order search may identify zero-cost
+          equivalences that are not ordered-tree equality, so only
+          endpoint-verified pairs are admitted here.
+        </p></noscript
+      >
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

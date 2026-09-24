@@ -146,15 +146,22 @@ make wheel
 RCSWX_WHEEL=dist/rcswx-0.1.0-...whl RCSWX_PYTHON=python3.12 make wheel-test
 ```
 
-The development-only WebAssembly gate compiles the core—not PyO3—for
-`wasm32-unknown-unknown` and executes its decode/analyze/full-history/apply,
-probability, seeded draw, and raw RNG-vector smoke in Node. It is not a browser
-binding or product.
+The Rust workspace also builds a reusable browser package and an interactive
+worker-owned example. It runs the existing core, with deterministic slider
+prefixes, seeded sampling, and bounded recordings of actual recursive alignment:
 
 ```sh
-make wasm-check
-make wasm-smoke
+nix develop
+make web-demo  # open the displayed /rcswx/ URL
+make web-test  # exact package in Chromium, Firefox, and WebKit
 ```
+
+See [WASM consumer contracts](docs/wasm.md) and the
+[standalone example](examples/web/README.md). The original development-only
+core gate remains separate: `make wasm-check` compiles the core—not PyO3—for
+`wasm32-unknown-unknown`, and `make wasm-smoke` executes its
+decode/analyze/full-history/apply, probability, seeded draw and raw RNG-vector
+smoke in Node.
 
 The workspace declares Rust 1.85 as its MSRV. The Nix shell pins Rust 1.85.0
 with the WASM target and supplies the local `wasm-bindgen-test-runner` and Node;

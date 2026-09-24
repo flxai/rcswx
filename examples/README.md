@@ -20,6 +20,7 @@ needs `rcswx[reference]`, but not Torch. The framework examples need `rcswx[torc
 | [torch_module_crossover.py](torch_module_crossover.py) | `torch` | Build, capture, and module-level crossover. |
 | [torch_converter.py](torch_converter.py) | `torch` | Register an exact `nn.Sequential` Linear/ReLU converter. |
 | [nix/flake.nix](nix/flake.nix) | `torch` | Add the Torch-enabled Nix variant to a consuming project. |
+| [web/](web/README.md) | tracked Nix/Node/WASM toolchain | Browser worker, exact edit-prefix slider, recorded recursive alignment, and seeded native sampling. |
 
 Keep `parents.py` beside the framework examples: they import its construction
 helpers. These scripts live in the repository; an installed wheel does not

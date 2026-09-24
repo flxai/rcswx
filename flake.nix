@@ -90,9 +90,23 @@
         alejandra
         ruff
         wasm-bindgen-cli
+        wasm-pack
+        playwright-driver.browsers
+        chromedriver
+        chromium
         nodejs
       ];
       LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [pkgs.stdenv.cc.cc.lib pkgs.zlib];
+      PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
+      PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
+      CHROMEDRIVER = "${pkgs.chromedriver}/bin/chromedriver";
+      WASM_BINDGEN_TEST_WEBDRIVER_JSON = pkgs.writeText "rcswx-webdriver.json" (builtins.toJSON {
+        "goog:chromeOptions" = {
+          binary = "${pkgs.chromium}/bin/chromium";
+          args = ["--no-sandbox"];
+        };
+      });
       UV_PYTHON_DOWNLOADS = "never";
       UV_PYTHON = "${pkgs.python314}/bin/python3";
     };
