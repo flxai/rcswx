@@ -42,6 +42,15 @@ def test_portable_tree_round_trip_uses_canonical_native_schema():
     assert Architecture.from_json(architecture.to_json()).to_dict() == encoded
 
 
+def test_public_json_constructor_still_rejects_invalid_structure():
+    cyclic = (
+        '{"schema":1,"grammar":"einspace","grammar_version":"1","root":0,'
+        '"nodes":[{"id":"0","name":"relu","children":[0]}]}'
+    )
+    with pytest.raises(ValueError):
+        Architecture.from_json(cyclic)
+
+
 def test_empty_plan_selection_starts_at_second_portable_parent():
     first = Architecture.from_tree(("identity",))
     second = Architecture.from_tree(("relu",))
