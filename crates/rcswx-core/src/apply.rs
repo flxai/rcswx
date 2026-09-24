@@ -1158,6 +1158,20 @@ impl<'a> Application<'a> {
             root: self.root,
         })
     }
+
+    fn materialization(self) -> Result<(Vec<Materialization>, usize)> {
+        self.plan.prepared.next_id = self.next_id.to_string();
+        let parent = &self.plan.prepared.second;
+        crate::architecture::validate_tree(
+            parent.schema,
+            &parent.grammar,
+            &parent.grammar_version,
+            self.root,
+            None,
+            |index| Ok(&self.get(index)?.node),
+        )?;
+        Ok((self.recipe, self.root))
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -1178,6 +1192,27 @@ pub fn apply(
     validate: bool,
     budget: &mut Budget<'_>,
 ) -> Result<ApplicationResult> {
+    apply_selection(plan, selected, validate, budget)?.result()
+}
+
+/// Apply edits for a legacy host without constructing a portable output arena.
+/// The reachable output is validated; returned handles belong to the recipe's
+/// object graph rather than a compact architecture node table.
+pub fn apply_materialization(
+    plan: &mut EditPlan,
+    selected: &[usize],
+    validate: bool,
+    budget: &mut Budget<'_>,
+) -> Result<(Vec<Materialization>, usize)> {
+    apply_selection(plan, selected, validate, budget)?.materialization()
+}
+
+fn apply_selection<'a>(
+    plan: &'a mut EditPlan,
+    selected: &[usize],
+    validate: bool,
+    budget: &mut Budget<'_>,
+) -> Result<Application<'a>> {
     if validate {
         plan.validate_selection(selected)?;
     }
@@ -1194,7 +1229,7 @@ pub fn apply(
     let mut application = Application::new(plan, budget)?;
     let mut performed = HashSet::new();
     application.apply_all(selected, &ids, &mut performed, budget)?;
-    application.result()
+    Ok(application)
 }
 
 #[cfg(test)]
@@ -1292,6 +1327,36 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["sequential", "identity", "relu"]
         );
+    }
+
+    #[test]
+    fn materialization_rejects_shared_output_occurrences() {
+        let first = architecture(vec![node("1", "identity", &[])]);
+        let second = architecture(vec![
+            node("9", "sequential", &[1, 2]),
+            node("10", "identity", &[]),
+            node("11", "relu", &[]),
+        ]);
+        let mut plan = plan(prepare(first, second).unwrap(), Vec::new());
+        let mut check = || Ok(());
+        let mut budget = Budget {
+            limits: Limits::default(),
+            work: 0,
+            output: 0,
+            allocation_bytes: 0,
+            check: &mut check,
+        };
+        let mut application = apply_selection(&mut plan, &[], true, &mut budget).unwrap();
+        let children = &mut application.nodes[application.root]
+            .as_mut()
+            .unwrap()
+            .node
+            .children;
+        children.push(children[0]);
+        assert!(matches!(
+            application.materialization(),
+            Err(Error::InvalidInput(_))
+        ));
     }
 
     #[test]

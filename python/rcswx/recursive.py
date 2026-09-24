@@ -608,8 +608,20 @@ class Alignment:
     def profile_json(self) -> str:
         return json.dumps(self.timings, sort_keys=True, separators=(",", ":"))
 
-    def _materialize(self, architecture_json: str, recipe_json: str, root_handle: int):
+    def _apply_selection(self, indices: Sequence[int], *, validate: bool):
+        memory_check = _memory_check(self.limiter)
         if self._first_legacy is None:
+            architecture_json, recipe_json, root_handle = self._native.apply(
+                indices, validate, memory_check
+            )
+        else:
+            architecture_json = None
+            recipe_json, root_handle = self._native.apply_legacy(indices, validate, memory_check)
+        return self._materialize(architecture_json, recipe_json, root_handle)
+
+    def _materialize(self, architecture_json: str | None, recipe_json: str, root_handle: int):
+        if self._first_legacy is None:
+            assert architecture_json is not None
             return Architecture._from_validated_json(architecture_json)
         assert self._second_legacy is not None
         started = perf_counter() if self.profile else None
@@ -622,10 +634,7 @@ class Alignment:
     def generate_offspring(self, selected_ops=None):
         self._ensure_fresh()
         indices = self._selection_indices(selected_ops, validate=False)
-        architecture_json, recipe_json, root_handle = self._native.apply(
-            indices, False, _memory_check(self.limiter)
-        )
-        return self._materialize(architecture_json, recipe_json, root_handle)
+        return self._apply_selection(indices, validate=False)
 
 
 def apply_edits(plan: Alignment, selection: Selection):
@@ -635,10 +644,7 @@ def apply_edits(plan: Alignment, selection: Selection):
     if selection._owner is not plan or selection.plan_id != plan.id:
         raise ValueError("selection belongs to another plan")
     plan._ensure_fresh()
-    architecture_json, recipe_json, root_handle = plan._native.apply(
-        selection.indices, True, _memory_check(plan.limiter)
-    )
-    return plan._materialize(architecture_json, recipe_json, root_handle)
+    return plan._apply_selection(selection.indices, validate=True)
 
 
 def _validate_raw_sampler(sampler, seed, rng) -> None:

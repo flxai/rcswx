@@ -65,6 +65,13 @@ class NativePlan:
         validate: bool = True,
         memory_check: Callable[[], bool] | None = None,
     ) -> tuple[str, str, int]: ...
+    # Return materialization recipe JSON and its root handle, without portable output.
+    def apply_legacy(
+        self,
+        selected: list[int],
+        validate: bool = True,
+        memory_check: Callable[[], bool] | None = None,
+    ) -> tuple[str, int]: ...
 
 def validate_architecture(text: str) -> str: ...
 def architecture_tokens(text: str) -> list[PreparedTokenRecord]: ...
