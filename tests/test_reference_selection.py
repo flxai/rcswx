@@ -63,12 +63,12 @@ def test_selector_outcome_and_rng_transition_including_failures(edits, skewness)
             after = state()
             np.random.seed(seed)
             with pytest.raises(expected_error):
-                select_operations(edits, skewness)
+                select_operations(edits, skewness, sampler="reference")
             assert state() == after == before
         else:
             after = state()
             np.random.seed(seed)
-            actual = select_operations(edits, skewness)
+            actual = select_operations(edits, skewness, sampler="reference")
             assert [op.id for op in actual] == [op.id for op in expected]
             assert state() == after
 

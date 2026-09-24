@@ -145,10 +145,90 @@ def test_ordered_ties_preserve_reference_edit_domain():
     assert len(native.nontrivial_ops) == 2
 
 
+def test_swap_reordering_retains_loop_state_from_restrictions():
+    descriptions = (
+        (
+            "branching(2)",
+            "group(2,2)",
+            (
+                "branching(2)",
+                "group(2,3)",
+                chain(["linear(32)"]),
+                routing(chain(["identity"]), "perm(0,1,3,2)"),
+                "cat(2,3)",
+            ),
+            chain(["linear(64)"]),
+            "cat(2,3)",
+        ),
+        (
+            "sequential",
+            chain(["linear(32)"]),
+            (
+                "sequential",
+                (
+                    "branching(2)",
+                    "group(2,2)",
+                    chain(["identity"]),
+                    chain(["relu"]),
+                    "cat(2,2)",
+                ),
+                chain(["linear(32)"]),
+            ),
+        ),
+    )
+    expected, _ = align_outcome(descriptions, False)
+    actual, _ = align_outcome(descriptions, True)
+    assert actual == expected
+
+
 @pytest.mark.parametrize(
     "descriptions",
     [CASES[index] for index in (0, 6, 7, 8, 9, 10, 11, 12)]
-    + [case.values[0] for case in BRANCH_BOUNDARY_CASES],
+    + [case.values[0] for case in BRANCH_BOUNDARY_CASES]
+    + [
+        pytest.param(
+            (
+                (
+                    "sequential",
+                    branching(2, chain(["identity"]), chain(["identity", "relu"])),
+                    chain(["sigmoid"]),
+                ),
+                branching(2, chain(["identity"]), chain(["identity", "relu"])),
+            ),
+            id="swapped-wrapper-depth-before-insertion",
+        ),
+        pytest.param(
+            (
+                (
+                    "sequential",
+                    branching(4, chain(["identity"])),
+                    chain(["norm", "relu"]),
+                ),
+                (
+                    "sequential",
+                    routing(chain(["relu"])),
+                    chain(["norm", "relu"]),
+                ),
+            ),
+            id="failed-prefix-split-preserves-effects",
+        ),
+        pytest.param(
+            (
+                (
+                    "sequential",
+                    routing(chain(["linear(16)"]), "perm(0,2,1,3)", "perm(0,1,3,2)"),
+                    (
+                        "branching(4)",
+                        "clone(4)",
+                        routing(chain(["pos_enc"]), "identity", "perm(0,2,1)"),
+                        "cat(4,2)",
+                    ),
+                ),
+                routing(chain(["linear(512)"]), "im2col(1,1,0)", "perm(0,2,1)"),
+            ),
+            id="nearest-wrapper-anchor-compares-both-parents",
+        ),
+    ],
 )
 def test_every_valid_tiny_selection_preserves_offspring_and_application_failures(descriptions):
     expected, reference = align_outcome(descriptions, False)
@@ -176,6 +256,42 @@ def test_every_valid_tiny_selection_preserves_offspring_and_application_failures
                 [op for bit, op in zip(mask, new.nontrivial_ops) if bit == "1"]
             )
             assert tree_record(actual_child) == tree_record(expected_child)
+
+
+@pytest.mark.parametrize(
+    "descriptions",
+    [
+        pytest.param(
+            (chain(["sigmoid", "relu"]), chain(["identity", "relu"])),
+            id="parent-child-list",
+        ),
+        pytest.param(
+            (
+                routing(chain(["relu"]), "perm(0,1,2)"),
+                routing(chain(["relu"]), "perm(0,2,1)"),
+            ),
+            id="wrapper-child-list",
+        ),
+    ],
+)
+def test_mutation_preserves_parent_child_list_aliases(descriptions):
+    observations = []
+    for owned in (False, True):
+        parents, guard = make_pair(descriptions, owned)
+        factory = Alignment if owned else load().algorithm.AlignmentMatrixRecursive
+        matrix = factory(*parents, limiter=guard)
+        matrix.model1.children_view = matrix.model1.children
+        matrix.model2.children_view = matrix.model2.children
+        child = matrix.generate_offspring(matrix.nontrivial_ops)
+        observations.append(
+            (
+                tree_record(child),
+                child.children_view is child.children,
+                tuple(map(tree_record, child.children_view)),
+            )
+        )
+    assert observations[0][1] is True
+    assert observations[1] == observations[0]
 
 
 def test_tiny_ordered_history_space():
@@ -210,8 +326,9 @@ def test_raw_crossover_ownership_edits_parent_effects_and_rng(descriptions):
             parents, guard = make_pair(descriptions, owned)
             np.random.seed(seed)
             try:
+                kwargs = {"sampler": "reference"} if owned else {}
                 child, selected, operations, distance1, distance2, between = function(
-                    *parents, limiter=guard
+                    *parents, limiter=guard, **kwargs
                 )
                 outcome = (
                     tree_record(child),
@@ -301,7 +418,7 @@ def test_distance_helper_fast_path_limiter_and_parent_effects(descriptions):
         function = distance if owned else load().algorithm.rcswx_distance
         try:
             result = function(*parents)
-            outcome = result, type(result).__name__
+            outcome = result
         except Exception as error:
             outcome = type(error).__name__
         outcomes.append((outcome, tuple(map(tree_record, parents))))

@@ -120,7 +120,11 @@ def test_validation_reconstructs_redraws_and_preserves_retry_boundary(right, cei
         try:
             if owned:
                 child, report = validated_crossover(
-                    *parents, rebuild=rebuild, batch_shape=guard.batch_shape, max_tries=max_tries
+                    *parents,
+                    rebuild=rebuild,
+                    batch_shape=guard.batch_shape,
+                    max_tries=max_tries,
+                    sampler="reference",
                 )
             else:
                 evolver.re_id = rebuild
@@ -171,7 +175,9 @@ def test_raw_failures_escape_the_inner_build_retry_handler(failure):
         expected = IndexError if failure == "fractional_selector" else MemoryError
         with pytest.raises(expected):
             if owned:
-                validated_crossover(*parents, rebuild=rebuild, batch_shape=guard.batch_shape)
+                validated_crossover(
+                    *parents, rebuild=rebuild, batch_shape=guard.batch_shape, sampler="reference"
+                )
             else:
                 evolver.re_id = rebuild
                 evolver.recursive_constrained_smith_waterman_crossover(*parents)
@@ -192,6 +198,7 @@ def test_python_rng_gate_and_no_crossover_alias(rate):
                 rebuild=sampler.re_id,
                 batch_shape=guard.batch_shape,
                 limiter=guard,
+                sampler="reference",
             )
         else:
             child, report = evolver.crossover(*parents)
@@ -223,7 +230,9 @@ def test_native_raw_operator_inside_unmodified_original_evolver(monkeypatch):
         )
         if native:
             monkeypatch.setattr(
-                load().evolution, "recursive_constrained_smith_waterman_crossover", raw_crossover
+                load().evolution,
+                "recursive_constrained_smith_waterman_crossover",
+                lambda *args, **kwargs: raw_crossover(*args, **kwargs, sampler="reference"),
             )
         child, ancestry = evolver.evolve(population)
         normalized = {
@@ -255,7 +264,10 @@ def test_outer_generation_reselects_and_saves_debug_parents(tmp_path):
             attempts.append(tuple(map(tree_record, parents)))
             if owned:
                 return validated_crossover(
-                    *parents, rebuild=sampler.re_id, batch_shape=guard.batch_shape
+                    *parents,
+                    rebuild=sampler.re_id,
+                    batch_shape=guard.batch_shape,
+                    sampler="reference",
                 )
             return evolver.recursive_constrained_smith_waterman_crossover(*parents)
 

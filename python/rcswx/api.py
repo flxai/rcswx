@@ -1,30 +1,38 @@
-"""Genotype-first alignment; no module inference or fixed output contract."""
+"""Framework-free public structural API."""
 
-from .limiter import Limiter
-from .recursive import Alignment
+from __future__ import annotations
+
+from .portable import Architecture
+from .recursive import Alignment, Selection, _same_raw_parent, apply_edits
 
 
-def edit_path(parent1, parent2, *, collapse_corners=False, limiter=None):
-    """Return ordered reference histories and dependency-bearing operations.
+def edit_path(
+    parent1, parent2, *, collapse_corners=False, limiter=None, profile=False, limits=None
+) -> Alignment:
+    """Return a retained native alignment plan for two portable or legacy trees.
 
-    The reference renumbers the second parent in place. This is not an immutable
-    canonical path and must not be cached across reconstruction or parent mutation.
+    Legacy preparation retains the reference-visible renumbering of the second
+    parent.  Portable values are immutable and have no host runtime dependency.
     """
-    if limiter is None:
-        limiter = parent1.limiter
-    return Alignment(parent1, parent2, collapse_corners=collapse_corners, limiter=limiter)
+    return Alignment(
+        parent1,
+        parent2,
+        collapse_corners=collapse_corners,
+        limiter=limiter,
+        profile=profile,
+        limits=limits,
+    )
 
 
 def distance(parent1, parent2):
-    """Match rcswx_distance's no-op shortcut and independently created limiter."""
-    if parent1.serialise() == parent2.serialise():
-        same = True
-        for op1, op2 in zip(parent1.serialise(), parent2.serialise()):
-            if op1.operation.name != op2.operation.name:
-                same = False
-                break
-        if same:
-            return 0
+    """Return the native structural distance, preserving the legacy no-op shortcut."""
+    if _same_raw_parent(parent1, parent2):
+        return 0
+    if isinstance(parent1, Architecture) or isinstance(parent2, Architecture):
+        return edit_path(parent1, parent2).distance
+    # Retain the historical independent limiter only on the legacy integration path.
+    from .limiter import Limiter
+
     limiter = Limiter(
         limits={
             "time": 60,
@@ -37,4 +45,7 @@ def distance(parent1, parent2):
             "batch_pass_seconds": 0.1,
         }
     )
-    return Alignment(parent1, parent2, limiter=limiter).distance
+    return edit_path(parent1, parent2, limiter=limiter).distance
+
+
+__all__ = ["Alignment", "Selection", "apply_edits", "distance", "edit_path"]

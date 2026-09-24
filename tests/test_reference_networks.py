@@ -79,7 +79,9 @@ def test_compound_alignment_and_raw_crossover_preserve_source_outcomes(name, rev
                     if owned
                     else reference.recursive_constrained_smith_waterman_crossover
                 )
-                child, selected, operations, *distances = crossover(*parents, limiter=guard)
+                child, selected, operations, *distances = crossover(
+                    *parents, limiter=guard, **({"sampler": "reference"} if owned else {})
+                )
                 result = (
                     tree_record(child),
                     tuple(map(operation_record, selected)),
@@ -113,6 +115,7 @@ def test_compound_validation_and_accepted_offspring_training_match_source(name, 
                     batch_shape=guard.batch_shape,
                     limiter=guard,
                     max_tries=3,
+                    sampler="reference",
                 )
             else:
                 child, report = builder.recursive_constrained_smith_waterman_crossover(

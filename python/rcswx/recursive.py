@@ -1,21 +1,31 @@
 # Derived from einsearch 7e713c7951397a6b12bd57638409774a74381746.
 # Copyright (c) 2024 Adri Gómez Martín, Felix Möller, Linus Ericsson, Aaron Klein.
 # Distributed under the MIT license; see LICENSE.einsearch.
-"""Lossless tree boundary and reference edit application around the native kernel."""
+"""Compatibility views over the native retained RCSWX edit plan.
+
+All structural preparation, alignment, dependency construction and application live
+in the Rust core.  This module deliberately only snapshots legacy derivation trees,
+exposes historical operation objects, and replays the core's declarative object
+materialization recipe.
+"""
+
+from __future__ import annotations
 
 import copy
-import time
-
-import numpy as np
-from termcolor import colored
+import json
+import secrets
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
+from time import perf_counter
+from typing import Any
 
 from . import _core
-from .genotype import DerivationTreeNode, Operation
-from .grammars import einspace
-from .sampling import select_operations
+from .portable import Architecture
 
 
 class MatrixOperation:
+    """Historical mutable-looking operation view backed by an immutable plan edit."""
+
     def __init__(
         self,
         op_id=None,
@@ -27,8 +37,8 @@ class MatrixOperation:
         ii=None,
         jj=None,
         value=0,
-        disabler_ops=[],
-        enabler_ops=[],
+        disabler_ops=None,
+        enabler_ops=None,
     ):
         self.id = op_id
         self.op_type = op_type
@@ -41,37 +51,22 @@ class MatrixOperation:
         self.value = value
         self.i_swapped = False
         self.j_swapped = False
-        self.disabler_ops = disabler_ops
-        self.enabler_ops = enabler_ops
+        self.disabler_ops = [] if disabler_ops is None else disabler_ops
+        self.enabler_ops = [] if enabler_ops is None else enabler_ops
 
     def __str__(self):
-        string = (
-            self.op_type + " (id: " + str(self.id) + ") with a cost of " + str(self.value) + ". "
-        )
-        if len(self.disabler_ops):
+        string = f"{self.op_type} (id: {self.id}) with a cost of {self.value}. "
+        if self.disabler_ops:
             string = string[:-2] + " (disabled by "
             for branch in self.disabler_ops:
-                if type(branch) is not list:
-                    branch = [branch]
-                for op in branch:
-                    string += str(op.id) + ", "
-            if string[-3:] == "by ":
-                string += "none, "
+                for op in branch if isinstance(branch, list) else [branch]:
+                    string += f"{op.id}, "
             string = string[:-2] + ")."
-        if len(self.enabler_ops):
-            string = (
-                string[:-2]
-                + " (" * (len(self.disabler_ops) == 0)
-                + "; " * (len(self.disabler_ops) > 0)
-                + "enabled by "
-            )
+        if self.enabler_ops:
+            string = string[:-2] + (" (" if not self.disabler_ops else "; ") + "enabled by "
             for branch in self.enabler_ops:
-                if type(branch) is not list:
-                    branch = [branch]
-                for op in branch:
-                    string += str(op.id) + ", "
-            if string[-3:] == "by ":
-                string += "none, "
+                for op in branch if isinstance(branch, list) else [branch]:
+                    string += f"{op.id}, "
             string = string[:-2] + ")."
         return string
 
@@ -82,1568 +77,621 @@ class MatrixOperation:
         return self.id == other.id
 
 
-class DecoyOperation:
-    def __init__(self, name):
+@dataclass(frozen=True, slots=True)
+class Selection:
+    """An explicitly plan-bound subset of selected-path operation occurrences."""
+
+    _owner: Alignment
+    _indices: tuple[int, ...]
+    _cost: float | None = None
+
+    @property
+    def plan_id(self) -> str:
+        return self._owner.id
+
+    @property
+    def indices(self) -> tuple[int, ...]:
+        return self._indices
+
+    @property
+    def operations(self) -> tuple[MatrixOperation, ...]:
+        return tuple(self._owner._operation_at(index) for index in self._indices)
+
+    @property
+    def cost(self) -> float:
+        if self._cost is not None and self._indices:
+            return self._cost
+        # The legacy raw result preserves Python's integer zero for an empty sum.
+        return sum(operation.value for operation in self.operations)
+
+
+class _PreparedOperation:
+    def __init__(self, name: str):
         self.name = name
 
 
-class DecoyNode:
-    def __init__(self, parent, branch, name):
-        self.parent = parent
-        self.operation = DecoyOperation(name)
-        self.children = []
-        if parent is None:
-            self.id = -1
-        else:
-            self.id = self.parent.id
+class _PreparedNode:
+    def __init__(self, identifier, name: str, children: list[str], parent_arity: int):
+        self.id = identifier
+        self.operation = _PreparedOperation(name)
+        self.children = children
+        self.parent_arity = parent_arity
+        self.parent = None
 
     def is_root(self):
         return self.parent is not None
 
     def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return self.id == other.id
-        else:
-            return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
+        return isinstance(other, _PreparedNode) and self.id == other.id
 
     def __str__(self):
-        return str(self.operation.name) + " (id " + str(self.id) + ")"
+        return f"{self.operation.name} (id {self.id})"
 
-    def __repr__(self):
-        return str(self)
+    __repr__ = __str__
+
+
+@dataclass(slots=True)
+class _LegacySnapshot:
+    root: object
+    nodes: tuple[object, ...]
+    architecture: Architecture
+    origins: tuple[int, ...]
+
+    @classmethod
+    def from_root(cls, root: object, origins: dict[int, int] | None = None) -> _LegacySnapshot:
+        occurrences: list[object] = []
+        records: list[dict[str, Any]] = []
+        if origins is None:
+            origins = {}
+
+        def append(node: object, ancestors: tuple[int, ...]) -> int:
+            marker = id(node)
+            if marker in ancestors:
+                raise ValueError("legacy trees must not contain parent/child cycles")
+            try:
+                name = node.operation.name
+                children = node.children
+                identifier = str(node.id)
+            except AttributeError as error:
+                raise TypeError("expected a legacy derivation tree") from error
+            index = len(occurrences)
+            occurrences.append(node)
+            records.append({})
+            origins.setdefault(marker, len(origins))
+            child_indices = [append(child, (*ancestors, marker)) for child in children]
+            records[index] = {
+                "id": identifier,
+                "name": name,
+                "children": child_indices,
+                "parameters": None,
+                "provenance": None,
+            }
+            return index
+
+        root_index = append(root, ())
+        return cls(
+            root,
+            tuple(occurrences),
+            Architecture.from_dict(
+                {
+                    "schema": 1,
+                    "grammar": "einspace",
+                    "grammar_version": "1",
+                    "root": root_index,
+                    "nodes": records,
+                    "input_spec": None,
+                }
+            ),
+            tuple(origins[id(node)] for node in occurrences),
+        )
+
+    def apply_parent2_ids(self, ids: Sequence[str]) -> None:
+        if len(ids) != len(self.nodes):
+            raise RuntimeError("native preparation returned the wrong parent2 ID count")
+        for node, identifier in zip(self.nodes, ids, strict=True):
+            # Reference preparation assigns Python integers, including arbitrary-width IDs.
+            node.id = int(identifier)
+        self.architecture = _LegacySnapshot.from_root(self.root).architecture
+
+    def fingerprint(self) -> tuple[tuple[int, str, str, tuple[int, ...]], ...]:
+        return tuple(
+            (
+                id(node),
+                str(node.id),
+                node.operation.name,
+                tuple(id(child) for child in node.children),
+            )
+            for node in self.nodes
+        )
+
+
+def _plan_id() -> str:
+    # Plan identity is not coupled to the structural selection RNG stream.
+    return secrets.token_hex(16)
+
+
+def _same_raw_parent(first: object, second: object) -> bool:
+    if isinstance(first, Architecture) or isinstance(second, Architecture):
+        if not isinstance(first, Architecture) or not isinstance(second, Architecture):
+            return False
+        return first == second
+    # Preserve the historic short-circuit's equality dispatch and operation-name check.
+    return first.serialise() == second.serialise() and all(
+        node1.operation.name == node2.operation.name
+        for node1, node2 in zip(first.serialise(), second.serialise(), strict=True)
+    )
+
+
+def _check_compatible_architectures(first: Architecture, second: Architecture) -> None:
+    left, right = first.to_dict(), second.to_dict()
+    if (left["grammar"], left["grammar_version"]) != (
+        right["grammar"],
+        right["grammar_version"],
+    ):
+        raise ValueError("portable parents must use the same grammar and grammar version")
+
+
+def _memory_check(limiter: object | None):
+    if limiter is None:
+        return None
+    return limiter.check_memory_crossover
+
+
+def _recipe_payload(event: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    if "kind" in event:
+        kind = event["kind"]
+        return kind, {key: value for key, value in event.items() if key != "kind"}
+    if len(event) != 1:
+        raise RuntimeError("invalid native materialization recipe event")
+    return next(iter(event.items()))
+
+
+def _make_sequence(template: object, parent: object | None, identifier: str) -> object:
+    """Construct the callback-bearing legacy sequence node requested by the recipe."""
+    # The legacy implementation has always used the einspace sequential constructor;
+    # importing it here keeps the framework-free structural path import-free.
+    from .genotype import DerivationTreeNode, Operation
+    from .grammars import einspace
+
+    return DerivationTreeNode(
+        int(identifier),
+        level=template.level,
+        parent=parent,
+        input_params=template.input_params,
+        depth=template.depth,
+        limiter=template.limiter,
+        operation=Operation(
+            name="sequential",
+            build=einspace.build_sequential_module,
+            infer=einspace.infer_sequential_module,
+            valid=einspace.valid_sequential_module,
+            inherit=[einspace.inherit_first_child, einspace.inherit_other_child],
+            give_back=[einspace.give_back_default, einspace.give_back_default],
+            type="nonterminal",
+            child_levels=["module", "module"],
+        ),
+    )
+
+
+def _replay_recipe(
+    first: _LegacySnapshot,
+    second: _LegacySnapshot,
+    recipe_json: str,
+    root_handle: int,
+) -> object:
+    """Replay native-selected links and copies without making topology decisions."""
+    handles: list[object | None] = [*first.nodes, *second.nodes]
+
+    def get(handle: int) -> object:
+        try:
+            value = handles[handle]
+        except IndexError as error:
+            raise RuntimeError("native materialization referenced an unknown handle") from error
+        if value is None:
+            raise RuntimeError("native materialization used an uninitialized handle")
+        return value
+
+    def put(handle: int, value: object) -> None:
+        if handle < 0:
+            raise RuntimeError("native materialization used a negative handle")
+        if handle >= len(handles):
+            handles.extend([None] * (handle + 1 - len(handles)))
+        handles[handle] = value
+
+    for encoded in json.loads(recipe_json):
+        kind, payload = _recipe_payload(encoded)
+        if kind == "deep_copy":
+            memo: dict[int, object] = {}
+            source = get(payload["source"])
+            clone = copy.deepcopy(source, memo)
+            for old, new in payload["mapping"]:
+                original = get(old)
+                copied = memo.get(id(original))
+                if copied is None:
+                    if old != payload["source"]:
+                        raise RuntimeError(
+                            "native deepcopy recipe omitted a reachable source object"
+                        )
+                    copied = clone
+                put(new, copied)
+        elif kind == "new_sequence":
+            parent = None if payload["parent"] is None else get(payload["parent"])
+            put(payload["node"], _make_sequence(get(payload["template"]), parent, payload["id"]))
+        elif kind == "set_children":
+            get(payload["node"]).children = [get(child) for child in payload["children"]]
+        elif kind == "replace_child":
+            get(payload["node"]).children[payload["index"]] = get(payload["child"])
+        elif kind == "set_parent":
+            get(payload["node"]).parent = (
+                None if payload["parent"] is None else get(payload["parent"])
+            )
+        elif kind == "set_id":
+            get(payload["node"]).id = int(payload["id"])
+        else:
+            raise RuntimeError(f"unknown native materialization recipe event {kind!r}")
+    return get(root_handle)
 
 
 class Alignment:
-    def __init__(self, parent1, parent2, collapse_corners=False, limiter=None):
+    """Retained native edit plan plus lazily materialized historical views."""
+
+    def __init__(
+        self, parent1, parent2, collapse_corners=False, limiter=None, profile=False, limits=None
+    ):
+        self.profile = profile
+        self.limits = limits
+        self._materialization_seconds = 0.0
         self.collapse_corners = collapse_corners
         self.verbose = False
         self.model1 = parent1
-        self.model_ops1 = [DecoyNode(None, None, "start_node")] + self.breakdown(parent1)
         self.model2 = parent2
-        self.new_node_id = max(node.id for node in parent1.serialise()) + 1
-        for node in parent2.serialise():
-            self.update_id(node)
-        self.model_ops2 = [DecoyNode(None, None, "start_node")] + self.breakdown(parent2)
-        self.limiter = limiter
-        self.operations = []
-        self.nontrivial_ops = []
-        identities = {}
-        original_ids = []
-
-        def identity(value):
-            if value not in identities:
-                identities[value] = len(original_ids)
-                original_ids.append(value)
-            return identities[value]
-
-        def snapshot(nodes):
-            return [
-                (
-                    identity(node.id),
-                    node.operation.name,
-                    [child.operation.name for child in node.children],
-                    len(node.parent.children) if node.parent is not None else 0,
-                )
-                for node in nodes
-            ]
-
-        first = snapshot(self.model_ops1)
-        second = snapshot(self.model_ops2)
-        started = time.perf_counter()
-        self.distance, paths, self.stats = _core.recursive_align(
-            first, second, collapse_corners, lambda: self.limiter.check_memory_crossover()
+        self.limiter = (
+            limiter if limiter is not None and not isinstance(parent1, Architecture) else None
         )
-        self.distance = 0 if len(first) == len(second) == 1 else np.float64(self.distance)
-        self.compute_time = time.perf_counter() - started
-        self.paths = []
-        for path in paths:
-            decoded = []
-            for ident, kind, node1, node2, i, j, value, i_swapped, j_swapped in path:
-                operation = MatrixOperation(
-                    op_id=ident,
-                    op_type=kind,
-                    node1_id=original_ids[node1] if node1 is not None else None,
-                    node2_id=original_ids[node2] if node2 is not None else None,
-                    i=i,
-                    j=j,
-                    value=0 if kind == "start" else np.float64(value),
-                )
-                operation.i_swapped = i_swapped
-                operation.j_swapped = j_swapped
-                decoded.append(operation)
-            self.paths.append(decoded)
-        self.calculate_restrictions()
+        self._first_legacy: _LegacySnapshot | None = None
+        self._second_legacy: _LegacySnapshot | None = None
+        if isinstance(parent1, Architecture) or isinstance(parent2, Architecture):
+            if not isinstance(parent1, Architecture) or not isinstance(parent2, Architecture):
+                raise TypeError("both parents must be portable Architectures or legacy trees")
+            _check_compatible_architectures(parent1, parent2)
+            first, second = parent1, parent2
+        else:
+            origins: dict[int, int] = {}
+            self._first_legacy = _LegacySnapshot.from_root(parent1, origins)
+            self._second_legacy = _LegacySnapshot.from_root(parent2, origins)
+            first, second = self._first_legacy.architecture, self._second_legacy.architecture
+            if self.limiter is None:
+                self.limiter = parent1.limiter
+        self._prepared = _core.prepare_architectures(
+            first.to_json(),
+            second.to_json(),
+            profile=profile,
+            limits=limits,
+            legacy_origins=(
+                None
+                if self._first_legacy is None
+                else (self._first_legacy.origins, self._second_legacy.origins)
+            ),
+        )
+        if self._second_legacy is not None:
+            # This effect intentionally occurs before native analysis, including failure paths.
+            self._second_legacy.apply_parent2_ids(self._prepared.parent2_ids)
+        self._native = self._prepared.analyze(
+            _plan_id(), collapse_corners, _memory_check(self.limiter)
+        )
+        self.id = self._native.id
+        self.distance = self._native.distance
+        self.stats = json.loads(self._native.stats_json())
+        self.compute_time = None
+        self._paths: list[list[MatrixOperation]] | None = None
+        self._selected_path: list[MatrixOperation] | None = None
+        self._model_ops1 = None
+        self._model_ops2 = None
+        self._selected_indices = tuple(self._native.operations)
+        self._unordered_indices = tuple(self._native.operations_unordered)
+        self._nontrivial_indices = tuple(self._native.nontrivial)
+        self._legacy_fingerprint = (
+            None
+            if self._first_legacy is None
+            else (self._first_legacy.fingerprint(), self._second_legacy.fingerprint())
+        )
+
+    def __deepcopy__(self, memo):
+        self._ensure_fresh()
+        result = type(self).__new__(type(self))
+        memo[id(self)] = result
+        result.__dict__.update(copy.deepcopy(self.__dict__, memo))
+        if result._first_legacy is not None:
+            result._legacy_fingerprint = (
+                result._first_legacy.fingerprint(),
+                result._second_legacy.fingerprint(),
+            )
+        return result
+
+    def _prepared_nodes(self, records, snapshot: _LegacySnapshot | None):
+        result = []
+        for identifier, name, children, parent_arity, occurrence in records:
+            if (
+                snapshot is not None
+                and occurrence is not None
+                and not name.startswith("wrap_")
+                and name != "start_node"
+            ):
+                result.append(snapshot.nodes[occurrence])
+            else:
+                external = int(identifier) if snapshot is not None else identifier
+                prepared = _PreparedNode(external, name, children, parent_arity)
+                if snapshot is not None and occurrence is not None:
+                    prepared.parent = snapshot.nodes[occurrence]
+                result.append(prepared)
+        return result
 
     def breakdown(self, node):
-        model_ops = []
-        if node.parent:
-            condition = "computation" not in node.parent.operation.name
-        else:
-            condition = True
-        if condition:
-            if "sequential" not in node.operation.name:
-                model_ops = [node]
-            if len(node.children) > 2:
-                for child in range(1, len(node.children) - 1):
-                    model_ops += self.breakdown(node.children[child])
-                    model_ops += [
-                        DecoyNode(
-                            node,
-                            child,
-                            "wrap_"
-                            + "end" * (child == len(node.children) - 2)
-                            + "sep" * (child != len(node.children) - 2),
-                        )
-                    ]
-            else:
-                for child in node.children:
-                    model_ops += self.breakdown(child)
-        return model_ops
+        """Return native boundary-token views without alignment or ID mutation."""
+        if isinstance(node, Architecture):
+            return self._prepared_nodes(_core.architecture_tokens(node.to_json()), None)[1:]
+        snapshot = _LegacySnapshot.from_root(node)
+        records = _core.architecture_tokens(snapshot.architecture.to_json())
+        return self._prepared_nodes(records, snapshot)[1:]
 
-    def update_id(self, node):
-        node.id = self.new_node_id
-        self.new_node_id += 1
-
-    def split_sequentials(self, original_node, split_id):
-        if split_id not in [n.id for n in original_node.serialise()]:
-            return original_node
-        parent_node = original_node.parent
-        if not original_node.is_root():
-            child_idx = parent_node.children.index(original_node)
-        nodes_list = original_node.children
-        sequential_in_list = True
-        while sequential_in_list:
-            sequential_in_list = False
-            for n, node in enumerate(nodes_list):
-                if node.operation.name == "sequential":
-                    sequential_in_list = True
-                    nodes_list = nodes_list[:n] + node.children + nodes_list[n + 1 :]
-                    break
-        for n, node in enumerate(nodes_list):
-            if node.id == split_id:
-                break
-        list1 = nodes_list[:n]
-        list2 = nodes_list[n:]
-        for _ in range(len(list1) - 1):
-            child2 = list1.pop()
-            child1 = list1.pop()
-            list1 += [
-                DerivationTreeNode(
-                    0,
-                    level=node.level,
-                    parent=node.parent,
-                    input_params=node.input_params,
-                    depth=node.depth,
-                    limiter=node.limiter,
-                    operation=Operation(
-                        name="sequential",
-                        build=einspace.build_sequential_module,
-                        infer=einspace.infer_sequential_module,
-                        valid=einspace.valid_sequential_module,
-                        inherit=[einspace.inherit_first_child, einspace.inherit_other_child],
-                        give_back=[einspace.give_back_default, einspace.give_back_default],
-                        type="nonterminal",
-                        child_levels=["module", "module"],
-                    ),
-                )
-            ]
-            self.update_id(list1[-1])
-            list1[-1].children = [child1, child2]
-            child1.parent = list1[-1]
-            child2.parent = list1[-1]
-        for _ in range(len(list2) - 1):
-            child2 = list2.pop()
-            child1 = list2.pop()
-            list2 += [
-                DerivationTreeNode(
-                    0,
-                    level=node.level,
-                    parent=node.parent,
-                    input_params=node.input_params,
-                    depth=node.depth,
-                    limiter=node.limiter,
-                    operation=Operation(
-                        name="sequential",
-                        build=einspace.build_sequential_module,
-                        infer=einspace.infer_sequential_module,
-                        valid=einspace.valid_sequential_module,
-                        inherit=[einspace.inherit_first_child, einspace.inherit_other_child],
-                        give_back=[einspace.give_back_default, einspace.give_back_default],
-                        type="nonterminal",
-                        child_levels=["module", "module"],
-                    ),
-                )
-            ]
-            self.update_id(list2[-1])
-            list2[-1].children = [child1, child2]
-            child1.parent = list2[-1]
-            child2.parent = list2[-1]
-        if len(list2):
-            resequentialized_node = DerivationTreeNode(
-                0,
-                level=node.level,
-                parent=node.parent,
-                input_params=node.input_params,
-                depth=node.depth,
-                limiter=node.limiter,
-                operation=Operation(
-                    name="sequential",
-                    build=einspace.build_sequential_module,
-                    infer=einspace.infer_sequential_module,
-                    valid=einspace.valid_sequential_module,
-                    inherit=[einspace.inherit_first_child, einspace.inherit_other_child],
-                    give_back=[einspace.give_back_default, einspace.give_back_default],
-                    type="nonterminal",
-                    child_levels=["module", "module"],
-                ),
+    @property
+    def model_ops1(self):
+        if self._model_ops1 is None:
+            self._model_ops1 = self._prepared_nodes(
+                self._prepared.first_tokens(), self._first_legacy
             )
-            self.update_id(resequentialized_node)
-            resequentialized_node.children = [list1[0], list2[0]]
-            list1[0].parent = resequentialized_node
-            list2[0].parent = resequentialized_node
-        else:
-            raise Exception("Unable to resequentialize as requested")
-        if not original_node.is_root():
-            parent_node.children[child_idx] = resequentialized_node
-        resequentialized_node.parent = parent_node
-        return resequentialized_node
+        return self._model_ops1
 
-    def calculate_restrictions(self, path_n=0):
-        path_idxs = [path_idx for path_idx in range(len(self.paths))]
-        ids1 = [node.id for node in self.model_ops1]
-        ids2 = [node.id for node in self.model_ops2]
-        for path_idx in path_idxs:
-            operations = copy.deepcopy(self.paths[path_idx])
-            for idx, op in enumerate(operations):
-                if "wrap_end" in op.op_type:
-                    if ("add" in op.op_type or "mut" in op.op_type) and len(
-                        self.model_ops1[ids1.index(op.node1_id)].children
-                    ) == 4:
-                        i_ops = [
-                            in_op
-                            for in_op in operations
-                            if in_op.op_type[:3] == op.op_type[:3] and in_op.node1_id == op.node1_id
-                        ]
-                        for i_op in i_ops:
-                            i_op.i_swapped = op.i_swapped
-                        i = [i_op.i for i_op in i_ops]
-                        if op.i_swapped:
-                            for inside_op in operations:
-                                if inside_op.i >= i[0] and inside_op.i < i[1]:
-                                    inside_op.i += i[2] - i[1]
-                                elif inside_op.i >= i[1] and inside_op.i < i[2]:
-                                    inside_op.i -= i[1] - i[0]
-            for idx, op in enumerate(operations):
-                if "wrap_end" in op.op_type:
-                    if ("rem" in op.op_type or "mut" in op.op_type) and len(
-                        self.model_ops2[ids2.index(op.node2_id)].children
-                    ) == 4:
-                        j_ops = [
-                            j_op
-                            for j_op in operations
-                            if j_op.op_type[:3] == op.op_type[:3] and j_op.node2_id == op.node2_id
-                        ]
-                        for j_op in j_ops:
-                            j_op.j_swapped = op.j_swapped
-                        j = [j_op.j for j_op in j_ops]
-                        if op.j_swapped:
-                            for inside_op in operations:
-                                if inside_op.j >= j[0] and inside_op.j < j[1]:
-                                    inside_op.j += j[2] - j[1]
-                                elif inside_op.j >= j[1] and inside_op.j < j[2]:
-                                    inside_op.j -= j[1] - j[0]
-            for idx, op in enumerate(operations):
-                if "add" in op.op_type:
-                    if len(self.model_ops1[op.i].children) == 4:
-                        for sep_idx, sep_operation in enumerate(operations[idx + 1 :]):
-                            if (
-                                "add_wrap" in sep_operation.op_type
-                                and self.model_ops1[sep_operation.i].id == self.model_ops1[op.i].id
-                            ):
-                                break
-                        sep_idx += idx + 1
-                        end_idx = 0
-                        for end_idx, end_operation in enumerate(operations[sep_idx + 1 :]):
-                            if (
-                                end_operation.op_type == "add_wrap_end"
-                                and self.model_ops1[end_operation.i].id == self.model_ops1[op.i].id
-                            ):
-                                break
-                        end_idx += sep_idx + 1
-                        disabler_ops = []
-                        enabler_ops = []
-                        adds = [[], []]
-                        muts = [[], []]
-                        rems = [[], []]
-                        for inside_op in operations[idx : sep_idx + 1]:
-                            if "wrap" not in inside_op.op_type:
-                                if "add" in inside_op.op_type:
-                                    adds[0] += [inside_op]
-                                if "mut" in inside_op.op_type:
-                                    muts[0] += [inside_op]
-                                if "rem" in inside_op.op_type:
-                                    rems[0] += [inside_op]
-                        if not len(muts[0]):
-                            for rem_op in rems[0]:
-                                rem_op.enabler_ops = rem_op.enabler_ops + adds[0]
-                                rem_op.disabler_ops = rem_op.disabler_ops + [
-                                    rem_op2 for rem_op2 in rems[0] if rem_op2 != rem_op
-                                ]
-                            disabler_ops = disabler_ops + [rems[0]]
-                            enabler_ops = enabler_ops + [adds[0] * len(rems[0])]
-                        for inside_op in operations[sep_idx + 1 : end_idx]:
-                            if "wrap" not in inside_op.op_type:
-                                if "add" in inside_op.op_type:
-                                    adds[1] += [inside_op]
-                                if "mut" in inside_op.op_type:
-                                    muts[1] += [inside_op]
-                                if "rem" in inside_op.op_type:
-                                    rems[1] += [inside_op]
-                        if not len(muts[1]):
-                            for rem_op in rems[1]:
-                                rem_op.enabler_ops = rem_op.enabler_ops + adds[1]
-                                rem_op.disabler_ops = rem_op.disabler_ops + [
-                                    rem_op2 for rem_op2 in rems[1] if rem_op2 != rem_op
-                                ]
-                            disabler_ops = disabler_ops + [rems[1]]
-                            enabler_ops = enabler_ops + [adds[1] * len(rems[1])]
-                        op.disabler_ops = disabler_ops
-                        op.enabler_ops = enabler_ops
-                        if (
-                            len(adds[0])
-                            and (not len(rems[0]))
-                            and (not len(muts[0]))
-                            or (len(adds[1]) and (not len(rems[1])) and (not len(muts[1])))
-                        ):
-                            op.disabler_ops = op.disabler_ops + [[op], [op]]
-                            op.enabler_ops = op.enabler_ops + adds
-                    elif len(self.model_ops1[op.i].children) == 3:
-                        for end_idx, end_operation in enumerate(operations[idx:]):
-                            if (
-                                end_operation.op_type == "add_wrap_end"
-                                and self.model_ops1[end_operation.i].id == self.model_ops1[op.i].id
-                            ):
-                                break
-                        end_idx += idx
-                        disabler_ops = []
-                        enabler_ops = []
-                        adds = []
-                        muts = []
-                        rems = []
-                        for inside_op in operations[idx : end_idx + 1]:
-                            if "wrap" not in inside_op.op_type:
-                                if "add" in inside_op.op_type:
-                                    adds += [inside_op]
-                                if "mut" in inside_op.op_type:
-                                    muts += [inside_op]
-                                if "rem" in inside_op.op_type:
-                                    rems += [inside_op]
-                        if not len(muts):
-                            for rem_op in rems:
-                                rem_op.enabler_ops = rem_op.enabler_ops + adds
-                                rem_op.disabler_ops = rem_op.disabler_ops + [
-                                    rem_op2 for rem_op2 in rems if rem_op2 != rem_op
-                                ]
-                            disabler_ops = disabler_ops + rems
-                            enabler_ops = enabler_ops + adds * len(rems)
-                        op.ii = end_operation.i
-                        op.jj = end_operation.j
-                        op.disabler_ops = disabler_ops
-                        op.enabler_ops = enabler_ops
-                        if len(adds) and (not len(rems)) and (not len(muts)):
-                            op.disabler_ops = op.disabler_ops + [op]
-                            op.enabler_ops = op.enabler_ops + adds
-                elif "rem" in op.op_type:
-                    if len(self.model_ops2[op.j].children) == 3:
-                        for end_idx, end_operation in enumerate(operations[idx:]):
-                            if (
-                                end_operation.op_type == "rem_wrap_end"
-                                and self.model_ops2[end_operation.j].id == self.model_ops2[op.j].id
-                            ):
-                                break
-                        end_idx += idx
-                        adds = []
-                        muts = []
-                        rems = []
-                        for inside_op in operations[idx : end_idx + 1]:
-                            if "wrap" not in inside_op.op_type:
-                                if "add" in inside_op.op_type:
-                                    adds += [inside_op]
-                                if "mut" in inside_op.op_type:
-                                    muts += [inside_op]
-                                if "rem" in inside_op.op_type:
-                                    rems += [inside_op]
-                        if not len(muts):
-                            for rem_op in rems:
-                                rem_op.disabler_ops = rem_op.disabler_ops + rems
-                                rem_op.enabler_ops = rem_op.enabler_ops + adds + [op]
-                    elif len(self.model_ops2[op.j].children) == 4:
-                        for sep_idx, sep_operation in enumerate(operations[idx + 1 :]):
-                            if (
-                                "rem_wrap" in sep_operation.op_type
-                                and self.model_ops2[sep_operation.j].id == self.model_ops2[op.j].id
-                            ):
-                                break
-                        sep_idx += idx + 1
-                        end_idx = 0
-                        for end_idx, end_operation in enumerate(operations[sep_idx + 1 :]):
-                            if (
-                                end_operation.op_type == "rem_wrap_end"
-                                and self.model_ops2[end_operation.j].id == self.model_ops2[op.j].id
-                            ):
-                                break
-                        end_idx += sep_idx + 1
-                        adds = [[], []]
-                        muts = [[], []]
-                        rems = [[], []]
-                        for inside_op in operations[idx : sep_idx + 1]:
-                            if "wrap" not in inside_op.op_type:
-                                if "add" in inside_op.op_type:
-                                    adds[0] += [inside_op]
-                                if "mut" in inside_op.op_type:
-                                    muts[0] += [inside_op]
-                                if "rem" in inside_op.op_type:
-                                    rems[0] += [inside_op]
-                        if not len(muts[0]):
-                            for rem_op in rems[0]:
-                                rem_op.disabler_ops = rem_op.disabler_ops + rems[0]
-                                rem_op.enabler_ops = rem_op.enabler_ops + adds[0] + [op]
-                        for inside_op in operations[sep_idx + 1 : end_idx]:
-                            if "wrap" not in inside_op.op_type:
-                                if "add" in inside_op.op_type:
-                                    adds[1] += [inside_op]
-                                if "mut" in inside_op.op_type:
-                                    muts[1] += [inside_op]
-                                if "rem" in inside_op.op_type:
-                                    rems[1] += [inside_op]
-                        if not len(muts[1]):
-                            for rem_op in rems[1]:
-                                rem_op.disabler_ops = rem_op.disabler_ops + rems[1]
-                                rem_op.enabler_ops = rem_op.enabler_ops + adds[1] + [op]
-            self.paths[path_idx] = operations
-            if path_idx == path_n:
-                self.operations = operations[1:]
-        self.operations_unordered = self.operations.copy()
-        for idx, op in enumerate(self.operations):
-            if (
-                "add" in op.op_type
-                and (
-                    len(self.model_ops1[op.i].children) == 4
-                    or "sep" in self.model_ops1[op.i].operation.name
+    @property
+    def model_ops2(self):
+        if self._model_ops2 is None:
+            self._model_ops2 = self._prepared_nodes(
+                self._prepared.second_tokens(), self._second_legacy
+            )
+        return self._model_ops2
+
+    def _decode_path(self, encoded: list[dict[str, Any]]) -> list[MatrixOperation]:
+        def external_id(value):
+            return int(value) if value is not None and self._first_legacy is not None else value
+
+        operations = [
+            MatrixOperation(
+                op_id=item["id"],
+                op_type=item["op_type"],
+                node1_id=external_id(item["node1_id"]),
+                node2_id=external_id(item["node2_id"]),
+                i=item["i"],
+                j=item["j"],
+                ii=item.get("ii"),
+                jj=item.get("jj"),
+                value=item["value"],
+            )
+            for item in encoded
+        ]
+        for operation, item in zip(operations, encoded, strict=True):
+            operation.i_swapped = item["i_swapped"]
+            operation.j_swapped = item["j_swapped"]
+            operation.enabler_ops = [
+                operations[value]
+                if isinstance(value, int)
+                else [operations[index] for index in value]
+                for value in item["enabler_ops"]
+            ]
+            operation.disabler_ops = [
+                operations[value]
+                if isinstance(value, int)
+                else [operations[index] for index in value]
+                for value in item["disabler_ops"]
+            ]
+        return operations
+
+    @property
+    def paths(self) -> list[list[MatrixOperation]]:
+        if self._paths is None:
+            paths = [self._decode_path(path) for path in json.loads(self._native.paths_json())]
+            if self._selected_path is None:
+                self._selected_path = paths[self._native.path_index]
+            else:
+                paths[self._native.path_index] = self._selected_path
+            self._paths = paths
+        return self._paths
+
+    def _current_path(self) -> list[MatrixOperation]:
+        if self._selected_path is None:
+            if self._paths is not None:
+                self._selected_path = self._paths[self._native.path_index]
+            else:
+                self._selected_path = self._decode_path(
+                    json.loads(self._native.selected_path_json())
                 )
-                and op.i_swapped
-            ):
-                for sep_idx, sep_operation in enumerate(self.operations[idx + 1 :]):
-                    if (
-                        "add" in sep_operation.op_type
-                        and self.model_ops1[sep_operation.i].id == self.model_ops1[op.i].id
-                    ):
-                        break
-                sep_idx += idx + 1
-                end_idx = 0
-                for end_idx, end_operation in enumerate(self.operations[sep_idx + 1 :]):
-                    if (
-                        "add" in end_operation.op_type
-                        and self.model_ops1[end_operation.i].id == self.model_ops1[op.i].id
-                    ):
-                        break
-                end_idx += sep_idx + 1
-                if (
-                    self.model_ops1[sep_operation.i].id == self.model_ops1[op.i].id
-                    and self.model_ops1[end_operation.i].id == self.model_ops1[op.i].id
-                ):
-                    self.operations = (
-                        self.operations[: idx + 1]
-                        + self.operations[sep_idx:end_idx]
-                        + self.operations[idx + 1 : sep_idx]
-                        + self.operations[end_idx:]
-                    )
-            elif (
-                "rem" in op.op_type
-                and (
-                    len(self.model_ops2[op.j].children) == 4
-                    or "sep" in self.model_ops2[op.j].operation.name
+        return self._selected_path
+
+    @property
+    def operations(self) -> list[MatrixOperation]:
+        path = self._current_path()
+        return [path[index] for index in self._selected_indices]
+
+    @property
+    def operations_unordered(self) -> list[MatrixOperation]:
+        path = self._current_path()
+        return [path[index] for index in self._unordered_indices]
+
+    @property
+    def nontrivial_ops(self) -> list[MatrixOperation]:
+        path = self._current_path()
+        return [path[index] for index in self._nontrivial_indices]
+
+    def _operation_at(self, index: int) -> MatrixOperation:
+        return self._current_path()[index]
+
+    def _ensure_fresh(self) -> None:
+        if self._legacy_fingerprint is None:
+            return
+        assert self._first_legacy is not None and self._second_legacy is not None
+        current = (self._first_legacy.fingerprint(), self._second_legacy.fingerprint())
+        if current != self._legacy_fingerprint:
+            raise ValueError("legacy parents changed after this alignment was prepared")
+
+    def select(self, indices_or_mask: Sequence[int] | str) -> Selection:
+        self._ensure_fresh()
+        if isinstance(indices_or_mask, str):
+            if len(indices_or_mask) != len(self._nontrivial_indices) or set(indices_or_mask) - {
+                "0",
+                "1",
+            }:
+                raise ValueError("selection mask must match the plan's nontrivial operations")
+            indices = tuple(
+                index
+                for bit, index in zip(indices_or_mask, self._nontrivial_indices, strict=True)
+                if bit == "1"
+            )
+        else:
+            indices = tuple(indices_or_mask)
+            if any(not isinstance(index, int) or isinstance(index, bool) for index in indices):
+                raise TypeError("selection indices must be integers")
+        self._native.validate_selection(indices)
+        return Selection(self, indices)
+
+    def probabilities(self, skewness=0):
+        """Return native enumeration-order masks, costs, and probabilities."""
+        self._ensure_fresh()
+        return self._native.probabilities(float(skewness), _memory_check(self.limiter))
+
+    def sample(self, skewness=0, *, sampler="native", seed=None, rng=None) -> Selection:
+        self._ensure_fresh()
+        if sampler == "native":
+            from .sampling import resolve_rng
+
+            stream = resolve_rng(sampler, seed, rng)
+            mask, cost = self._native.sample(float(skewness), stream, _memory_check(self.limiter))
+            return Selection(self, self.select(mask).indices, float(cost))
+        if sampler == "reference":
+            from .sampling import resolve_rng
+            from .sampling_reference import select_mask
+
+            resolve_rng(sampler, seed, rng)
+            masks, costs = self._native.combinations(_memory_check(self.limiter))
+            return self.select(select_mask(masks, costs, float(skewness)))
+        raise ValueError("sampler must be 'native' or 'reference'")
+
+    def _selection_indices(self, selected_ops: object, *, validate: bool) -> tuple[int, ...]:
+        if isinstance(selected_ops, Selection):
+            if selected_ops._owner is not self or selected_ops.plan_id != self.id:
+                raise ValueError("selection belongs to another plan")
+            return selected_ops.indices
+        if selected_ops is None:
+            return self._nontrivial_indices
+        if not isinstance(selected_ops, Iterable):
+            raise TypeError("selected operations must be a plan Selection or iterable")
+        # Compatibility API: map equality-by-logical-ID legacy operation objects to this plan.
+        remaining = list(self._selected_indices)
+        result: list[int] = []
+        for selected in selected_ops:
+            try:
+                position = next(
+                    number
+                    for number, index in enumerate(remaining)
+                    if self._operation_at(index).id == selected.id
                 )
-                and op.j_swapped
-            ):
-                for sep_idx, sep_operation in enumerate(self.operations[idx + 1 :]):
-                    if (
-                        "rem" in sep_operation.op_type
-                        and self.model_ops2[sep_operation.j].id == self.model_ops2[op.j].id
-                    ):
-                        break
-                sep_idx += idx + 1
-                end_idx = 0
-                for end_idx, end_operation in enumerate(self.operations[sep_idx + 1 :]):
-                    if (
-                        "rem" in end_operation.op_type
-                        and self.model_ops2[end_operation.j].id == self.model_ops2[op.j].id
-                    ):
-                        break
-                end_idx += sep_idx + 1
-                if (
-                    self.model_ops2[sep_operation.j].id == self.model_ops2[op.j].id
-                    and self.model_ops2[end_operation.j].id == self.model_ops2[op.j].id
-                ):
-                    self.operations = (
-                        self.operations[: idx + 1]
-                        + self.operations[sep_idx:end_idx]
-                        + self.operations[idx + 1 : sep_idx]
-                        + self.operations[end_idx:]
-                    )
-            elif (
-                "mut" in op.op_type
-                and (
-                    len(self.model_ops1[op.i].children) == 4
-                    or "sep" in self.model_ops1[op.i].operation.name
-                )
-                and (op.i_swapped or op.j_swapped)
-            ):
-                for sep_idx, sep_operation in enumerate(self.operations[idx + 1 :]):
-                    if self.model_ops1[sep_operation.i].id == self.model_ops1[op.i].id:
-                        break
-                sep_idx += idx + 1
-                for end_idx, end_operation in enumerate(self.operations[sep_idx + 1 :]):
-                    if self.model_ops1[end_operation.i].id == self.model_ops1[op.i].id:
-                        break
-                end_idx += sep_idx + 1
-                if (
-                    self.model_ops1[sep_operation.i].id == self.model_ops1[op.i].id
-                    and self.model_ops1[end_operation.i].id == self.model_ops1[op.i].id
-                ):
-                    self.operations = (
-                        self.operations[: idx + 1]
-                        + self.operations[sep_idx:end_idx]
-                        + self.operations[idx + 1 : sep_idx]
-                        + self.operations[end_idx:]
-                    )
-        self.operations.reverse()
-        self.nontrivial_ops = [operation for operation in self.operations if operation.value]
+            except (AttributeError, StopIteration) as error:
+                raise ValueError("selected operation does not belong to this plan") from error
+            result.append(remaining.pop(position))
+        return tuple(result)
+
+    @property
+    def timings(self) -> dict[str, float]:
+        if not self.profile:
+            return {}
+        values = json.loads(self._native.profile_json())
+        values["materialization"] = self._materialization_seconds
+        return values
+
+    def profile_json(self) -> str:
+        return json.dumps(self.timings, sort_keys=True, separators=(",", ":"))
+
+    def _materialize(self, architecture_json: str, recipe_json: str, root_handle: int):
+        if self._first_legacy is None:
+            return Architecture.from_json(architecture_json)
+        assert self._second_legacy is not None
+        started = perf_counter() if self.profile else None
+        try:
+            return _replay_recipe(self._first_legacy, self._second_legacy, recipe_json, root_handle)
+        finally:
+            if started is not None:
+                self._materialization_seconds += perf_counter() - started
 
     def generate_offspring(self, selected_ops=None):
-        if selected_ops == None:
-            selected_ops = self.nontrivial_ops
-        if self.verbose:
-            print(
-                ">>>Parent model 1\n",
-                colored(self.model2, "red"),
-                "\n>>>Parent model 2\n",
-                colored(self.model1, "green"),
-                "\n",
-            )
-        self.performed_ops = []
-        offspring = self.apply_all_operations(selected_ops, copy.deepcopy(self.model2))
-        if self.verbose:
-            print(">>>Final model\n", colored(offspring, "yellow"))
-        return offspring
-
-    def apply_all_operations(self, selected_ops, offspring):
-        for op in selected_ops:
-            if len(op.enabler_ops):
-                if type(op.enabler_ops) is list and (op.i_swapped or op.j_swapped):
-                    op.enabler_ops.reverse()
-                for branch in op.enabler_ops:
-                    if type(branch) is not list:
-                        branch = [branch]
-                    offspring = self.apply_all_operations(
-                        [r_op for r_op in branch if r_op in selected_ops], offspring
-                    )
-            offspring = self.apply_op(op, offspring)
-        return offspring
-
-    def apply_op(self, op, offspring):
-        if op.id not in self.performed_ops:
-            self.performed_ops += [op.id]
-            if "mut" in op.op_type:
-                for node in self.model_ops1:
-                    if node.id == self.model_ops1[op.i].id:
-                        node1 = copy.deepcopy(node)
-                        break
-                for node in offspring.serialise():
-                    if node.id == self.model_ops2[op.j].id or node.id == self.model_ops1[op.i].id:
-                        node2 = copy.deepcopy(node)
-                        break
-                if not node1.id == self.model_ops1[op.i].id or (
-                    not node.id == self.model_ops2[op.j].id
-                    and (not node.id == self.model_ops1[op.i].id)
-                ):
-                    raise Exception("Nodes to mutate not found")
-                node1str = str(node1)
-                if "branching" in node1.operation.name:
-                    node1str = node1str.split(")")[0] + ")" + node1str.split(")")[1] + ")...}"
-                if "routing" in node1.operation.name:
-                    node1str = node1str.split(")")[0] + ")...]"
-                node2str = str(node2)
-                if "branching" in node2.operation.name:
-                    node2str = node2str.split(")")[0] + ")" + node2str.split(")")[1] + ")...}"
-                if "routing" in node2.operation.name:
-                    node2str = node2str.split(")")[0] + ")...]"
-                if self.verbose:
-                    print(
-                        ">>>Mutating", colored(node2str, "red"), "into", colored(node1str, "green")
-                    )
-                node1.parent = node2.parent
-                if not node2.is_root():
-                    node2.parent.children[node2.parent.children.index(node2)] = node1
-                if "branching(2)" in node1.operation.name:
-                    if sum([op.i_swapped, op.j_swapped]) == 1:
-                        node1.children[2] = node2.children[1]
-                        node1.children[1] = node2.children[2]
-                    else:
-                        node1.children[1] = node2.children[1]
-                        node1.children[2] = node2.children[2]
-                    node1.children[1].parent = node1
-                    node1.children[2].parent = node1
-                elif "branching" in node1.operation.name or "routing" in node1.operation.name:
-                    node1.children[1] = node2.children[1]
-                    node1.children[1].parent = node1
-                offspring = node1.get_root()
-            elif "rem" in op.op_type:
-                for node in offspring.serialise():
-                    if node.id == self.model_ops2[op.j].id:
-                        break
-                if not node.id == self.model_ops2[op.j].id:
-                    print(
-                        ">>>Tried to remove module with id",
-                        colored(self.model_ops2[op.j].id, "red"),
-                        "but it was not found.",
-                    )
-                elif "branching(2)" in node.operation.name:
-                    b1 = node.children[1 + op.j_swapped]
-                    b2 = node.children[2 - op.j_swapped]
-                    if self.verbose:
-                        print(
-                            ">>>Serializing branches",
-                            colored(str(b1), "red"),
-                            "and",
-                            colored(str(b2), "red") + " (swapping branches)" * op.j_swapped,
-                        )
-                    sequential_node = DerivationTreeNode(
-                        0,
-                        level=node.level,
-                        parent=node.parent,
-                        input_params=node.input_params,
-                        depth=node.depth,
-                        limiter=node.limiter,
-                        operation=Operation(
-                            name="sequential",
-                            build=einspace.build_sequential_module,
-                            infer=einspace.infer_sequential_module,
-                            valid=einspace.valid_sequential_module,
-                            inherit=[einspace.inherit_first_child, einspace.inherit_other_child],
-                            give_back=[einspace.give_back_default, einspace.give_back_default],
-                            type="nonterminal",
-                            child_levels=["module", "module"],
-                        ),
-                    )
-                    self.update_id(sequential_node)
-                    sequential_node.children = [b1, b2]
-                    b1.parent = sequential_node
-                    b2.parent = sequential_node
-                    if node.parent:
-                        node.parent.children[node.parent.children.index(node)] = sequential_node
-                    offspring = sequential_node.get_root()
-                else:
-                    nodestr = str(node)
-                    if "branching" in node.operation.name:
-                        nodestr = nodestr.split(")")[0] + ")" + nodestr.split(")")[1] + ")...}"
-                    if "routing" in node.operation.name:
-                        nodestr = nodestr.split(")")[0] + ")...]"
-                    if self.verbose:
-                        print(">>>Removing", colored(nodestr, "red"))
-                    parent_node = node.parent
-                    if "branching" in node.operation.name or "routing" in node.operation.name:
-                        if parent_node:
-                            parent_node.children[parent_node.children.index(node)] = node.children[
-                                1
-                            ]
-                        node.children[1].parent = node.parent
-                        offspring = node.children[1].get_root()
-                    else:
-                        if parent_node.operation.name == "sequential":
-                            sibling_node = parent_node.children[
-                                parent_node.children.index(node) - 1
-                            ]
-                        else:
-                            sibling_node = parent_node.children[
-                                1 + (parent_node.children.index(node) == 1)
-                            ]
-                        if not parent_node.is_root():
-                            sibling_node.parent = parent_node.parent
-                            parent_node.parent.children[
-                                parent_node.parent.children.index(parent_node)
-                            ] = sibling_node
-                        else:
-                            sibling_node.parent = None
-                        offspring = sibling_node.get_root()
-            elif op.op_type == "add_wrap":
-                for node in self.model_ops1:
-                    if node.id == self.model_ops1[op.i].id:
-                        node1 = copy.deepcopy(node)
-                        break
-                offspring_serialised = offspring.serialise()
-                if len(node.children) == 3:
-                    split_pos = [0, 0]
-                    jjj = 1
-                    if op.j + jjj < len(self.model_ops2):
-                        while "wrap_" in self.model_ops2[
-                            op.j + jjj
-                        ].operation.name or self.model_ops2[op.j + jjj].id not in [
-                            n.id for n in offspring.serialise()
-                        ]:
-                            jjj += 1
-                            if op.j + jjj == len(self.model_ops2):
-                                break
-                    if op.j + jjj < len(self.model_ops2):
-                        while (
-                            offspring.serialise()[split_pos[0]].id != self.model_ops2[op.j + jjj].id
-                        ):
-                            split_pos[0] = split_pos[0] + 1
-                            if split_pos[0] == len(offspring.serialise()):
-                                break
-                    else:
-                        split_pos[0] = len(offspring.serialise())
-                    iii = 0
-                    if op.i + iii < len(self.model_ops1):
-                        while "wrap_" in self.model_ops1[
-                            op.i + iii
-                        ].operation.name or self.model_ops1[op.i + iii].id not in [
-                            n.id for n in offspring.serialise()
-                        ]:
-                            iii += 1
-                            if op.i + iii == len(self.model_ops1):
-                                break
-                    if op.i + iii < len(self.model_ops1):
-                        while (
-                            offspring.serialise()[split_pos[1]].id != self.model_ops1[op.i + iii].id
-                        ):
-                            split_pos[1] += 1
-                            if split_pos[1] == len(offspring.serialise()):
-                                break
-                    else:
-                        split_pos[1] = len(offspring.serialise())
-                    node = offspring.serialise()[min(split_pos)]
-                    starting_node = node
-                    depths = self.calculate_depth_of_path(offspring_serialised)
-                    after_layer = [0, 0]
-                    closing_op, closing_j = [
-                        (in_idx, in_op.j)
-                        for in_idx, in_op in enumerate(self.operations_unordered)
-                        if in_op.node1_id == op.node1_id and "_end" in in_op.op_type
-                    ][0]
-                    try:
-                        if (
-                            self.model_ops2[closing_j] in offspring_serialised
-                            and "_end" in self.model_ops2[closing_j].operation.name
-                        ):
-                            selected_idx0, op_distances0 = [
-                                (aux_idx, abs(aux_idx - closing_op))
-                                for aux_idx, aux_op in enumerate(self.operations_unordered)
-                                if aux_op.j == closing_j
-                            ][0]
-                            after_layer[0] = True
-                        else:
-                            op_distances0 = []
-                            for aux_idx, aux_op in enumerate(self.operations_unordered):
-                                if (
-                                    ("rem" in aux_op.op_type or "mut" in aux_op.op_type)
-                                    and self.model_ops2[aux_op.j] in offspring_serialised
-                                    and (
-                                        (
-                                            "_sep" not in self.model_ops2[aux_op.j].operation.name
-                                            and (not aux_op.j_swapped)
-                                            or (
-                                                "_sep" in self.model_ops2[aux_op.j].operation.name
-                                                and aux_op.j_swapped
-                                            )
-                                        )
-                                        and "_end" not in self.model_ops2[aux_op.j].operation.name
-                                    )
-                                    and (
-                                        aux_idx - closing_op > 0
-                                        or len(self.model_ops2[aux_op.j].children) < 2
-                                    )
-                                ):
-                                    op_distances0 += [aux_idx - closing_op]
-                                else:
-                                    op_distances0 += [np.inf]
-                            op_distances0 = [
-                                op_dist
-                                if depths[op_idx] == depths[self.operations_unordered.index(op)]
-                                and op_dist != 0
-                                else np.inf
-                                for op_idx, op_dist in enumerate(op_distances0)
-                            ]
-                            selected_idx0 = np.argmin([abs(op_dist0) for op_dist0 in op_distances0])
-                            after_layer[0] = op_distances0[selected_idx0] < 0
-                            op_distances0 = abs(op_distances0[selected_idx0])
-                    except BaseException:
-                        selected_idx0 = -1
-                        op_distances0 = np.inf
-                        after_layer[0] = False
-                    try:
-                        op_distances1 = []
-                        for aux_idx, aux_op in enumerate(self.operations_unordered):
-                            if (
-                                ("add" in aux_op.op_type or "mut" in aux_op.op_type)
-                                and self.model_ops1[aux_op.i] in offspring_serialised
-                                and (
-                                    (
-                                        "_sep" not in self.model_ops1[aux_op.i].operation.name
-                                        and (not aux_op.i_swapped)
-                                        or (
-                                            "_sep" in self.model_ops1[aux_op.i].operation.name
-                                            and aux_op.i_swapped
-                                        )
-                                    )
-                                    and "_end" not in self.model_ops1[aux_op.i].operation.name
-                                )
-                                and (
-                                    aux_idx - closing_op > 0
-                                    or len(self.model_ops1[aux_op.i].children) < 2
-                                )
-                            ):
-                                op_distances1 += [aux_idx - closing_op]
-                            else:
-                                op_distances1 += [np.inf]
-                        op_distances1 = [
-                            op_dist
-                            if depths[op_idx] == depths[self.operations_unordered.index(op)]
-                            and op_dist != 0
-                            else np.inf
-                            for op_idx, op_dist in enumerate(op_distances1)
-                        ]
-                        selected_idx1 = np.argmin([abs(op_dist1) for op_dist1 in op_distances1])
-                        after_layer[1] = op_distances1[selected_idx1] < 0
-                        op_distances1 = abs(op_distances1[selected_idx1])
-                    except BaseException:
-                        selected_idx1 = -1
-                        op_distances1 = np.inf
-                        after_layer[1] = False
-                    chosen_pos = np.argmin([op_distances0, op_distances1])
-                    after_layer = after_layer[chosen_pos]
-                    final_layer = [
-                        self.model_ops2[self.operations_unordered[selected_idx0].j],
-                        self.model_ops1[self.operations_unordered[selected_idx1].i],
-                    ][chosen_pos]
-                    final_layer_id = final_layer.id
-                    try:
-                        split_pos = offspring_serialised.index(final_layer)
-                    except BaseException:
-                        split_pos = len(offspring_serialised)
-                    if split_pos == len(offspring_serialised):
-                        end_at_id = -1
-                    elif after_layer and split_pos < len(offspring_serialised):
-                        jump_ids = [
-                            aux_node.id for aux_node in offspring_serialised[split_pos].serialise()
-                        ]
-                        split_pos += 1
-                        while (
-                            offspring_serialised[split_pos] not in self.model_ops1 + self.model_ops2
-                            or offspring_serialised[split_pos].id in jump_ids
-                        ):
-                            split_pos += 1
-                            if split_pos == len(offspring_serialised):
-                                break
-                        if split_pos < len(offspring_serialised):
-                            end_at_id = offspring_serialised[split_pos].id
-                        else:
-                            end_at_id = -1
-                    else:
-                        end_at_id = offspring_serialised[split_pos].id
-                    found_parent_sequential = False
-                    if split_pos == len(offspring_serialised):
-                        while not found_parent_sequential:
-                            if not node.is_root():
-                                if node.parent.operation.name == "sequential" and end_at_id not in [
-                                    aux_node.id for aux_node in node.serialise()
-                                ]:
-                                    node = node.parent
-                                else:
-                                    found_parent_sequential = True
-                            else:
-                                found_parent_sequential = True
-                    else:
-                        while not found_parent_sequential:
-                            if not node.is_root():
-                                if node.parent.operation.name == "sequential" and end_at_id not in [
-                                    aux_node.id for aux_node in node.serialise()
-                                ]:
-                                    node = node.parent
-                                else:
-                                    found_parent_sequential = True
-                            else:
-                                found_parent_sequential = True
-                    if node.operation.name == "sequential":
-                        try:
-                            node = self.split_sequentials(node, starting_node.id).children[1]
-                        except BaseException:
-                            node = node
-                    else:
-                        node = node
-                    if node.operation.name == "sequential":
-                        if end_at_id != -1 and end_at_id in [
-                            aux_node.id for aux_node in node.serialise()
-                        ]:
-                            node2 = self.split_sequentials(node, end_at_id).children[0]
-                        else:
-                            node2 = node
-                    else:
-                        node2 = node
-                    if self.verbose:
-                        print(
-                            ">>>Adding wrapper",
-                            colored(node1.operation.name, "green"),
-                            "around",
-                            colored(str(node2), "red"),
-                        )
-                    node1.parent = node2.parent
-                    if not node2.is_root():
-                        node2.parent.children[node2.parent.children.index(node2)] = node1
-                    node1.children[1] = node2
-                    node2.parent = node1
-                    offspring = node1.get_root()
-                elif len(node.children) == 4:
-                    split_pos = [0, 0]
-                    jjj = 1
-                    if op.j + jjj < len(self.model_ops2):
-                        while "wrap_" in self.model_ops2[
-                            op.j + jjj
-                        ].operation.name or self.model_ops2[op.j + jjj].id not in [
-                            n.id for n in offspring.serialise()
-                        ]:
-                            jjj += 1
-                            if op.j + jjj == len(self.model_ops2):
-                                break
-                    if op.j + jjj < len(self.model_ops2):
-                        while (
-                            offspring.serialise()[split_pos[0]].id != self.model_ops2[op.j + jjj].id
-                        ):
-                            split_pos[0] = split_pos[0] + 1
-                            if split_pos[0] == len(offspring.serialise()):
-                                break
-                    else:
-                        split_pos[0] = len(offspring.serialise())
-                    iii = 0
-                    if op.i + iii < len(self.model_ops1):
-                        while "wrap_" in self.model_ops1[
-                            op.i + iii
-                        ].operation.name or self.model_ops1[op.i + iii].id not in [
-                            n.id for n in offspring.serialise()
-                        ]:
-                            iii += 1
-                            if op.i + iii == len(self.model_ops1):
-                                break
-                    if op.i + iii < len(self.model_ops1):
-                        while (
-                            offspring.serialise()[split_pos[1]].id != self.model_ops1[op.i + iii].id
-                        ):
-                            split_pos[1] += 1
-                            if split_pos[1] == len(offspring.serialise()):
-                                break
-                    else:
-                        split_pos[1] = len(offspring.serialise())
-                    node = offspring.serialise()[min(split_pos)]
-                    starting_node = node
-                    depths = self.calculate_depth_of_path(offspring_serialised)
-                    after_layer = [0, 0]
-                    closing_op, closing_j = [
-                        (in_idx, in_op.j)
-                        for in_idx, in_op in enumerate(self.operations_unordered)
-                        if in_op.node1_id == op.node1_id and "_end" in in_op.op_type
-                    ][0]
-                    try:
-                        if (
-                            self.model_ops2[closing_j] in offspring_serialised
-                            and "_end" in self.model_ops2[closing_j].operation.name
-                        ):
-                            selected_idx0, op_distances0 = [
-                                (aux_idx, abs(aux_idx - closing_op))
-                                for aux_idx, aux_op in enumerate(self.operations_unordered)
-                                if aux_op.j == closing_j
-                            ][0]
-                            after_layer[0] = True
-                        else:
-                            op_distances0 = []
-                            for aux_idx, aux_op in enumerate(self.operations_unordered):
-                                if (
-                                    ("rem" in aux_op.op_type or "mut" in aux_op.op_type)
-                                    and self.model_ops2[aux_op.j] in offspring_serialised
-                                    and (
-                                        (
-                                            "_sep" not in self.model_ops2[aux_op.j].operation.name
-                                            and (not aux_op.j_swapped)
-                                            or (
-                                                "_sep" in self.model_ops2[aux_op.j].operation.name
-                                                and aux_op.j_swapped
-                                            )
-                                        )
-                                        and "_end" not in self.model_ops2[aux_op.j].operation.name
-                                    )
-                                    and (
-                                        aux_idx - closing_op > 0
-                                        or len(self.model_ops2[aux_op.j].children) < 2
-                                    )
-                                ):
-                                    op_distances0 += [aux_idx - closing_op]
-                                else:
-                                    op_distances0 += [np.inf]
-                            op_distances0 = [
-                                op_dist
-                                if depths[op_idx] == depths[self.operations_unordered.index(op)]
-                                and op_dist != 0
-                                else np.inf
-                                for op_idx, op_dist in enumerate(op_distances0)
-                            ]
-                            selected_idx0 = np.argmin([abs(op_dist0) for op_dist0 in op_distances0])
-                            after_layer[0] = op_distances0[selected_idx0] < 0
-                            op_distances0 = abs(op_distances0[selected_idx0])
-                    except BaseException:
-                        selected_idx0 = -1
-                        op_distances0 = np.inf
-                        after_layer[0] = False
-                    try:
-                        op_distances1 = []
-                        for aux_idx, aux_op in enumerate(self.operations_unordered):
-                            if (
-                                ("add" in aux_op.op_type or "mut" in aux_op.op_type)
-                                and self.model_ops1[aux_op.i] in offspring_serialised
-                                and (
-                                    (
-                                        "_sep" not in self.model_ops1[aux_op.i].operation.name
-                                        and (not aux_op.i_swapped)
-                                        or (
-                                            "_sep" in self.model_ops1[aux_op.i].operation.name
-                                            and aux_op.i_swapped
-                                        )
-                                    )
-                                    and "_end" not in self.model_ops1[aux_op.i].operation.name
-                                )
-                                and (
-                                    aux_idx - closing_op > 0
-                                    or len(self.model_ops1[aux_op.i].children) < 2
-                                )
-                            ):
-                                op_distances1 += [aux_idx - closing_op]
-                            else:
-                                op_distances1 += [np.inf]
-                        op_distances1 = [
-                            op_dist
-                            if depths[op_idx] == depths[self.operations_unordered.index(op)]
-                            and op_dist != 0
-                            else np.inf
-                            for op_idx, op_dist in enumerate(op_distances1)
-                        ]
-                        selected_idx1 = np.argmin([abs(op_dist1) for op_dist1 in op_distances1])
-                        after_layer[1] = op_distances1[selected_idx1] < 0
-                        op_distances1 = abs(op_distances1[selected_idx1])
-                    except BaseException:
-                        selected_idx1 = -1
-                        op_distances1 = np.inf
-                        after_layer[1] = False
-                    chosen_pos = np.argmin([op_distances0, op_distances1])
-                    after_layer = after_layer[chosen_pos]
-                    final_layer = [
-                        self.model_ops2[self.operations_unordered[selected_idx0].j],
-                        self.model_ops1[self.operations_unordered[selected_idx1].i],
-                    ][chosen_pos]
-                    final_layer_id = final_layer.id
-                    try:
-                        split_pos = offspring_serialised.index(final_layer)
-                    except BaseException:
-                        split_pos = len(offspring_serialised)
-                    if split_pos == len(offspring_serialised):
-                        end_at_id = -1
-                    elif after_layer and split_pos < len(offspring_serialised):
-                        split_pos += 1
-                        while (
-                            offspring_serialised[split_pos] not in self.model_ops1 + self.model_ops2
-                        ):
-                            split_pos += 1
-                            if split_pos == len(offspring_serialised):
-                                break
-                        if split_pos < len(offspring_serialised):
-                            end_at_id = offspring_serialised[split_pos].id
-                        else:
-                            end_at_id = -1
-                    else:
-                        end_at_id = offspring_serialised[split_pos].id
-                    found_parent_sequential = False
-                    if split_pos == len(offspring_serialised):
-                        while not found_parent_sequential:
-                            if not node.is_root():
-                                if node.parent.operation.name == "sequential" and end_at_id not in [
-                                    aux_node.id for aux_node in node.serialise()
-                                ]:
-                                    node = node.parent
-                                else:
-                                    found_parent_sequential = True
-                            else:
-                                found_parent_sequential = True
-                    else:
-                        while not found_parent_sequential:
-                            if not node.is_root():
-                                if node.parent.operation.name == "sequential" and end_at_id not in [
-                                    aux_node.id for aux_node in node.serialise()
-                                ]:
-                                    node = node.parent
-                                else:
-                                    found_parent_sequential = True
-                            else:
-                                found_parent_sequential = True
-                    if node.operation.name == "sequential":
-                        try:
-                            node = self.split_sequentials(node, starting_node.id).children[1]
-                        except BaseException:
-                            node = node
-                    else:
-                        node = node
-                    if node.operation.name == "sequential":
-                        if end_at_id != -1 and end_at_id in [
-                            aux_node.id for aux_node in node.serialise()
-                        ]:
-                            node2 = self.split_sequentials(node, end_at_id).children[0]
-                        else:
-                            node2 = node
-                    else:
-                        node2 = node
-                    depths = self.calculate_depth_of_path(offspring_serialised)
-                    after_layer = [0, 0]
-                    closing_op = [
-                        in_idx
-                        for in_idx, in_op in enumerate(self.operations_unordered)
-                        if in_op.node1_id == op.node1_id and "_sep" in in_op.op_type
-                    ][0]
-                    try:
-                        op_distances0 = []
-                        for aux_idx, aux_op in enumerate(self.operations_unordered):
-                            if (
-                                ("rem" in aux_op.op_type or "mut" in aux_op.op_type)
-                                and self.model_ops2[aux_op.j] in offspring_serialised
-                                and (
-                                    (
-                                        "_sep" not in self.model_ops2[aux_op.j].operation.name
-                                        and (not aux_op.j_swapped)
-                                        or (
-                                            "_sep" in self.model_ops2[aux_op.j].operation.name
-                                            and aux_op.j_swapped
-                                        )
-                                    )
-                                    and "_end" not in self.model_ops2[aux_op.j].operation.name
-                                )
-                                and (
-                                    aux_idx - closing_op > 0
-                                    or len(self.model_ops2[aux_op.j].children) < 2
-                                )
-                            ):
-                                op_distances0 += [aux_idx - closing_op]
-                            else:
-                                op_distances0 += [np.inf]
-                        op_distances0 = [
-                            op_dist
-                            if depths[op_idx] == depths[self.operations_unordered.index(op)]
-                            and op_dist != 0
-                            else np.inf
-                            for op_idx, op_dist in enumerate(op_distances0)
-                        ]
-                        selected_idx0 = np.argmin([abs(op_dist0) for op_dist0 in op_distances0])
-                        after_layer[0] = op_distances0[selected_idx0] < 0
-                        op_distances0 = abs(op_distances0[selected_idx0])
-                    except BaseException:
-                        selected_idx0 = -1
-                        op_distances0 = np.inf
-                        after_layer[0] = False
-                    try:
-                        op_distances1 = []
-                        for aux_idx, aux_op in enumerate(self.operations_unordered):
-                            if (
-                                ("add" in aux_op.op_type or "mut" in aux_op.op_type)
-                                and self.model_ops1[aux_op.i] in offspring_serialised
-                                and (
-                                    (
-                                        "_sep" not in self.model_ops1[aux_op.i].operation.name
-                                        and (not aux_op.i_swapped)
-                                        or (
-                                            "_sep" in self.model_ops1[aux_op.i].operation.name
-                                            and aux_op.i_swapped
-                                        )
-                                    )
-                                    and "_end" not in self.model_ops1[aux_op.i].operation.name
-                                )
-                                and (
-                                    aux_idx - closing_op > 0
-                                    or len(self.model_ops1[aux_op.i].children) < 2
-                                )
-                            ):
-                                op_distances1 += [aux_idx - closing_op]
-                            else:
-                                op_distances1 += [np.inf]
-                        op_distances1 = [
-                            op_dist
-                            if depths[op_idx] == depths[self.operations_unordered.index(op)]
-                            and op_dist != 0
-                            else np.inf
-                            for op_idx, op_dist in enumerate(op_distances1)
-                        ]
-                        selected_idx1 = np.argmin([abs(op_dist1) for op_dist1 in op_distances1])
-                        after_layer[1] = op_distances1[selected_idx1] < 0
-                        op_distances1 = abs(op_distances1[selected_idx1])
-                    except BaseException:
-                        selected_idx1 = -1
-                        op_distances1 = np.inf
-                        after_layer[1] = False
-                    chosen_pos = np.argmin([op_distances0, op_distances1])
-                    split_pos = [selected_idx0, selected_idx1][chosen_pos]
-                    after_layer = after_layer[chosen_pos]
-                    final_layer_id = [
-                        self.model_ops2[self.operations_unordered[selected_idx0].j].id,
-                        self.model_ops1[self.operations_unordered[selected_idx1].i].id,
-                    ][chosen_pos]
-                    try:
-                        split_pos = [
-                            idx
-                            for idx, node in enumerate(offspring_serialised)
-                            if node.id == final_layer_id
-                        ][0]
-                    except BaseException:
-                        split_pos = len(offspring_serialised)
-                    if split_pos == len(offspring_serialised):
-                        end_at_id = -1
-                    elif after_layer and split_pos < len(offspring_serialised):
-                        jump_ids = [
-                            aux_node.id for aux_node in offspring_serialised[split_pos].serialise()
-                        ]
-                        split_pos += 1
-                        while (
-                            offspring_serialised[split_pos] not in self.model_ops1 + self.model_ops2
-                            or offspring_serialised[split_pos].id in jump_ids
-                        ):
-                            split_pos += 1
-                            if split_pos == len(offspring_serialised):
-                                break
-                        if split_pos < len(offspring_serialised):
-                            end_at_id = offspring_serialised[split_pos].id
-                        else:
-                            end_at_id = -1
-                    else:
-                        end_at_id = offspring_serialised[split_pos].id
-                    found_parent_sequential = False
-                    if split_pos == len(offspring_serialised):
-                        while not found_parent_sequential:
-                            if not node2.is_root():
-                                if (
-                                    node2.parent.operation.name == "sequential"
-                                    and end_at_id
-                                    not in [aux_node.id for aux_node in node2.serialise()]
-                                ):
-                                    node2 = node2.parent
-                                else:
-                                    found_parent_sequential = True
-                            else:
-                                found_parent_sequential = True
-                    else:
-                        while not found_parent_sequential:
-                            if not node2.is_root():
-                                if (
-                                    node2.parent.operation.name == "sequential"
-                                    and end_at_id
-                                    not in [aux_node.id for aux_node in node2.serialise()]
-                                ):
-                                    node2 = node2.parent
-                                else:
-                                    found_parent_sequential = True
-                            else:
-                                found_parent_sequential = True
-                    if not node2.is_root():
-                        while node2 not in node2.parent.children and (not node2.is_root()):
-                            node2 = node2.parent
-                    if node2.operation.name == "sequential" and split_pos < len(
-                        offspring_serialised
-                    ):
-                        node2 = self.split_sequentials(node2, end_at_id)
-                    else:
-                        node2 = node2
-                    if self.verbose:
-                        print(
-                            ">>>Parallelizing modules",
-                            colored(str(node2.children[0]), "red"),
-                            "and",
-                            colored(str(node2.children[1]), "red"),
-                            "using",
-                            colored(node1.operation.name, "green"),
-                        )
-                    parent_node = node2.parent
-                    if not node2.is_root():
-                        parent_node.children[parent_node.children.index(node2)] = node1
-                    node1.parent = parent_node
-                    node1.children[1] = node2.children[0]
-                    node1.children[2] = node2.children[1]
-                    node2.children[0].parent = node1
-                    node2.children[1].parent = node1
-                    offspring = node1.get_root()
-            elif "add" in op.op_type:
-                for node in self.model_ops1:
-                    if node.id == self.model_ops1[op.i].id:
-                        add_node = copy.deepcopy(node)
-                        break
-                if not add_node.id == self.model_ops1[op.i].id:
-                    raise Exception(
-                        "Node",
-                        self.model_ops1[op.i].id,
-                        "not found from model 1 when attempting module addition",
-                    )
-                if self.model_ops2[op.j].id == -1:
-                    offspring_node = offspring
-                    node1 = add_node
-                    node2 = offspring_node
-                    after_layer = False
-                else:
-                    offspring_serialised = offspring.serialise()
-                    depths = self.calculate_depth_of_path(offspring_serialised)
-                    after_layer = [0, 0]
-                    closing_op = self.operations_unordered.index(op)
-                    try:
-                        op_distances0 = []
-                        for aux_idx, aux_op in enumerate(self.operations_unordered):
-                            if (
-                                "rem" in aux_op.op_type or "mut" in aux_op.op_type
-                            ) and self.model_ops2[aux_op.j] in offspring_serialised:
-                                op_distances0 += [aux_idx - closing_op]
-                            else:
-                                op_distances0 += [np.inf]
-                        op_distances0 = [
-                            op_dist
-                            if depths[op_idx] == depths[self.operations_unordered.index(op)]
-                            and op_dist != 0
-                            else np.inf
-                            for op_idx, op_dist in enumerate(op_distances0)
-                        ]
-                        selected_idx0 = np.argmin([abs(op_dist0) for op_dist0 in op_distances0])
-                        op_distances0 = op_distances0[selected_idx0]
-                        after_layer[0] = op_distances0 < 0
-                    except BaseException:
-                        selected_idx0 = -1
-                        op_distances0 = np.inf
-                        after_layer[0] = False
-                    try:
-                        op_distances1 = []
-                        for aux_idx, aux_op in enumerate(self.operations_unordered):
-                            if (
-                                "add" in aux_op.op_type or "mut" in aux_op.op_type
-                            ) and self.model_ops1[aux_op.i] in offspring_serialised:
-                                op_distances1 += [aux_idx - closing_op]
-                            else:
-                                op_distances1 += [np.inf]
-                        op_distances1 = [
-                            op_dist
-                            if depths[op_idx] == depths[self.operations_unordered.index(op)]
-                            and op_dist != 0
-                            else np.inf
-                            for op_idx, op_dist in enumerate(op_distances1)
-                        ]
-                        selected_idx1 = np.argmin([abs(op_dist1) for op_dist1 in op_distances1])
-                        op_distances1 = op_distances1[selected_idx1]
-                        after_layer[1] = op_distances1 < 0
-                    except BaseException:
-                        selected_idx1 = -1
-                        op_distances1 = np.inf
-                        after_layer[1] = False
-                    if np.isinf(np.min([op_distances0, op_distances1])):
-                        node2 = add_node
-                        offspring_node = offspring
-                        node1 = offspring_node
-                        after_layer = True
-                    else:
-                        chosen_pos = np.argmin([abs(op_distances0), abs(op_distances1)])
-                        after_layer = after_layer[chosen_pos]
-                        offspring_swap = [
-                            self.operations_unordered[selected_idx0].j_swapped,
-                            self.operations_unordered[selected_idx1].i_swapped,
-                        ][chosen_pos]
-                        final_layer = [
-                            self.model_ops2[self.operations_unordered[selected_idx0].j],
-                            self.model_ops1[self.operations_unordered[selected_idx1].i],
-                        ][chosen_pos]
-                        offspring_node = offspring_serialised[
-                            offspring_serialised.index(final_layer)
-                        ]
-                        if after_layer:
-                            if (
-                                "_end" in final_layer.operation.name
-                                or len(offspring_node.children) <= 2
-                            ):
-                                node1 = offspring_node
-                                node2 = add_node
-                                if self.verbose:
-                                    print(
-                                        ">>>Adding",
-                                        colored(str(node2), "green"),
-                                        "after",
-                                        colored(str(node1), "red"),
-                                    )
-                            elif (
-                                "_sep" in final_layer.operation.name
-                                and (not offspring_swap)
-                                or ("_sep" not in final_layer.operation.name and offspring_swap)
-                            ):
-                                node1 = add_node
-                                offspring_node = offspring_node.children[2]
-                                node2 = offspring_node
-                                if self.verbose:
-                                    print(
-                                        ">>>Adding",
-                                        colored(str(node1), "green"),
-                                        "before",
-                                        colored(str(node2), "red"),
-                                    )
-                            else:
-                                node1 = add_node
-                                offspring_node = offspring_node.children[1]
-                                node2 = offspring_node
-                                if self.verbose:
-                                    print(
-                                        ">>>Adding",
-                                        colored(str(node1), "green"),
-                                        "before",
-                                        colored(str(node2), "red"),
-                                    )
-                        elif "_end" in final_layer.operation.name:
-                            offspring_node = offspring_node.children[-2]
-                            node1 = offspring_node
-                            node2 = add_node
-                            if self.verbose:
-                                print(
-                                    ">>>Adding",
-                                    colored(str(node2), "green"),
-                                    "after",
-                                    colored(str(node1), "red"),
-                                )
-                        elif (
-                            "_sep" in final_layer.operation.name
-                            and (not offspring_swap)
-                            or ("_sep" not in final_layer.operation.name and offspring_swap)
-                        ):
-                            offspring_node = offspring_node.children[1]
-                            node1 = offspring_node
-                            node2 = add_node
-                            if self.verbose:
-                                print(
-                                    ">>>Adding",
-                                    colored(str(node2), "green"),
-                                    "after",
-                                    colored(str(node1), "red"),
-                                )
-                        else:
-                            node1 = add_node
-                            node2 = offspring_node
-                            if self.verbose:
-                                print(
-                                    ">>>Adding",
-                                    colored(str(node1), "green"),
-                                    "before",
-                                    colored(str(node2), "red"),
-                                )
-                sequential_node = DerivationTreeNode(
-                    0,
-                    level=node1.level,
-                    parent=None,
-                    input_params=node1.input_params,
-                    depth=node1.depth,
-                    limiter=node1.limiter,
-                    operation=Operation(
-                        name="sequential",
-                        build=einspace.build_sequential_module,
-                        infer=einspace.infer_sequential_module,
-                        valid=einspace.valid_sequential_module,
-                        inherit=[einspace.inherit_first_child, einspace.inherit_other_child],
-                        give_back=[einspace.give_back_default, einspace.give_back_default],
-                        type="nonterminal",
-                        child_levels=["module", "module"],
-                    ),
-                )
-                self.update_id(sequential_node)
-                sequential_node.parent = offspring_node.parent
-                if not offspring_node.is_root():
-                    offspring_node.parent.children[
-                        offspring_node.parent.children.index(offspring_node)
-                    ] = sequential_node
-                sequential_node.children = [node1, node2]
-                node1.parent = sequential_node
-                node2.parent = sequential_node
-                offspring = sequential_node.get_root()
-            if self.verbose and "wrap_end" not in op.op_type and ("wrap_sep" not in op.op_type):
-                print("", colored(offspring, "light_grey"), "\n")
-        return offspring
-
-    def calculate_depth_of_path(self, serialised_model, operations=None):
-        node_ids = [node.id for node in serialised_model]
-        node_ids1 = [node.id for node in self.model_ops1]
-        node_ids2 = [node.id for node in self.model_ops2]
-        if operations == None:
-            operations = self.operations_unordered
-        next_depth = 1
-        stack = [0]
-        ids = []
-        for aux_idx, aux_op in enumerate(operations):
-            ids.append(stack[-1])
-            if (
-                ("rem_wrap" in aux_op.op_type or "mut_wrap" in aux_op.op_type)
-                and aux_op.node2_id in node_ids
-                and (len(self.model_ops2[node_ids2.index(aux_op.node2_id)].children) == 4)
-            ):
-                if "end" in aux_op.op_type:
-                    stack.pop()
-                    stack.pop()
-                else:
-                    stack.append(next_depth)
-                    next_depth += 1
-            elif (
-                ("add_wrap" in aux_op.op_type or "mut_wrap" in aux_op.op_type)
-                and aux_op.node1_id in node_ids
-                and (len(self.model_ops1[node_ids1.index(aux_op.node1_id)].children) == 4)
-            ):
-                if "end" in aux_op.op_type:
-                    stack.pop()
-                    stack.pop()
-                else:
-                    stack.append(next_depth)
-                    next_depth += 1
-        return ids
+        self._ensure_fresh()
+        indices = self._selection_indices(selected_ops, validate=False)
+        architecture_json, recipe_json, root_handle = self._native.apply(
+            indices, False, _memory_check(self.limiter)
+        )
+        return self._materialize(architecture_json, recipe_json, root_handle)
 
 
-def raw_crossover(parent1, parent2, skewness=0, limiter=None):
-    if limiter is None:
-        limiter = parent1.limiter
-    if parent1.serialise() == parent2.serialise():
-        same = True
-        for op1, op2 in zip(parent1.serialise(), parent2.serialise()):
-            if op1.operation.name != op2.operation.name:
-                same = False
-                break
-        if same:
-            return (parent1, [], [], 0, 0, 0)
-    matrix = Alignment(parent1, parent2, limiter=limiter)
-    operations = matrix.nontrivial_ops
-    if len(operations) == 0:
+def apply_edits(plan: Alignment, selection: Selection):
+    """Apply a validated, plan-bound selection without enumerating alternatives."""
+    if not isinstance(plan, Alignment) or not isinstance(selection, Selection):
+        raise TypeError("apply_edits requires an Alignment and its Selection")
+    if selection._owner is not plan or selection.plan_id != plan.id:
+        raise ValueError("selection belongs to another plan")
+    plan._ensure_fresh()
+    architecture_json, recipe_json, root_handle = plan._native.apply(
+        selection.indices, True, _memory_check(plan.limiter)
+    )
+    return plan._materialize(architecture_json, recipe_json, root_handle)
+
+
+def _validate_raw_sampler(sampler, seed, rng) -> None:
+    if sampler == "native" and seed is None and rng is None:
+        return
+    from .sampling import resolve_rng
+
+    resolve_rng(sampler, seed, rng)
+
+
+def raw_crossover(
+    parent1,
+    parent2,
+    skewness=0,
+    limiter=None,
+    *,
+    sampler="native",
+    seed=None,
+    rng=None,
+    profile=False,
+    limits=None,
+):
+    """Return the historical six-item raw result using native selection/application."""
+    if _same_raw_parent(parent1, parent2):
+        _validate_raw_sampler(sampler, seed, rng)
         return (parent1, [], [], 0, 0, 0)
-    else:
-        selected_ops = select_operations(operations, skewness=skewness)
-        child = matrix.generate_offspring(selected_ops)
-        distance_between_parents = matrix.distance
-        distance_to_parent2 = sum([op.value for op in selected_ops])
-        distance_to_parent1 = distance_between_parents - distance_to_parent2
-        child = copy.deepcopy(child)
-        selected_ops = copy.deepcopy(selected_ops)
-        operations = copy.deepcopy(operations)
-        del matrix
+    matrix = Alignment(parent1, parent2, limiter=limiter, profile=profile, limits=limits)
+    operations = matrix.nontrivial_ops
+    if not operations:
+        _validate_raw_sampler(sampler, seed, rng)
+        return (parent1, [], [], 0, 0, 0)
+    selection = matrix.sample(skewness, sampler=sampler, seed=seed, rng=rng)
+    child = apply_edits(matrix, selection)
+    distance_between_parents = matrix.distance
+    distance_to_parent2 = selection.cost
+    distance_to_parent1 = distance_between_parents - distance_to_parent2
+    if isinstance(child, Architecture):
         return (
             child,
-            selected_ops,
+            list(selection.operations),
             operations,
             distance_to_parent1,
             distance_to_parent2,
             distance_between_parents,
         )
+    # The reference returns one final independent deepcopy of the materialized child.
+    child = copy.deepcopy(child)
+    return (
+        child,
+        copy.deepcopy(list(selection.operations)),
+        copy.deepcopy(operations),
+        distance_to_parent1,
+        distance_to_parent2,
+        distance_between_parents,
+    )

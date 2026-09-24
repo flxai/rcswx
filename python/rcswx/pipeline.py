@@ -1,9 +1,11 @@
 """Reference crossover validation and outer generation recovery boundaries.
 
 Parent selection, mutation, task heads, evaluation, and population storage remain
-caller-owned. In particular, regeneration is a callback, not repeated selection
-from one cached alignment or silent shape-conditioning of the subset sampler.
+caller-owned.  The native structural call stays outside the build/forward retry
+handler, as in the historical integration.
 """
+
+from __future__ import annotations
 
 import pickle
 import random
@@ -18,15 +20,38 @@ from .recursive import raw_crossover
 
 
 def validated_crossover(
-    parent1, parent2, *, rebuild, batch_shape, skewness=0, max_tries=100, limiter=None
+    parent1,
+    parent2,
+    *,
+    rebuild,
+    batch_shape,
+    skewness=0,
+    max_tries=100,
+    limiter=None,
+    sampler="native",
+    seed=None,
+    rng=None,
 ):
-    """Reconstruct and run a temporary model; return genotype and reference metadata.
+    """Reconstruct and run a temporary model; return genotype and crossover metadata.
 
-    ``rebuild`` is an operation-driven reconstructor such as ``Reconstructor.re_id``.
-    The raw call deliberately sits outside the build/forward retry handler.
+    A native seed or RNG is resolved once for this public call so failed rebuilds
+    draw successive selections from one stream rather than reseeding each retry.
+    Reference mode deliberately retains its ambient NumPy stream and rejects native
+    seed/RNG arguments before any crossover or reconstruction work.
     """
     if limiter is None:
         limiter = parent1.limiter
+    if sampler == "native":
+        from .sampling import resolve_rng
+
+        stream = resolve_rng(sampler, seed, rng)
+    elif sampler == "reference":
+        from .sampling import resolve_rng
+
+        resolve_rng(sampler, seed, rng)
+        stream = None
+    else:
+        raise ValueError("sampler must be 'native' or 'reference'")
     root_input_params = deepcopy(parent1.input_params)
     tries = 0
     while True:
@@ -34,7 +59,12 @@ def validated_crossover(
             raise RuntimeError("Crossover failed to generate valid children.")
         tries += 1
         child, selected, operations, distance1, distance2, between = raw_crossover(
-            parent1, parent2, skewness=skewness, limiter=limiter
+            parent1,
+            parent2,
+            skewness=skewness,
+            limiter=limiter,
+            sampler=sampler,
+            rng=stream,
         )
         try:
             child.input_params = root_input_params
@@ -54,11 +84,29 @@ def validated_crossover(
             print(error)
 
 
-def gated_crossover(parent1, parent2, *, crossover_rate, rebuild, batch_shape, limiter=None):
+def gated_crossover(
+    parent1,
+    parent2,
+    *,
+    crossover_rate,
+    rebuild,
+    batch_shape,
+    limiter=None,
+    sampler="native",
+    seed=None,
+    rng=None,
+):
     """Consume the caller's Python RNG at the original crossover gate."""
     if random.random() < crossover_rate:
         return validated_crossover(
-            parent1, parent2, rebuild=rebuild, batch_shape=batch_shape, limiter=limiter
+            parent1,
+            parent2,
+            rebuild=rebuild,
+            batch_shape=batch_shape,
+            limiter=limiter,
+            sampler=sampler,
+            seed=seed,
+            rng=rng,
         )
     return parent1, {"crossover": False}
 
@@ -76,14 +124,7 @@ class GenerationResult:
 def generation_step(
     generate, evaluate, *, limiter, n_tries=None, parents=None, results_path=None, iteration=0
 ):
-    """Generate, validate, and evaluate one accepted individual.
-
-    ``generate()`` returns ``(root, ancestry)`` and may select a fresh pair each time.
-    ``parents()``, if supplied, returns the currently selected individual objects
-    (with ``id`` and ``root``), enabling the reference debug pickle behavior. The
-    caller adds the returned successful result to its population. Evaluation can
-    construct its task-specific Network; raw crossover does not invent a task head.
-    """
+    """Generate, validate, and evaluate one accepted individual."""
     attempts = 0
     while True:
         attempts += 1
@@ -105,7 +146,6 @@ def generation_step(
             print(f"Error in generating new individual: {error}")
             parent1, parent2 = parents() if parents is not None else (None, None)
             if parent1 and parent2:
-                # Match Evolution.step's path construction and default pickle protocol.
                 debug_path = str(results_path).rsplit("/", 1)[0] + "/debug"
                 makedirs(debug_path, exist_ok=True)
                 for side, parent in ((1, parent1), (2, parent2)):
