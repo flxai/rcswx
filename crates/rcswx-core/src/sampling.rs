@@ -641,6 +641,7 @@ mod tests {
             output: 0,
             allocation_bytes: 0,
             check: &mut check,
+            wait_check: None,
         };
         let mut rng = NativeRng::from_seed([3; 32]);
         let mut stages = Vec::new();

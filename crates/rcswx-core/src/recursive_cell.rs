@@ -1,5 +1,15 @@
 //! A cell's read phase owns no mutable matrix, recorder, or host callback.
 use super::{Cell, Failure, History, Kernel, Kind, Path, Result, Step, Token, mutation_cost};
+use std::sync::atomic::{AtomicBool, Ordering};
+
+#[inline]
+pub(super) fn check_cancel(cancelled: Option<&AtomicBool>) -> Result<()> {
+    if cancelled.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
+        Err(Failure::Operational(crate::error::Error::Cancelled))
+    } else {
+        Ok(())
+    }
+}
 
 /// Borrow guards and their owning cells stay on the coordinator. These views
 /// contain immutable values and cannot outlive the guards kept by the caller.
@@ -17,18 +27,24 @@ pub(super) struct Draft {
     pub candidates: [Option<Vec<f64>>; 3],
     pub value: Option<f64>,
     pub paths: Vec<Path>,
+    pub history_requests: usize,
     pub failure: Option<Failure>,
 }
 
 impl Draft {
-    pub fn evaluate(input: &Input<'_>, mut reserve_history: impl FnMut() -> Result<()>) -> Self {
+    pub fn evaluate(
+        input: &Input<'_>,
+        mut reserve_history: impl FnMut() -> Result<()>,
+        cancelled: Option<&AtomicBool>,
+    ) -> Self {
         let mut draft = Self {
             candidates: [None, None, None],
             value: None,
             paths: Vec::new(),
+            history_requests: 0,
             failure: None,
         };
-        draft.failure = draft.compute(input, &mut reserve_history).err();
+        draft.failure = draft.compute(input, &mut reserve_history, cancelled).err();
         draft
     }
 
@@ -36,6 +52,7 @@ impl Draft {
         &mut self,
         input: &Input<'_>,
         reserve_history: &mut impl FnMut() -> Result<()>,
+        cancelled: Option<&AtomicBool>,
     ) -> Result<()> {
         let presets = [
             &input.destination.top,
@@ -45,6 +62,7 @@ impl Draft {
         let one = input.first;
         let two = input.second;
         for (direction, preset) in presets.iter().enumerate() {
+            check_cancel(cancelled)?;
             if !preset.is_empty() {
                 continue;
             }
@@ -60,15 +78,25 @@ impl Draft {
             values
                 .try_reserve_exact(source.paths.len())
                 .map_err(|_| Failure::Memory)?;
-            values.extend(source.paths.iter().map(|path| match direction {
-                0 if one.boundary() => Kernel::closing_cost(path, one, true, source.value),
-                1 if two.boundary() => Kernel::closing_cost(path, two, false, source.value),
-                0 | 1 => source.value + 1.0,
-                _ if one.boundary() && one.name == two.name => {
-                    Kernel::closing_mutation(path, one, two, source.value)
+            for (index, path) in source.paths.iter().enumerate() {
+                if index % 64 == 0 {
+                    check_cancel(cancelled)?;
                 }
-                _ => source.value + mutation,
-            }));
+                let cost = match direction {
+                    0 if one.boundary() => {
+                        Kernel::closing_cost(path, one, true, source.value, cancelled)?
+                    }
+                    1 if two.boundary() => {
+                        Kernel::closing_cost(path, two, false, source.value, cancelled)?
+                    }
+                    0 | 1 => source.value + 1.0,
+                    _ if one.boundary() && one.name == two.name => {
+                        Kernel::closing_mutation(path, one, two, source.value, cancelled)?
+                    }
+                    _ => source.value + mutation,
+                };
+                values.push(cost);
+            }
             self.candidates[direction] = Some(values);
         }
         let costs = [
@@ -139,10 +167,14 @@ impl Draft {
                 value - source.value
             };
             for (index, &cost) in candidates.iter().enumerate() {
+                if index % 64 == 0 {
+                    check_cancel(cancelled)?;
+                }
                 if cost != value {
                     continue;
                 }
                 let parent = source.paths.get(index).ok_or(Failure::Index)?;
+                self.history_requests += 1;
                 reserve_history()?;
                 self.paths.try_reserve(1).map_err(|_| Failure::Memory)?;
                 self.paths.push(History::new(

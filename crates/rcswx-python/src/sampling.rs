@@ -25,6 +25,7 @@ fn native_error(error: Error) -> PyErr {
         | Error::MissingMutationTarget
         | Error::Limit(_)
         | Error::Cancelled
+        | Error::Execution(_)
         | Error::Callback
         | Error::PlanMismatch => PyRuntimeError::new_err(message),
     }

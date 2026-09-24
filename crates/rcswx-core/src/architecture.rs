@@ -153,6 +153,8 @@ pub struct Budget<'a> {
     pub output: usize,
     pub allocation_bytes: usize,
     pub check: &'a mut dyn FnMut() -> Result<()>,
+    /// Independent elapsed-time polling on the coordinator, when supplied by a host.
+    pub wait_check: Option<&'a mut dyn FnMut() -> Result<()>>,
 }
 
 impl Budget<'_> {
@@ -189,5 +191,12 @@ impl Budget<'_> {
     pub fn checkpoint(&mut self, work: usize, output: usize, allocation: usize) -> Result<()> {
         self.account(work, output, allocation)?;
         (self.check)()
+    }
+
+    pub fn poll_wait(&mut self) -> Result<()> {
+        match &mut self.wait_check {
+            Some(check) => check(),
+            None => (self.check)(),
+        }
     }
 }

@@ -98,7 +98,7 @@ def run_python(environment: Path, source: str, *, cwd: Path) -> None:
     run([str(python_in(environment)), "-I", "-c", source], cwd=cwd)
 
 
-def assert_installed_root(environment: Path, available: tuple[str, ...]) -> None:
+def assert_installed_root(environment: Path, available: tuple[str, ...], parallel: bool) -> None:
     run_python(
         environment,
         f"""
@@ -114,6 +114,36 @@ prefix = pathlib.Path(sys.prefix).resolve()
 assert location.is_relative_to(prefix), (location, prefix)
 assert extension.is_relative_to(prefix), (extension, prefix)
 assert any(extension.name.endswith(suffix) for suffix in importlib.machinery.EXTENSION_SUFFIXES), extension
+assert _core.PARALLEL_CAPABLE is {parallel!r}
+def sequence(items):
+    if len(items) == 1:
+        return items[0]
+    middle = len(items) // 2
+    return ("sequential", sequence(items[:middle]), sequence(items[middle:]))
+def parent(changed):
+    return rcswx.Architecture.from_tree(sequence([
+        ("routing", ("identity",),
+         ("computation", (f"linear({{16 + 2 * index + int(changed and index == 16)}})",)),
+         ("identity",))
+        for index in range(32)
+    ]))
+pair = parent(False), parent(True)
+serial = rcswx.edit_path(*pair, workers=1)
+assert serial.execution["pool_capacity"] is None
+if _core.PARALLEL_CAPABLE:
+    native = rcswx.edit_path(*pair, workers=2)
+    assert native._native.paths_json() == serial._native.paths_json()
+    assert native.stats == serial.stats
+    assert native.execution["worker_limit"] <= 2
+    if native.execution["worker_limit"] == 2:
+        assert native.execution["parallel_cells"] > 0
+else:
+    try:
+        rcswx.edit_path(*pair, workers=2)
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("serial-only wheel accepted workers=2")
 available = {available!r}
 for name in ("torch", "numpy", "scipy", "psutil", "rich", "termcolor", "tqdm"):
     loaded = name in sys.modules or any(module.startswith(name + ".") for module in sys.modules)
@@ -192,7 +222,7 @@ def run_example(environment: Path, name: str, root: Path) -> None:
     )
 
 
-def check(wheel: Path, interpreter: str) -> None:
+def check(wheel: Path, interpreter: str, parallel: bool) -> None:
     assert_metadata(wheel)
     with tempfile.TemporaryDirectory(prefix="rcswx-wheel-") as temporary:
         root = Path(temporary)
@@ -201,25 +231,26 @@ def check(wheel: Path, interpreter: str) -> None:
             for name, extras in SURFACES.items()
         }
 
-        assert_installed_root(environments["minimal"], ())
+        assert_installed_root(environments["minimal"], (), parallel)
         assert_missing_extra(environments["minimal"], "rcswx.torch", "torch")
         assert_missing_extra(environments["minimal"], "rcswx.sampling_reference", "reference")
         run_example(environments["minimal"], PORTABLE_EXAMPLE.name, root)
 
         assert_installed_root(
-            environments["torch"], ("torch", "psutil", "rich", "termcolor", "tqdm")
+            environments["torch"], ("torch", "psutil", "rich", "termcolor", "tqdm"), parallel
         )
         run_python(environments["torch"], "import rcswx.torch", cwd=root)
         for example in TORCH_EXAMPLES:
             run_example(environments["torch"], example, root)
 
-        assert_installed_root(environments["reference"], ("numpy", "scipy"))
+        assert_installed_root(environments["reference"], ("numpy", "scipy"), parallel)
         run_python(environments["reference"], "import rcswx.sampling_reference", cwd=root)
         run_example(environments["reference"], "reference_sampling.py", root)
 
         assert_installed_root(
             environments["torch-reference"],
             ("torch", "numpy", "scipy", "psutil", "rich", "termcolor", "tqdm"),
+            parallel,
         )
         run_python(
             environments["torch-reference"],
@@ -231,6 +262,7 @@ def check(wheel: Path, interpreter: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--wheel", required=True, type=Path)
+    parser.add_argument("--expect-parallel", action="store_true")
     parser.add_argument(
         "--python",
         default=sys.executable,
@@ -240,7 +272,7 @@ def main() -> None:
     wheel = arguments.wheel.resolve()
     if not wheel.is_file() or wheel.suffix != ".whl":
         parser.error(f"--wheel must name one wheel file, got {wheel}")
-    check(wheel, arguments.python)
+    check(wheel, arguments.python, arguments.expect_parallel)
 
 
 if __name__ == "__main__":

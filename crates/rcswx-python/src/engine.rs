@@ -1,5 +1,6 @@
 //! PyO3 ownership boundary for prepared snapshots and retained native edit plans.
 
+use crate::execution::WorkerCount;
 use crate::sampling::NativeRng;
 use pyo3::exceptions::{
     PyException, PyIndexError, PyMemoryError, PyRuntimeError, PyUnboundLocalError, PyValueError,
@@ -10,6 +11,7 @@ use rcswx_core::apply;
 use rcswx_core::architecture::{Architecture, Budget, Limits};
 use rcswx_core::edit_plan::{self, EditPlan};
 use rcswx_core::error::Error;
+use rcswx_core::execution::{Execution, Report};
 use rcswx_core::sampling;
 use rcswx_core::selection;
 use rcswx_core::tokens::{self, PreparedPair};
@@ -18,7 +20,7 @@ use std::time::Instant;
 
 type PreparedTokenRecord = (String, String, Vec<String>, usize, Option<usize>);
 
-fn python_error(error: Error, callback: Option<PyErr>) -> PyErr {
+pub(crate) fn python_error(error: Error, callback: Option<PyErr>) -> PyErr {
     match error {
         Error::InvalidInput(message) | Error::Reference(message) | Error::Numerical(message) => {
             PyValueError::new_err(message)
@@ -34,6 +36,7 @@ fn python_error(error: Error, callback: Option<PyErr>) -> PyErr {
         Error::Memory => PyMemoryError::new_err("Memory limit exceeded for crossover"),
         Error::Limit(kind) => PyMemoryError::new_err(format!("native {kind} limit exceeded")),
         Error::Cancelled => PyRuntimeError::new_err("native work was cancelled"),
+        Error::Execution(message) => PyRuntimeError::new_err(message),
         Error::Callback => {
             callback.unwrap_or_else(|| PyRuntimeError::new_err("host checkpoint failed"))
         }
@@ -67,9 +70,14 @@ where
     py.detach(move || {
         let mut callback_error = None;
         let mut poll = || {
-            if let Some(callback) = &memory_check {
-                match Python::attach(|py| callback.call0(py).and_then(|value| value.is_truthy(py)))
-                {
+            rcswx_core::execution::callback(|| {
+                match Python::attach(|py| {
+                    py.check_signals()?;
+                    match &memory_check {
+                        Some(callback) => callback.call0(py)?.is_truthy(py),
+                        None => Ok(true),
+                    }
+                }) {
                     Ok(true) => Ok(()),
                     Ok(false) => Err(Error::Memory),
                     Err(error) => {
@@ -77,14 +85,13 @@ where
                         Err(Error::Callback)
                     }
                 }
-            } else {
-                Ok(())
-            }
+            })
         };
         let result = {
             // Core checkpoints account every unit of work/allocation. Host RSS
             // polling is much more expensive: check initially, periodically,
             // and before publishing success, not for every enumeration visit.
+            let poll = std::cell::RefCell::new(&mut poll);
             let mut until_poll = 0;
             let mut check = || {
                 if memory_check.is_none() {
@@ -92,18 +99,20 @@ where
                 }
                 if until_poll == 0 {
                     until_poll = 1023;
-                    poll()
+                    (*poll.borrow_mut())()
                 } else {
                     until_poll -= 1;
                     Ok(())
                 }
             };
+            let mut wait_check = || (*poll.borrow_mut())();
             let mut budget = Budget {
                 limits,
                 work: 0,
                 output: 0,
                 allocation_bytes: 0,
                 check: &mut check,
+                wait_check: Some(&mut wait_check),
             };
             operation(&mut budget)
         };
@@ -111,7 +120,7 @@ where
         (result, callback_error)
     })
 }
-/// Opt-in diagnostic spans owned by the binding. The core never reads a clock.
+/// Opt-in profiling spans are binding-owned, independent of executor polling.
 #[derive(Clone, Default)]
 struct Profile {
     enabled: bool,
@@ -189,13 +198,14 @@ impl NativePrepared {
     fn profile_json(&self) -> PyResult<String> {
         self.profile.json()
     }
-    #[pyo3(signature = (plan_id, collapse_corners=false, memory_check=None))]
+    #[pyo3(signature = (plan_id, collapse_corners=false, memory_check=None, *, workers=WorkerCount::SERIAL))]
     fn analyze(
         &self,
         py: Python<'_>,
         plan_id: String,
         collapse_corners: bool,
         memory_check: Option<Py<PyAny>>,
+        workers: WorkerCount,
     ) -> PyResult<NativePlan> {
         let prepared = self.prepared.clone();
         let limits = self.limits.clone();
@@ -203,6 +213,7 @@ impl NativePrepared {
         let (outcome, callback_error) =
             detached_with_budget(py, limits.clone(), memory_check, move |budget| {
                 let mut profile = inherited_profile;
+                let mut execution = Execution::new(workers.0)?;
                 let result = if profile.enabled {
                     let mut active = BTreeMap::<&'static str, Instant>::new();
                     let mut stage = |name: &'static str, started: bool| {
@@ -212,23 +223,33 @@ impl NativePrepared {
                             profile.record(name, start.elapsed());
                         }
                     };
-                    edit_plan::analyze_profiled(
+                    edit_plan::analyze_with_execution(
                         prepared,
                         collapse_corners,
                         plan_id,
                         budget,
-                        &mut stage,
+                        &mut execution,
+                        Some(&mut stage),
                     )
                 } else {
-                    edit_plan::analyze(prepared, collapse_corners, plan_id, budget)
+                    edit_plan::analyze_with_execution(
+                        prepared,
+                        collapse_corners,
+                        plan_id,
+                        budget,
+                        &mut execution,
+                        None,
+                    )
                 };
-                result.map(|plan| (plan, profile))
+                result.map(|plan| (plan, profile, execution.into_report()))
             });
-        let (plan, profile) = outcome.map_err(|error| python_error(error, callback_error))?;
+        let (plan, profile, execution) =
+            outcome.map_err(|error| python_error(error, callback_error))?;
         Ok(NativePlan {
             plan,
             limits,
             profile,
+            execution,
         })
     }
 }
@@ -239,6 +260,7 @@ pub struct NativePlan {
     plan: EditPlan,
     limits: Limits,
     profile: Profile,
+    execution: Report,
 }
 
 #[pymethods]
@@ -279,6 +301,10 @@ impl NativePlan {
 
     fn stats_json(&self) -> PyResult<String> {
         serde_json::to_string(&self.plan.stats).map_err(json_error)
+    }
+
+    fn execution_json(&self) -> PyResult<String> {
+        serde_json::to_string(&self.execution).map_err(json_error)
     }
 
     fn selected_path_json(&self) -> PyResult<String> {

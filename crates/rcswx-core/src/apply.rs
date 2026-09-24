@@ -1444,6 +1444,7 @@ mod tests {
             output: 0,
             allocation_bytes: 0,
             check: &mut check,
+            wait_check: None,
         };
         apply(plan, selected, false, &mut budget).unwrap()
     }
@@ -1485,6 +1486,7 @@ mod tests {
             output: 0,
             allocation_bytes: 0,
             check: &mut check,
+            wait_check: None,
         };
         let mut application = apply_selection(
             &mut plan,
@@ -1699,6 +1701,7 @@ mod tests {
             output: 0,
             allocation_bytes: 0,
             check: &mut check,
+            wait_check: None,
         };
         assert!(matches!(
             apply(&mut plan, &[0], false, &mut budget),

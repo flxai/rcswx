@@ -78,6 +78,7 @@ fn budgeted<T>(
         output: 0,
         allocation_bytes: 0,
         check: &mut check,
+        wait_check: None,
     };
     f(&mut budget).map_err(|e| core_error(e, stage))
 }

@@ -71,12 +71,39 @@ subsequent selection or application. Portable architectures are immutable.
 process RSS. `profile=True` enables diagnostic stage timings; leave it disabled
 for primary performance measurements.
 
+Native wavefront execution is opt-in at build time and per call:
+
+```sh
+make develop-parallel  # Or: make wheel-parallel; install that exact wheel.
+make parallel-check parallel-test
+```
+
+Then use `edit_path(first, second, workers=2)` (or `Alignment(..., workers=2)`).
+The default `workers=1` is serial and never initializes the pool. `workers=-1`
+uses the private pool's capacity; other positive integers bound this call's
+simultaneous compute jobs, capped at that capacity. Concurrent calls share the
+same bounded pool. Boolean/non-integer counts, zero, and values below `-1` are
+rejected before legacy parent preparation. Serial-only builds reject parallel
+requests; WebAssembly stays serial even with the Cargo feature enabled.
+
+`plan.execution` reports capability, requested/resolved workers, pool capacity,
+parallel/serial cells, job overlap, scratch reservation and fallback counts.
+Algorithm statistics and ordered plans are unchanged. Narrow or aliased waves
+run serially. The coordinator handles callbacks and signals; interrupted calls
+join their jobs before raising. Serial callback re-entry is supported; parallel
+callback re-entry and reuse of an initialized pool after `fork` fail promptly.
+Use serial execution or a fresh interpreter in a forked child.
+See [wavefront design and measurements](docs/wavefront.md) for the execution
+contract, performance evidence, and limits.
+
 On legacy/PyTorch trees, the `Limiter`'s `memory_crossover` RSS guard remains
 host-side. Retained native operations poll it at their first checkpoint, every
 1,024 checkpoints thereafter, and before returning a successful native result.
 Work/output/allocation quotas still account every checkpoint in Rust; they are
 not throttled with host polling. RSS checks are sampled and can overshoot a
 threshold between polls, so they are not a hard process-memory ceiling.
+Parallel calls additionally poll elapsed time at 10 ms intervals while waiting
+for compute jobs. This does not change canonical work or allocation counters.
 
 Native ChaCha12 sampling is the default. It is seeded through RCSWX and does
 not consume NumPy's global RNG; a structural seed never seeds PyTorch weight
@@ -145,6 +172,13 @@ editable import as proof.
 make wheel
 RCSWX_WHEEL=dist/rcswx-0.1.0-...whl RCSWX_PYTHON=python3.12 make wheel-test
 ```
+
+For a parallel-capable artifact, use `make wheel-parallel`, then
+`RCSWX_WHEEL=dist/parallel/rcswx-0.1.0-...whl make wheel-parallel-test`.
+That gate verifies capability and serial/parallel plan parity in every surface.
+`make wasm-parallel-check` executes the core and frozen oracle in Node with the
+feature enabled, proving that native threads do not enter the WASM dependency
+graph.
 
 The Rust workspace also builds a reusable browser package and an interactive
 worker-owned example. It runs the existing core, with deterministic slider
