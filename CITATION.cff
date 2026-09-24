@@ -1,0 +1,46 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the article below. Adri Gómez Martín and Felix Möller contributed equally."
+title: RCSWX
+type: software
+authors:
+  - family-names: "Gómez Martín"
+    given-names: Adri
+  - family-names: Möller
+    given-names: Felix
+  - family-names: McDonagh
+    given-names: Steven
+  - family-names: Abella
+    given-names: Monica
+  - family-names: Desco
+    given-names: Manuel
+  - family-names: Crowley
+    given-names: "Elliot J."
+  - family-names: Klein
+    given-names: Aaron
+  - family-names: Ericsson
+    given-names: Linus
+license: MIT
+repository-code: "https://github.com/flxai/rcswx"
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Gómez Martín"
+      given-names: Adri
+    - family-names: Möller
+      given-names: Felix
+    - family-names: McDonagh
+      given-names: Steven
+    - family-names: Abella
+      given-names: Monica
+    - family-names: Desco
+      given-names: Manuel
+    - family-names: Crowley
+      given-names: "Elliot J."
+    - family-names: Klein
+      given-names: Aaron
+    - family-names: Ericsson
+      given-names: Linus
+  title: "Evolutionary Architecture Search through Grammar-Based Sequence Alignment"
+  year: 2025
+  doi: "10.48550/arXiv.2512.04992"
+  url: "https://arxiv.org/abs/2512.04992"
