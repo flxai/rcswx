@@ -10,6 +10,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+#[cfg(feature = "trace")]
+#[path = "recursive_trace.rs"]
+mod recording;
+
 #[derive(Debug)]
 pub enum Failure {
     Index,
@@ -288,6 +292,8 @@ struct Kernel<'a> {
     check: &'a mut dyn FnMut(&Stats) -> Result<()>,
     observe_allocations: bool,
     stats: Stats,
+    #[cfg(feature = "trace")]
+    trace: Option<recording::Observer<'a>>,
 }
 impl Kernel<'_> {
     fn account(
@@ -319,6 +325,59 @@ impl Kernel<'_> {
             .ok_or(Failure::Memory)?;
         if self.observe_allocations {
             (self.check)(&self.stats)?;
+        }
+        Ok(())
+    }
+
+    fn mark(&mut self, value: &CellRef, first: bool, swapped: bool) {
+        mark(value, first, swapped);
+        #[cfg(feature = "trace")]
+        if let Some(trace) = &mut self.trace {
+            trace.cell(value);
+        }
+    }
+
+    fn collapse(
+        &mut self,
+        a: &mut Matrix,
+        b: &mut Matrix,
+        i: usize,
+        j: usize,
+        first: bool,
+    ) -> Result<()> {
+        #[cfg(feature = "trace")]
+        if let Some(trace) = &mut self.trace {
+            let left = trace.cell(&cell(a, i as isize, j as isize)?);
+            let right = trace.cell(&cell(b, i as isize, j as isize)?);
+            trace.recorder.emit(
+                "collapse",
+                || serde_json::json!({"left":left,"right":right,"i":i,"j":j,"first":first}),
+            );
+        }
+        collapse(a, b, i, j, first)?;
+        #[cfg(feature = "trace")]
+        if let Some(trace) = &mut self.trace {
+            trace.cell(&cell(a, i as isize, j as isize)?);
+            trace.cell(&cell(b, i as isize, j as isize)?);
+            trace.matrix(a, "collapse_first");
+            trace.matrix(b, "collapse_second");
+        }
+        Ok(())
+    }
+
+    fn clean(&mut self, value: &CellRef, completely: bool) -> Result<()> {
+        #[cfg(feature = "trace")]
+        if let Some(trace) = &mut self.trace {
+            trace.cell(value);
+        }
+        value.borrow_mut().clean(completely)?;
+        #[cfg(feature = "trace")]
+        if let Some(trace) = &mut self.trace {
+            let id = trace.cell(value);
+            trace.recorder.emit(
+                "clean",
+                || serde_json::json!({"cell":id,"completely":completely}),
+            );
         }
         Ok(())
     }
@@ -769,6 +828,10 @@ impl Kernel<'_> {
                 _ => &mut data.corner,
             } = costs;
         }
+        #[cfg(feature = "trace")]
+        if let Some(trace) = &mut self.trace {
+            trace.computed(matrix, i, j);
+        }
         Ok(true)
     }
 
@@ -779,7 +842,12 @@ impl Kernel<'_> {
         second: &[Token],
         start_i: usize,
         start_j: usize,
+        #[cfg(feature = "trace")] positions: Option<(Vec<usize>, Vec<usize>)>,
     ) -> Result<Matrix> {
+        #[cfg(feature = "trace")]
+        if let (Some(trace), Some(positions)) = (&mut self.trace, &positions) {
+            trace.begin(&matrix, positions, start_i, start_j);
+        }
         let mut iswap: Option<Matrix> = None;
         let mut jswap: Option<Matrix> = None;
         let mut ijswap: Option<Matrix> = None;
@@ -873,6 +941,15 @@ impl Kernel<'_> {
                         Ok(tokens[prev..end.min(tokens.len())].to_vec())
                     }
                 };
+                #[cfg(feature = "trace")]
+                let coordinates = |first_swapped, second_swapped| {
+                    positions.as_ref().map(|(first, second)| {
+                        (
+                            recording::positions(first, prev_i, max_i, mid_i, first_swapped),
+                            recording::positions(second, prev_j, max_j, mid_j, second_swapped),
+                        )
+                    })
+                };
                 let a_swap = swapped(first, prev_i, mid_i, max_i)?;
                 let b_swap = swapped(second, prev_j, mid_j, max_j)?;
                 let aux = self.calculate(
@@ -881,6 +958,8 @@ impl Kernel<'_> {
                     b,
                     start_i + prev_i,
                     start_j + prev_j,
+                    #[cfg(feature = "trace")]
+                    coordinates(false, false),
                 )?;
                 put_submatrix(&mut matrix, &aux, prev_i, max_i, prev_j, max_j)?;
                 let mut aux_i = None;
@@ -898,10 +977,17 @@ impl Kernel<'_> {
                     if cell(&aux, 0, -1)?.borrow().value.is_nan() {
                         aux[0] = row_slice(&matrix, prev_i, prev_j, max_j)?;
                     }
-                    let aux =
-                        self.calculate(aux, &a_swap, b, start_i + prev_i, start_j + prev_j)?;
+                    let aux = self.calculate(
+                        aux,
+                        &a_swap,
+                        b,
+                        start_i + prev_i,
+                        start_j + prev_j,
+                        #[cfg(feature = "trace")]
+                        coordinates(true, false),
+                    )?;
                     for j in prev_j..max_j {
-                        mark(&cell(im, max_i as isize - 1, j as isize)?, true, true);
+                        self.mark(&cell(im, max_i as isize - 1, j as isize)?, true, true);
                     }
                     if !cell(ijm, prev_i as isize, prev_j as isize)?
                         .borrow()
@@ -925,15 +1011,17 @@ impl Kernel<'_> {
                             &b_swap,
                             start_i + prev_i,
                             start_j + prev_j,
+                            #[cfg(feature = "trace")]
+                            coordinates(true, true),
                         )?;
                         put_submatrix(ijm, &both, prev_i, max_i, prev_j, max_j)?;
                         for j in prev_j..max_j {
-                            collapse(im, ijm, max_i - 1, j, false)?;
+                            self.collapse(im, ijm, max_i - 1, j, false)?;
                         }
                     }
                     put_submatrix(im, &aux, prev_i, max_i, prev_j, max_j)?;
                     for j in prev_j..max_j {
-                        collapse(&mut matrix, im, max_i - 1, j, true)?;
+                        self.collapse(&mut matrix, im, max_i - 1, j, true)?;
                     }
                     aux_i = Some(aux);
                 }
@@ -950,10 +1038,17 @@ impl Kernel<'_> {
                             )?;
                         }
                     }
-                    let aux =
-                        self.calculate(aux, a, &b_swap, start_i + prev_i, start_j + prev_j)?;
+                    let aux = self.calculate(
+                        aux,
+                        a,
+                        &b_swap,
+                        start_i + prev_i,
+                        start_j + prev_j,
+                        #[cfg(feature = "trace")]
+                        coordinates(false, true),
+                    )?;
                     for i in prev_i..max_i {
-                        mark(&cell(jm, i as isize, max_j as isize - 1)?, false, true);
+                        self.mark(&cell(jm, i as isize, max_j as isize - 1)?, false, true);
                     }
                     if !cell(ijm, prev_i as isize, prev_j as isize)?
                         .borrow()
@@ -977,16 +1072,18 @@ impl Kernel<'_> {
                             &b_swap,
                             start_i + prev_i,
                             start_j + prev_j,
+                            #[cfg(feature = "trace")]
+                            coordinates(true, true),
                         )?;
                         put_submatrix(ijm, &both, prev_i, max_i, prev_j, max_j)?;
                         // The source sets j_swapped in this collapse too.
                         for i in prev_i..max_i {
-                            collapse(jm, ijm, i, max_j - 1, false)?;
+                            self.collapse(jm, ijm, i, max_j - 1, false)?;
                         }
                     }
                     put_submatrix(jm, &aux, prev_i, max_i, prev_j, max_j)?;
                     for i in prev_i..max_i {
-                        collapse(&mut matrix, jm, i, max_j - 1, false)?;
+                        self.collapse(&mut matrix, jm, i, max_j - 1, false)?;
                     }
                     aux_j = Some(aux);
                 }
@@ -1015,13 +1112,20 @@ impl Kernel<'_> {
                             )?;
                         }
                     }
-                    let mut both =
-                        self.calculate(both, &a_swap, &b_swap, start_i + prev_i, start_j + prev_j)?;
+                    let mut both = self.calculate(
+                        both,
+                        &a_swap,
+                        &b_swap,
+                        start_i + prev_i,
+                        start_j + prev_j,
+                        #[cfg(feature = "trace")]
+                        coordinates(true, true),
+                    )?;
                     let ai = aux_i.as_ref().ok_or(Failure::Unbound("aux_matrix_iswap"))?;
                     let aj = aux_j.as_ref().ok_or(Failure::Unbound("aux_matrix_jswap"))?;
                     for i in 0..both.len() {
                         let current = cell(&both, i as isize, -1)?;
-                        mark(&current, true, true);
+                        self.mark(&current, true, true);
                         let other = cell(aj, i as isize, -1)?;
                         if other.borrow().value < current.borrow().value {
                             let last = both[i].len().checked_sub(1).ok_or(Failure::Index)?;
@@ -1031,7 +1135,7 @@ impl Kernel<'_> {
                     let width = at(&both, 0)?.len();
                     for j in 0..width {
                         let current = cell(&both, -1, j as isize)?;
-                        mark(&current, false, true);
+                        self.mark(&current, false, true);
                         let other = cell(ai, -1, j as isize)?;
                         if other.borrow().value < current.borrow().value {
                             let last = both.len().checked_sub(1).ok_or(Failure::Index)?;
@@ -1071,24 +1175,19 @@ impl Kernel<'_> {
                                     || ((i + start_i) as f64 - (j + start_j) as f64
                                         >= self.original1.len() as f64 * 0.25))
                             {
-                                cell(&matrix, i as isize, j as isize)?
-                                    .borrow_mut()
-                                    .clean(false)?;
+                                self.clean(&cell(&matrix, i as isize, j as isize)?, false)?;
                                 for auxiliary in [&iswap, &jswap, &ijswap].into_iter().flatten() {
-                                    cell(auxiliary, i as isize, j as isize)?
-                                        .borrow_mut()
-                                        .clean(false)?;
+                                    self.clean(&cell(auxiliary, i as isize, j as isize)?, false)?;
                                 }
                             }
                         }
                         if i > 1 && j > 1 {
-                            cell(&matrix, i as isize - 1, j as isize - 1)?
-                                .borrow_mut()
-                                .clean(true)?;
+                            self.clean(&cell(&matrix, i as isize - 1, j as isize - 1)?, true)?;
                             for auxiliary in [&iswap, &jswap, &ijswap].into_iter().flatten() {
-                                cell(auxiliary, i as isize - 1, j as isize - 1)?
-                                    .borrow_mut()
-                                    .clean(true)?;
+                                self.clean(
+                                    &cell(auxiliary, i as isize - 1, j as isize - 1)?,
+                                    true,
+                                )?;
                             }
                         }
                     }
@@ -1108,13 +1207,9 @@ impl Kernel<'_> {
                 for i in prev_i..max_i - usize::from(max_i < first.len()) {
                     for j in prev_j..max_j - usize::from(max_j < second.len()) {
                         if i < self.original1.len() - 1 && j < self.original2.len() - 1 {
-                            cell(&matrix, i as isize, j as isize)?
-                                .borrow_mut()
-                                .clean(true)?;
+                            self.clean(&cell(&matrix, i as isize, j as isize)?, true)?;
                             for auxiliary in [&iswap, &jswap, &ijswap].into_iter().flatten() {
-                                cell(auxiliary, i as isize, j as isize)?
-                                    .borrow_mut()
-                                    .clean(true)?;
+                                self.clean(&cell(auxiliary, i as isize, j as isize)?, true)?;
                             }
                         }
                     }
@@ -1127,6 +1222,10 @@ impl Kernel<'_> {
                 prev_j = max_j - 1;
             }
         }
+        #[cfg(feature = "trace")]
+        if let Some(trace) = &mut self.trace {
+            trace.end(&matrix);
+        }
         Ok(matrix)
     }
 }
@@ -1137,7 +1236,15 @@ pub fn align(
     collapse_corners: bool,
     check: &mut dyn FnMut() -> Result<()>,
 ) -> Result<Alignment> {
-    align_internal(first, second, collapse_corners, &mut |_| check(), false)
+    align_internal(
+        first,
+        second,
+        collapse_corners,
+        &mut |_| check(),
+        false,
+        #[cfg(feature = "trace")]
+        None,
+    )
 }
 
 /// Observe resource counters before retained matrix/history/output allocation.
@@ -1148,7 +1255,33 @@ pub fn align_observed(
     collapse_corners: bool,
     observe: &mut dyn FnMut(&Stats) -> Result<()>,
 ) -> Result<Alignment> {
-    align_internal(first, second, collapse_corners, observe, true)
+    align_internal(
+        first,
+        second,
+        collapse_corners,
+        observe,
+        true,
+        #[cfg(feature = "trace")]
+        None,
+    )
+}
+
+#[cfg(feature = "trace")]
+pub fn align_traced(
+    first: &[Token],
+    second: &[Token],
+    collapse_corners: bool,
+    observe: &mut dyn FnMut(&Stats) -> Result<()>,
+    recorder: &mut crate::trace::Recorder,
+) -> Result<Alignment> {
+    align_internal(
+        first,
+        second,
+        collapse_corners,
+        observe,
+        true,
+        Some(recorder),
+    )
 }
 
 fn align_internal(
@@ -1157,6 +1290,7 @@ fn align_internal(
     collapse_corners: bool,
     check: &mut dyn FnMut(&Stats) -> Result<()>,
     observe_allocations: bool,
+    #[cfg(feature = "trace")] recorder: Option<&mut crate::trace::Recorder>,
 ) -> Result<Alignment> {
     let mut kernel = Kernel {
         original1: first,
@@ -1165,11 +1299,28 @@ fn align_internal(
         check,
         observe_allocations,
         stats: Stats::default(),
+        #[cfg(feature = "trace")]
+        trace: recorder.filter(|r| r.full()).map(recording::Observer::new),
     };
     let initial = kernel.initialize(first, second, true)?;
-    let matrix = kernel.calculate(initial, first, second, 0, 0)?;
+    let matrix = kernel.calculate(
+        initial,
+        first,
+        second,
+        0,
+        0,
+        #[cfg(feature = "trace")]
+        kernel
+            .trace
+            .as_ref()
+            .map(|_| ((0..first.len()).collect(), (0..second.len()).collect())),
+    )?;
     let end = cell(&matrix, -1, -1)?;
     let end = end.borrow();
+    #[cfg(feature = "trace")]
+    if let Some(trace) = &mut kernel.trace {
+        trace.retained(&end.paths);
+    }
     let mut paths = Vec::new();
     kernel.account(
         0,

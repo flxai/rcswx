@@ -71,6 +71,8 @@ struct Application<'a> {
     recipe: Vec<Materialization>,
     next_id: num_bigint::BigInt,
     first_len: usize,
+    #[cfg(feature = "trace")]
+    recorder: Option<&'a mut crate::trace::Recorder>,
 }
 
 impl<'a> Application<'a> {
@@ -98,6 +100,8 @@ impl<'a> Application<'a> {
             recipe: Vec::new(),
             next_id,
             first_len,
+            #[cfg(feature = "trace")]
+            recorder: None,
         };
         let second_root = this.plan.prepared.second.root;
         let copied = this.copy_parent(Parent::Second, second_root, budget)?;
@@ -761,7 +765,20 @@ impl<'a> Application<'a> {
                     .collect::<Result<HashSet<_>>>()?;
                 self.apply_all(&enabled, &enabled_ids, performed, budget)?;
             }
-            self.apply_op(&operation, performed, budget)?;
+            #[cfg(feature = "trace")]
+            let recipe_start = self.recipe.len();
+            #[cfg(feature = "trace")]
+            if let Some(recorder) = &mut self.recorder {
+                recorder.emit("execute", || serde_json::json!({"path_index":index,"operation_id":operation.id,
+                    "operation":operation.op_type,"already_performed":performed.contains(&operation.id)}));
+            }
+            let outcome = self.apply_op(&operation, performed, budget);
+            #[cfg(feature = "trace")]
+            if let Some(recorder) = &mut self.recorder {
+                recorder.emit("actions", || serde_json::json!({"path_index":index,"recipe_offset":recipe_start,
+                    "actions":self.recipe[recipe_start..],"ok":outcome.is_ok(),"error":outcome.as_ref().err().map(ToString::to_string)}));
+            }
+            outcome?;
         }
         Ok(())
     }
@@ -1192,7 +1209,15 @@ pub fn apply(
     validate: bool,
     budget: &mut Budget<'_>,
 ) -> Result<ApplicationResult> {
-    apply_selection(plan, selected, validate, budget)?.result()
+    apply_selection(
+        plan,
+        selected,
+        validate,
+        budget,
+        #[cfg(feature = "trace")]
+        None,
+    )?
+    .result()
 }
 
 /// Apply edits for a legacy host without constructing a portable output arena.
@@ -1204,7 +1229,15 @@ pub fn apply_materialization(
     validate: bool,
     budget: &mut Budget<'_>,
 ) -> Result<(Vec<Materialization>, usize)> {
-    apply_selection(plan, selected, validate, budget)?.materialization()
+    apply_selection(
+        plan,
+        selected,
+        validate,
+        budget,
+        #[cfg(feature = "trace")]
+        None,
+    )?
+    .materialization()
 }
 
 fn apply_selection<'a>(
@@ -1212,6 +1245,7 @@ fn apply_selection<'a>(
     selected: &[usize],
     validate: bool,
     budget: &mut Budget<'_>,
+    #[cfg(feature = "trace")] recorder: Option<&'a mut crate::trace::Recorder>,
 ) -> Result<Application<'a>> {
     if validate {
         plan.validate_selection(selected)?;
@@ -1227,9 +1261,115 @@ fn apply_selection<'a>(
         })
         .collect::<Result<HashSet<_>>>()?;
     let mut application = Application::new(plan, budget)?;
+    #[cfg(feature = "trace")]
+    {
+        application.recorder = recorder;
+        if let Some(recorder) = &mut application.recorder {
+            recorder.emit(
+                "requested",
+                || serde_json::json!({"selected_indices":selected}),
+            );
+            recorder.emit("actions", || serde_json::json!({"path_index":null,"recipe_offset":0,"actions":application.recipe,"ok":true}));
+        }
+    }
     let mut performed = HashSet::new();
     application.apply_all(selected, &ids, &mut performed, budget)?;
     Ok(application)
+}
+
+/// Observe actual materialization handles rather than guessing origins from IDs.
+#[cfg(feature = "trace")]
+pub fn apply_traced(
+    plan: &mut EditPlan,
+    selected: &[usize],
+    validate: bool,
+    budget: &mut Budget<'_>,
+    recorder: &mut crate::trace::Recorder,
+) -> Result<crate::trace::ObservedApplication> {
+    use crate::trace::{ObservedApplication, OccurrenceOrigin, SourceOccurrence};
+    use std::collections::BTreeSet;
+    let outcome = (|| {
+        let application = apply_selection(plan, selected, validate, budget, Some(recorder))?;
+        let handles = application.preorder()?;
+        let first_len = application.plan.prepared.first.nodes.len();
+        let second_len = application.plan.prepared.second.nodes.len();
+        let mut origins = (0..first_len + second_len)
+            .map(|handle| {
+                (
+                    handle,
+                    (
+                        BTreeSet::from([SourceOccurrence {
+                            parent: if handle < first_len { 1 } else { 2 },
+                            occurrence_index: if handle < first_len {
+                                handle
+                            } else {
+                                handle - first_len
+                            },
+                        }]),
+                        false,
+                    ),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        for action in &application.recipe {
+            match action {
+                Materialization::DeepCopy { mapping, .. } => {
+                    for &(source, target) in mapping {
+                        let origin = origins.get(&source).ok_or(Error::Index)?.clone();
+                        origins.insert(target, origin);
+                    }
+                }
+                Materialization::NewSequence { node, template, .. } => {
+                    let sources = origins.get(template).ok_or(Error::Index)?.0.clone();
+                    origins.insert(*node, (sources, true));
+                }
+                _ => {}
+            }
+        }
+        for &handle in handles.iter().rev() {
+            if origins
+                .get(&handle)
+                .is_some_and(|(_, synthetic)| *synthetic)
+            {
+                let children = application
+                    .children(handle)?
+                    .iter()
+                    .map(|child| {
+                        origins
+                            .get(child)
+                            .map(|(sources, _)| sources.clone())
+                            .ok_or(Error::Index)
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                let origin = origins.get_mut(&handle).ok_or(Error::Index)?;
+                for sources in children {
+                    origin.0.extend(sources);
+                }
+            }
+        }
+        let origins = handles
+            .iter()
+            .enumerate()
+            .map(|(occurrence_index, handle)| {
+                let (sources, synthesized) = origins.get(handle).ok_or(Error::Index)?;
+                Ok(OccurrenceOrigin {
+                    occurrence_index,
+                    sources: sources.iter().cloned().collect(),
+                    synthesized: *synthesized,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let result = application.result()?;
+        Ok((ObservedApplication { result, origins }, handles))
+    })();
+    if let Ok((result, handles)) = &outcome {
+        recorder.emit("materialized", || {
+            serde_json::json!({"handles":handles,"origins":result.origins,
+            "architecture_json":result.result.architecture.to_json().ok()})
+        });
+    }
+    recorder.emit("outcome", || serde_json::json!({"ok":outcome.is_ok(),"error":outcome.as_ref().err().map(ToString::to_string)}));
+    outcome.map(|(result, _)| result)
 }
 
 #[cfg(test)]
@@ -1346,7 +1486,15 @@ mod tests {
             allocation_bytes: 0,
             check: &mut check,
         };
-        let mut application = apply_selection(&mut plan, &[], true, &mut budget).unwrap();
+        let mut application = apply_selection(
+            &mut plan,
+            &[],
+            true,
+            &mut budget,
+            #[cfg(feature = "trace")]
+            None,
+        )
+        .unwrap();
         let children = &mut application.nodes[application.root]
             .as_mut()
             .unwrap()
