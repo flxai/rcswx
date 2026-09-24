@@ -49,51 +49,18 @@ impl Architecture {
     }
 
     pub fn validate(&self) -> Result<()> {
-        if self.schema != SCHEMA_VERSION {
-            return Err(Error::InvalidInput(
-                "unsupported architecture schema".into(),
-            ));
-        }
-        if self.grammar.is_empty() || self.grammar_version.is_empty() {
-            return Err(Error::InvalidInput(
-                "grammar identity and version are required".into(),
-            ));
-        }
-        if self.root >= self.nodes.len() {
-            return Err(Error::InvalidInput(
-                "architecture root is out of bounds".into(),
-            ));
-        }
-        let mut seen = HashSet::with_capacity(self.nodes.len());
-        let mut pending = vec![self.root];
-        while let Some(index) = pending.pop() {
-            let node = self
-                .nodes
-                .get(index)
-                .ok_or_else(|| Error::InvalidInput("child reference is out of bounds".into()))?;
-            if !seen.insert(index) {
-                return Err(Error::InvalidInput(
-                    "shared or cyclic tree occurrence".into(),
-                ));
-            }
-            let id = BigInt::from_str(&node.id)
-                .map_err(|_| Error::InvalidInput("logical IDs must be decimal integers".into()))?;
-            if id.to_string() != node.id {
-                return Err(Error::InvalidInput(
-                    "logical IDs must use canonical decimal encoding".into(),
-                ));
-            }
-            if node.name.is_empty() {
-                return Err(Error::InvalidInput("operation identity is empty".into()));
-            }
-            pending.extend(node.children.iter().rev().copied());
-        }
-        if seen.len() != self.nodes.len() {
-            return Err(Error::InvalidInput(
-                "unreachable architecture occurrences".into(),
-            ));
-        }
-        Ok(())
+        validate_tree(
+            self.schema,
+            &self.grammar,
+            &self.grammar_version,
+            self.root,
+            Some(self.nodes.len()),
+            |index| {
+                self.nodes
+                    .get(index)
+                    .ok_or_else(|| Error::InvalidInput("child reference is out of bounds".into()))
+            },
+        )
     }
 
     pub fn preorder(&self) -> Vec<usize> {
@@ -115,6 +82,60 @@ impl Architecture {
         }
         parents
     }
+}
+
+/// Validate either a compact architecture or reachable nodes in a runtime arena.
+/// Only compact architectures require every stored occurrence to be reachable.
+pub(crate) fn validate_tree<'a>(
+    schema: u32,
+    grammar: &str,
+    grammar_version: &str,
+    root: usize,
+    node_count: Option<usize>,
+    node_at: impl Fn(usize) -> Result<&'a Node>,
+) -> Result<()> {
+    if schema != SCHEMA_VERSION {
+        return Err(Error::InvalidInput(
+            "unsupported architecture schema".into(),
+        ));
+    }
+    if grammar.is_empty() || grammar_version.is_empty() {
+        return Err(Error::InvalidInput(
+            "grammar identity and version are required".into(),
+        ));
+    }
+    if node_count.is_some_and(|count| root >= count) {
+        return Err(Error::InvalidInput(
+            "architecture root is out of bounds".into(),
+        ));
+    }
+    let mut seen = HashSet::with_capacity(node_count.unwrap_or(0));
+    let mut pending = vec![root];
+    while let Some(index) = pending.pop() {
+        let node = node_at(index)?;
+        if !seen.insert(index) {
+            return Err(Error::InvalidInput(
+                "shared or cyclic tree occurrence".into(),
+            ));
+        }
+        let id = BigInt::from_str(&node.id)
+            .map_err(|_| Error::InvalidInput("logical IDs must be decimal integers".into()))?;
+        if id.to_string() != node.id {
+            return Err(Error::InvalidInput(
+                "logical IDs must use canonical decimal encoding".into(),
+            ));
+        }
+        if node.name.is_empty() {
+            return Err(Error::InvalidInput("operation identity is empty".into()));
+        }
+        pending.extend(node.children.iter().rev().copied());
+    }
+    if node_count.is_some_and(|count| seen.len() != count) {
+        return Err(Error::InvalidInput(
+            "unreachable architecture occurrences".into(),
+        ));
+    }
+    Ok(())
 }
 
 /// Limits are operational, never a declaration that a larger tree is invalid.

@@ -432,6 +432,26 @@ impl NativePlan {
         let recipe = serde_json::to_string(&result.recipe).map_err(json_error)?;
         Ok((architecture, recipe, result.root))
     }
+
+    #[pyo3(signature = (selected, validate=true, memory_check=None))]
+    fn apply_legacy(
+        &mut self,
+        py: Python<'_>,
+        selected: Vec<usize>,
+        validate: bool,
+        memory_check: Option<Py<PyAny>>,
+    ) -> PyResult<(String, usize)> {
+        let started = self.profile.enabled.then(Instant::now);
+        let limits = self.limits.clone();
+        let (outcome, callback_error) = detached_with_budget(py, limits, memory_check, |budget| {
+            apply::apply_materialization(&mut self.plan, &selected, validate, budget)
+        });
+        let (recipe, root) = outcome.map_err(|error| python_error(error, callback_error))?;
+        if let Some(start) = started {
+            self.profile.record("apply", start.elapsed());
+        }
+        Ok((serde_json::to_string(&recipe).map_err(json_error)?, root))
+    }
 }
 
 #[pyfunction]
