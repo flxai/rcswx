@@ -8,3 +8,5 @@ pub mod recursive;
 pub mod sampling;
 pub mod selection;
 pub mod tokens;
+#[cfg(feature = "trace")]
+pub mod trace;

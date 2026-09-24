@@ -864,7 +864,15 @@ pub fn analyze(
     id: String,
     budget: &mut Budget<'_>,
 ) -> Result<EditPlan> {
-    analyze_internal(prepared, collapse_corners, id, budget, None)
+    analyze_internal(
+        prepared,
+        collapse_corners,
+        id,
+        budget,
+        None,
+        #[cfg(feature = "trace")]
+        None,
+    )
 }
 
 /// Analyze a prepared pair while allowing a host to time native stages.
@@ -876,7 +884,46 @@ pub fn analyze_profiled(
     budget: &mut Budget<'_>,
     stage: &mut dyn FnMut(&'static str, bool),
 ) -> Result<EditPlan> {
-    analyze_internal(prepared, collapse_corners, id, budget, Some(stage))
+    analyze_internal(
+        prepared,
+        collapse_corners,
+        id,
+        budget,
+        Some(stage),
+        #[cfg(feature = "trace")]
+        None,
+    )
+}
+
+/// Record computation once; callers retain this recording independently of applications.
+#[cfg(feature = "trace")]
+pub fn analyze_traced(
+    prepared: PreparedPair,
+    collapse_corners: bool,
+    id: String,
+    budget: &mut Budget<'_>,
+    recorder: &mut crate::trace::Recorder,
+) -> Result<EditPlan> {
+    recorder.emit("preparation", || {
+        let tokens = |tokens: &[crate::tokens::PreparedToken]| tokens.iter().enumerate().map(|(index,t)| serde_json::json!({
+            "index":index,"id":prepared.identities[t.token.id as usize],"name":t.token.name,
+            "children":t.token.children,"parent_arity":t.token.parent_arity,"occurrence":t.occurrence
+        })).collect::<Vec<_>>();
+        serde_json::json!({"collapse_corners":collapse_corners,"direction":"parent2_to_parent1",
+            "identities":prepared.identities,"first_tokens":tokens(&prepared.first_tokens),"second_tokens":tokens(&prepared.second_tokens)})
+    });
+    let result = analyze_internal(prepared, collapse_corners, id, budget, None, Some(recorder));
+    if let Ok(plan) = &result {
+        recorder.emit("plan", || {
+            serde_json::json!({
+                "path_index":plan.path_index,"paths":plan.paths,"operations":plan.operations,
+                "operations_unordered":plan.operations_unordered,"nontrivial":plan.nontrivial,
+                "distance":crate::trace::number(plan.distance,false),"stats":plan.stats
+            })
+        });
+    }
+    recorder.emit("outcome", || serde_json::json!({"ok":result.is_ok(),"error":result.as_ref().err().map(ToString::to_string)}));
+    result
 }
 
 fn analyze_internal(
@@ -885,6 +932,7 @@ fn analyze_internal(
     id: String,
     budget: &mut Budget<'_>,
     mut stage: Option<&mut dyn FnMut(&'static str, bool)>,
+    #[cfg(feature = "trace")] mut recorder: Option<&mut crate::trace::Recorder>,
 ) -> Result<EditPlan> {
     let first_tokens = kernel_tokens(&prepared.first_tokens)?;
     let second_tokens = kernel_tokens(&prepared.second_tokens)?;
@@ -943,6 +991,24 @@ fn analyze_internal(
             previous_allocation = stats.allocation_bytes;
             Ok(())
         };
+        #[cfg(feature = "trace")]
+        if let Some(recorder) = recorder.as_deref_mut() {
+            recursive::align_traced(
+                &first_tokens,
+                &second_tokens,
+                collapse_corners,
+                &mut observe,
+                recorder,
+            )
+        } else {
+            recursive::align_observed(
+                &first_tokens,
+                &second_tokens,
+                collapse_corners,
+                &mut observe,
+            )
+        }
+        #[cfg(not(feature = "trace"))]
         recursive::align_observed(
             &first_tokens,
             &second_tokens,
