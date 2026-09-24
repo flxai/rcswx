@@ -9,6 +9,13 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::rc::Rc as HistoryRef;
+#[cfg(feature = "trace")]
+use std::rc::Weak as HistoryWeak;
+use std::sync::atomic::{AtomicU8, Ordering};
+
+#[path = "recursive_cell.rs"]
+mod cell_eval;
 
 #[cfg(feature = "trace")]
 #[path = "recursive_trace.rs"]
@@ -109,12 +116,51 @@ pub struct Step {
     pub i_swapped: bool,
     pub j_swapped: bool,
 }
+/// Prefix structure is immutable. Only the coordinator writes swap annotations,
+/// after all readers have joined; evaluation never consults those annotations.
 struct History {
-    step: RefCell<Step>,
-    previous: Option<Rc<History>>,
+    step: Step,
+    swapped: AtomicU8,
+    previous: Option<Path>,
     len: usize,
 }
-type Path = Rc<History>;
+impl History {
+    fn new(step: Step, previous: Option<Path>, len: usize) -> Path {
+        let swapped = u8::from(step.i_swapped) | (u8::from(step.j_swapped) << 1);
+        HistoryRef::new(Self {
+            step,
+            swapped: AtomicU8::new(swapped),
+            previous,
+            len,
+        })
+    }
+    fn snapshot(&self) -> Step {
+        let swapped = self.swapped.load(Ordering::Relaxed);
+        let mut step = self.step.clone();
+        step.i_swapped = swapped & 1 != 0;
+        step.j_swapped = swapped & 2 != 0;
+        step
+    }
+    fn mark(&self, first: bool, swapped: bool) {
+        let mask = if first { 1 } else { 2 };
+        let flags = self.swapped.load(Ordering::Relaxed);
+        self.swapped.store(
+            if swapped { flags | mask } else { flags & !mask },
+            Ordering::Relaxed,
+        );
+    }
+}
+impl Drop for History {
+    fn drop(&mut self) {
+        // Release unshared suffixes iteratively. Shared prefixes stay alive for
+        // other cells, auxiliary matrices, or a joined wave's read views.
+        let mut previous = self.previous.take();
+        while let Some(mut history) = previous.and_then(HistoryRef::into_inner) {
+            previous = history.previous.take();
+        }
+    }
+}
+type Path = HistoryRef<History>;
 
 #[derive(Clone)]
 struct Cell {
@@ -229,11 +275,7 @@ fn put_submatrix(
 }
 fn mark(value: &CellRef, first: bool, swapped: bool) {
     for path in &value.borrow().paths {
-        if first {
-            path.step.borrow_mut().i_swapped = swapped;
-        } else {
-            path.step.borrow_mut().j_swapped = swapped;
-        }
+        path.mark(first, swapped);
     }
 }
 fn collapse(a: &mut Matrix, b: &mut Matrix, i: usize, j: usize, first: bool) -> Result<()> {
@@ -432,8 +474,8 @@ impl Kernel<'_> {
                 std::mem::size_of::<History>() + 2 * std::mem::size_of::<usize>(),
                 0,
             )?;
-            start.borrow_mut().paths = vec![Rc::new(History {
-                step: RefCell::new(Step {
+            start.borrow_mut().paths = vec![History::new(
+                Step {
                     id: 0,
                     kind: Kind::Start,
                     node1_id: Some(at(first, 0)?.id),
@@ -443,10 +485,10 @@ impl Kernel<'_> {
                     value: 0.0,
                     i_swapped: false,
                     j_swapped: false,
-                }),
-                previous: None,
-                len: 1,
-            })];
+                },
+                None,
+                1,
+            )];
         }
         Ok(matrix)
     }
@@ -457,7 +499,7 @@ impl Kernel<'_> {
             path: &Path,
             memo: &mut HashMap<usize, Path>,
         ) -> Result<Path> {
-            let key = Rc::as_ptr(path) as usize;
+            let key = HistoryRef::as_ptr(path) as usize;
             if let Some(existing) = memo.get(&key) {
                 return Ok(existing.clone());
             }
@@ -465,7 +507,7 @@ impl Kernel<'_> {
             let mut pending = vec![];
             let mut next = Some(path.clone());
             while let Some(current) = next {
-                if memo.contains_key(&(Rc::as_ptr(&current) as usize)) {
+                if memo.contains_key(&(HistoryRef::as_ptr(&current) as usize)) {
                     break;
                 }
                 next = current.previous.clone();
@@ -475,23 +517,19 @@ impl Kernel<'_> {
                 let previous = original
                     .previous
                     .as_ref()
-                    .map(|p| memo[&(Rc::as_ptr(p) as usize)].clone());
+                    .map(|p| memo[&(HistoryRef::as_ptr(p) as usize)].clone());
                 kernel.account(
                     0,
                     1,
                     std::mem::size_of::<History>() + 2 * std::mem::size_of::<usize>(),
                     0,
                 )?;
-                let cloned = Rc::new(History {
-                    step: RefCell::new(original.step.borrow().clone()),
-                    previous,
-                    len: original.len,
-                });
+                let cloned = History::new(original.snapshot(), previous, original.len);
                 #[cfg(feature = "trace")]
                 if let Some(trace) = &mut kernel.trace {
                     trace.history_clone(&original, &cloned);
                 }
-                memo.insert(Rc::as_ptr(&original) as usize, cloned);
+                memo.insert(HistoryRef::as_ptr(&original) as usize, cloned);
             }
             Ok(memo[&key].clone())
         }
@@ -584,9 +622,9 @@ impl Kernel<'_> {
     fn closing_cost(path: &Path, token: &Token, first: bool, previous_value: f64) -> f64 {
         let mut level = 0i64;
         let mut closed = 0i64;
-        let mut current = Some(path.clone());
+        let mut current = Some(path.as_ref());
         while let Some(history) = current {
-            let op = history.step.borrow();
+            let op = &history.step;
             let own_id = if first { op.node1_id } else { op.node2_id };
             let own_kind = if first { op.kind.add() } else { op.kind.rem() };
             if own_id == Some(token.id) && own_kind {
@@ -614,7 +652,7 @@ impl Kernel<'_> {
             if own_id == Some(token.id) && op.kind == opening {
                 break;
             }
-            current = history.previous.clone();
+            current = history.previous.as_deref();
         }
         let required = token.parent_arity as i64 - 2 - i64::from(token.name == "wrap_sep");
         if level == 0 && required == closed {
@@ -626,9 +664,9 @@ impl Kernel<'_> {
     fn closing_mutation(path: &Path, first: &Token, second: &Token, previous_value: f64) -> f64 {
         let mut closed1 = 0i64;
         let mut closed2 = 0i64;
-        let mut current = Some(path.clone());
+        let mut current = Some(path.as_ref());
         while let Some(history) = current {
-            let op = history.step.borrow();
+            let op = &history.step;
             if op.node1_id == Some(first.id) && op.kind.mutation() {
                 closed1 += 1;
             }
@@ -644,7 +682,7 @@ impl Kernel<'_> {
             {
                 break;
             }
-            current = history.previous.clone();
+            current = history.previous.as_deref();
         }
         let required1 = first.parent_arity as i64 - 2 - i64::from(first.name == "wrap_sep");
         let required2 = second.parent_arity as i64 - 2 - i64::from(second.name == "wrap_sep");
@@ -669,137 +707,22 @@ impl Kernel<'_> {
         }
         let one = at(first, i as isize)?;
         let two = at(second, j as isize)?;
-        if destination.borrow().top.is_empty() {
-            let previous = cell(matrix, i as isize - 1, j as isize)?;
-            let source = previous.borrow();
-            destination.borrow_mut().top = source
-                .paths
-                .iter()
-                .map(|p| {
-                    if one.boundary() {
-                        Self::closing_cost(p, one, true, source.value)
-                    } else {
-                        source.value + 1.0
-                    }
-                })
-                .collect();
-        }
-        if destination.borrow().left.is_empty() {
-            let previous = cell(matrix, i as isize, j as isize - 1)?;
-            let source = previous.borrow();
-            destination.borrow_mut().left = source
-                .paths
-                .iter()
-                .map(|p| {
-                    if two.boundary() {
-                        Self::closing_cost(p, two, false, source.value)
-                    } else {
-                        source.value + 1.0
-                    }
-                })
-                .collect();
-        }
-        if destination.borrow().corner.is_empty() {
-            let cost = mutation_cost(one, two)?;
-            let previous = cell(matrix, i as isize - 1, j as isize - 1)?;
-            let source = previous.borrow();
-            destination.borrow_mut().corner = source
-                .paths
-                .iter()
-                .map(|p| {
-                    if one.boundary() && one.name == two.name {
-                        Self::closing_mutation(p, one, two, source.value)
-                    } else {
-                        source.value + cost
-                    }
-                })
-                .collect();
-        }
-        let value = {
-            let data = destination.borrow();
-            data.top
-                .iter()
-                .chain(data.corner.iter())
-                .chain(data.left.iter())
-                .copied()
-                .reduce(f64::min)
-                .ok_or(Failure::EmptyMinimum)?
-        };
-        destination.borrow_mut().value = value;
-        // History order is TOP, LEFT, CORNER, despite TOP,CORNER,LEFT in nanmin.
-        for direction in 0..3 {
-            let costs = {
-                let mut data = destination.borrow_mut();
-                std::mem::take(match direction {
-                    0 => &mut data.top,
-                    1 => &mut data.left,
-                    _ => &mut data.corner,
-                })
+        let top = cell(matrix, i as isize - 1, j as isize)?;
+        let left = cell(matrix, i as isize, j as isize - 1)?;
+        let corner = cell(matrix, i as isize - 1, j as isize - 1)?;
+        let draft = {
+            let destination = destination.borrow();
+            let top = top.borrow();
+            let left = left.borrow();
+            let corner = corner.borrow();
+            let input = cell_eval::Input {
+                destination: &destination,
+                predecessors: [&top, &left, &corner],
+                first: one,
+                second: two,
+                position: (i + start_i, j + start_j),
             };
-            for (index, cost) in costs.iter().enumerate() {
-                if *cost != value {
-                    continue;
-                }
-                let previous = match direction {
-                    0 => cell(matrix, i as isize - 1, j as isize)?,
-                    1 => cell(matrix, i as isize, j as isize - 1)?,
-                    _ => cell(matrix, i as isize - 1, j as isize - 1)?,
-                };
-                let parent = previous
-                    .borrow()
-                    .paths
-                    .get(index)
-                    .ok_or(Failure::Index)?
-                    .clone();
-                let charge = if value.is_infinite() {
-                    value
-                } else {
-                    value - previous.borrow().value
-                };
-                let kind = match direction {
-                    0 => {
-                        if one.name == "wrap_end" {
-                            Kind::AddEnd
-                        } else if one.name == "wrap_sep" {
-                            Kind::AddSep
-                        } else if one.children.len() >= 3 {
-                            Kind::AddWrap
-                        } else {
-                            Kind::AddModule
-                        }
-                    }
-                    1 => {
-                        if two.name == "wrap_end" {
-                            Kind::RemEnd
-                        } else if two.name == "wrap_sep" {
-                            Kind::RemSep
-                        } else if two.children.len() >= 3 {
-                            Kind::RemWrap
-                        } else {
-                            Kind::Rem
-                        }
-                    }
-                    _ => {
-                        if one.name == "wrap_end" {
-                            Kind::MutEnd
-                        } else if one.name == "wrap_sep" {
-                            Kind::MutSep
-                        } else if two.children.len() >= 3 {
-                            Kind::MutWrap
-                        } else {
-                            Kind::Mut
-                        }
-                    }
-                };
-                let boundary = matches!(
-                    kind,
-                    Kind::AddEnd
-                        | Kind::AddSep
-                        | Kind::RemEnd
-                        | Kind::RemSep
-                        | Kind::MutEnd
-                        | Kind::MutSep
-                );
+            cell_eval::Draft::evaluate(&input, || {
                 self.account(
                     0,
                     1,
@@ -807,40 +730,52 @@ impl Kernel<'_> {
                         + 2 * std::mem::size_of::<usize>()
                         + std::mem::size_of::<Path>(),
                     0,
-                )?;
-                let history = Rc::new(History {
-                    step: RefCell::new(Step {
-                        id: parent.len,
-                        kind,
-                        node1_id: if kind == Kind::Rem {
-                            None
-                        } else {
-                            Some(one.id)
-                        },
-                        node2_id: Some(two.id),
-                        i: i + start_i,
-                        j: j + start_j,
-                        value: if boundary { 0.0 } else { charge },
-                        i_swapped: false,
-                        j_swapped: false,
-                    }),
-                    len: parent.len + 1,
-                    previous: Some(parent),
-                });
-                destination.borrow_mut().paths.push(history);
-            }
+                )
+            })
+        };
+        self.publish_cell(matrix, i, j, draft)?;
+        Ok(true)
+    }
+
+    fn publish_cell(
+        &mut self,
+        matrix: &Matrix,
+        i: usize,
+        j: usize,
+        mut draft: cell_eval::Draft,
+    ) -> Result<()> {
+        let destination = cell(matrix, i as isize, j as isize)?;
+        {
             let mut data = destination.borrow_mut();
-            *match direction {
-                0 => &mut data.top,
-                1 => &mut data.left,
-                _ => &mut data.corner,
-            } = costs;
+            if let Some(top) = draft.candidates[0].take() {
+                data.top = top;
+            }
+            if let Some(left) = draft.candidates[1].take() {
+                data.left = left;
+            }
+            if let Some(corner) = draft.candidates[2].take() {
+                data.corner = corner;
+            }
+            if let Some(value) = draft.value {
+                data.value = value;
+            }
+            if data.paths.is_empty() {
+                data.paths = draft.paths;
+            } else {
+                data.paths
+                    .try_reserve(draft.paths.len())
+                    .map_err(|_| Failure::Memory)?;
+                data.paths.append(&mut draft.paths);
+            }
+        }
+        if let Some(error) = draft.failure {
+            return Err(error);
         }
         #[cfg(feature = "trace")]
         if let Some(trace) = &mut self.trace {
             trace.computed(matrix, i, j);
         }
-        Ok(true)
+        Ok(())
     }
 
     fn calculate(
@@ -1352,10 +1287,10 @@ fn align_internal(
         steps
             .try_reserve_exact(path.len)
             .map_err(|_| Failure::Memory)?;
-        let mut current = Some(path.clone());
+        let mut current = Some(path.as_ref());
         while let Some(history) = current {
-            steps.push(history.step.borrow().clone());
-            current = history.previous.clone();
+            steps.push(history.snapshot());
+            current = history.previous.as_deref();
         }
         steps.reverse();
         paths.push(steps);

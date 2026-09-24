@@ -109,5 +109,34 @@ algorithm error before an earlier position is published.
   rejected. A PID guard is checked before pool synchronization after `fork`;
   a forked child may still execute serial work, or start a fresh interpreter.
 
-Implementation and final performance results are recorded below as their
-verification gates complete.
+## Serial ownership gate
+
+The common evaluator and deterministic publisher pass all 32 frozen cases on
+native Rust and on real wasm32 execution in Node, including exact trace events
+and truncation. The existing Python suite passed 611 tests, covering the pinned
+reference behavior, portable API and Torch surface. Core resource/trace tests
+also pass. A lifetime regression exercises iterative release of a 50,000-step
+history while another owner retains a shared prefix.
+
+Default/portable builds retain non-atomic reference counting. The immutable
+history representation admits atomic ownership for native parallel-capable
+builds without changing the evaluator, identity graph, or trace representation.
+
+`benchmarks/results/wavefront-serial-refactor.json` records the serial performance
+gate. Back-to-back whole-program runs showed substantial frequency/thermal
+drift on this hybrid CPU, so the driver now supports `--compare-package`: it
+loads the independently installed original and candidate packages/extensions,
+rotates their public-call order each repetition, and checks every complete
+ordered-path fingerprint. No native implementation is regenerated or substituted.
+
+Across eight pinned-CPU chain/wrapper cases (128/256 modules, both collapse
+modes), nine-repeat paired median ratios were **0.992–1.047** versus the
+original. All path fingerprints and all algorithm statistics, including
+accounted allocation bytes, matched. Standalone runs retain independent RSS
+measurements; paired runs intentionally share an interpreter/allocator and
+are latency controls, not isolated memory measurements.
+
+The `cold` field is the first call for that case/mode, not a claim that each
+row starts a fresh process or pool. Exact extension/wheel hashes identify the
+executed binaries; recorded Git revisions are the checkout HEAD at measurement
+time, before the corresponding semantic commit.

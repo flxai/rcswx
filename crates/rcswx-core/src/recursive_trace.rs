@@ -4,8 +4,8 @@ use crate::trace::{Recorder, number};
 use serde_json::{Value, json};
 use std::rc::Weak;
 
-struct Identity<T> {
-    weak: Weak<T>,
+struct Identity<W> {
+    weak: W,
     id: usize,
     revision: usize,
     value: Value,
@@ -13,8 +13,8 @@ struct Identity<T> {
 }
 pub(super) struct Observer<'a> {
     pub recorder: &'a mut Recorder,
-    cells: HashMap<usize, Identity<RefCell<Cell>>>,
-    histories: HashMap<usize, Identity<History>>,
+    cells: HashMap<usize, Identity<Weak<RefCell<Cell>>>>,
+    histories: HashMap<usize, Identity<HistoryWeak<History>>>,
     next_cell: usize,
     next_history: usize,
     next_problem: usize,
@@ -48,14 +48,14 @@ impl<'a> Observer<'a> {
             if !self.active() {
                 return last;
             }
-            let key = Rc::as_ptr(&current) as usize;
-            let step = current.step.borrow();
+            let key = HistoryRef::as_ptr(&current) as usize;
+            let step = current.snapshot();
             let value = json!({"previous":previous,"len":current.len,"step":{"id":step.id,"kind":step.kind.name(),"node1_id":step.node1_id.map(|x|x.to_string()),"node2_id":step.node2_id.map(|x|x.to_string()),"i":step.i,"j":step.j,"value":number(step.value,false),"i_swapped":step.i_swapped,"j_swapped":step.j_swapped}});
             let valid = self.histories.get(&key).is_some_and(|entry| {
                 entry
                     .weak
                     .upgrade()
-                    .is_some_and(|p| Rc::ptr_eq(&p, &current))
+                    .is_some_and(|p| HistoryRef::ptr_eq(&p, &current))
             });
             if !valid {
                 let id = self.next_history;
@@ -63,7 +63,7 @@ impl<'a> Observer<'a> {
                 self.histories.insert(
                     key,
                     Identity {
-                        weak: Rc::downgrade(&current),
+                        weak: HistoryRef::downgrade(&current),
                         id,
                         revision: 0,
                         value: Value::Null,

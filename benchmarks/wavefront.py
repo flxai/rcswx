@@ -8,11 +8,13 @@ The chain, routing and branching layouts extend the repository's portable fixtur
 import argparse
 import gc
 import hashlib
+import importlib.util
 import json
 import os
 import platform
 import statistics
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -53,6 +55,45 @@ def parents(family, size):
     return build(False), build(True)
 
 
+def measured(module, pair, options, profiled):
+    gc.collect()
+    reset = True
+    try:
+        Path("/proc/self/clear_refs").write_text("5\n")
+    except OSError:
+        reset = False
+    before = resident()
+    cpu = time.process_time_ns()
+    started = time.perf_counter_ns()
+    try:
+        plan = module.edit_path(*pair, **options)
+    except Exception as error:
+        return {
+            "error": {
+                "type": type(error).__name__,
+                "message": str(error),
+                "seconds": (time.perf_counter_ns() - started) / 1e9,
+            }
+        }
+    elapsed = (time.perf_counter_ns() - started) / 1e9
+    cpu = (time.process_time_ns() - cpu) / 1e9
+    after = resident()
+    sample = {
+        "seconds": elapsed,
+        "process_cpu_seconds": cpu,
+        "rss_peak_bytes": after["VmHWM"] if reset else None,
+        "baseline_rss_bytes": before["VmRSS"],
+        "stats": plan.stats,
+        "execution": getattr(plan, "execution", None),
+        "distance": plan.distance,
+        "paths_sha256": hashlib.sha256(plan._native.paths_json().encode()).hexdigest(),
+        "tokens": [len(plan._prepared.first_tokens()), len(plan._prepared.second_tokens())],
+    }
+    if profiled:
+        sample["timings"] = plan.timings
+    return sample
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
@@ -71,11 +112,16 @@ def main():
     parser.add_argument("--collapse", choices=["both", "on", "off"], default="both")
     parser.add_argument("--repeats", type=int, default=5)
     parser.add_argument("--profile", action="store_true")
+    parser.add_argument(
+        "--compare-package",
+        type=Path,
+        help="Alternate calls with an independently installed original package directory",
+    )
     args = parser.parse_args()
     if args.repeats < 1 or any(size < 2 for size in args.sizes):
         parser.error("repeats must be positive and sizes at least two")
     import rcswx
-    from rcswx import _core, edit_path
+    from rcswx import _core
 
     report = {
         "schema": 1,
@@ -91,19 +137,48 @@ def main():
         "timing": "One synchronous public edit_path; preparation and plan assembly included; input construction, fingerprinting, and destruction excluded. First call recorded separately.",
         "rows": [],
     }
+    original = None
+    if args.compare_package:
+        path = args.compare_package.resolve()
+        spec = importlib.util.spec_from_file_location(
+            "_rcswx_wavefront_baseline",
+            path / "__init__.py",
+            submodule_search_locations=[str(path)],
+        )
+        original = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = original
+        spec.loader.exec_module(original)
+        report["baseline_package"] = original.__file__
+        report["baseline_extension_sha256"] = hashlib.sha256(
+            Path(original._core.__file__).read_bytes()
+        ).hexdigest()
+        report["comparison"] = (
+            "Separate installed packages/native libraries in one interpreter; case/mode order rotates between repetitions. Use standalone runs for isolated RSS."
+        )
     flags = [False, True] if args.collapse == "both" else [args.collapse == "on"]
     for family in args.families:
         for size in args.sizes:
-            first, second = parents(family, size)
-            hashes = [
-                hashlib.sha256(value.to_json().encode()).hexdigest() for value in (first, second)
-            ]
+            pair = parents(family, size)
+            hashes = [hashlib.sha256(value.to_json().encode()).hexdigest() for value in pair]
+            original_pair = (
+                tuple(original.Architecture.from_json(value.to_json()) for value in pair)
+                if original
+                else None
+            )
             for collapse in flags:
-                for workers in args.workers:
+                variants = [
+                    (f"workers={workers}", rcswx, pair, workers, args.baseline)
+                    for workers in args.workers
+                ]
+                if original:
+                    variants.insert(0, ("original", original, original_pair, 1, True))
+                runs = []
+                for variant, module, inputs, workers, legacy in variants:
                     row = {
                         "family": family,
                         "size": size,
                         "collapse_corners": collapse,
+                        "variant": variant,
                         "workers": workers,
                         "input_sha256": hashes,
                         "samples": [],
@@ -117,61 +192,33 @@ def main():
                             "max_allocation_bytes": 512 * 1024 * 1024,
                         },
                     }
-                    if not args.baseline:
+                    if not legacy:
                         options["workers"] = workers
-                    for repeat in range(args.repeats + 1):
-                        gc.collect()
-                        reset = True
-                        try:
-                            Path("/proc/self/clear_refs").write_text("5\n")
-                        except OSError:
-                            reset = False
-                        before = resident()
-                        started = time.perf_counter_ns()
-                        try:
-                            plan = edit_path(first, second, **options)
-                        except Exception as error:
-                            row["error"] = {
-                                "type": type(error).__name__,
-                                "message": str(error),
-                                "seconds": (time.perf_counter_ns() - started) / 1e9,
-                            }
-                            break
-                        elapsed = (time.perf_counter_ns() - started) / 1e9
-                        after = resident()
-                        paths = plan._native.paths_json()
-                        sample = {
-                            "seconds": elapsed,
-                            "rss_peak_bytes": after["VmHWM"] if reset else None,
-                            "baseline_rss_bytes": before["VmRSS"],
-                            "stats": plan.stats,
-                            "execution": getattr(plan, "execution", None),
-                            "distance": plan.distance,
-                            "paths_sha256": hashlib.sha256(paths.encode()).hexdigest(),
-                            "tokens": [
-                                len(plan._prepared.first_tokens()),
-                                len(plan._prepared.second_tokens()),
-                            ],
-                        }
-                        if args.profile:
-                            sample["timings"] = plan.timings
-                        if repeat == 0:
+                    runs.append((module, inputs, options, row))
+                for repeat in range(args.repeats + 1):
+                    # Rotate order rather than comparing long back-to-back runs:
+                    # a hybrid laptop's thermal/frequency drift is substantial.
+                    offset = repeat % len(runs)
+                    for module, inputs, options, row in runs[offset:] + runs[:offset]:
+                        if "error" in row:
+                            continue
+                        sample = measured(module, inputs, options, args.profile)
+                        if "error" in sample:
+                            row.update(sample)
+                        elif repeat == 0:
                             row["cold"] = sample
                         else:
                             row["samples"].append(sample)
-                        del plan
+                fingerprints = set()
+                for _, _, _, row in runs:
                     if row["samples"]:
                         row["median_seconds"] = statistics.median(
                             sample["seconds"] for sample in row["samples"]
                         )
-                        fingerprints = {
+                        fingerprints.update(
                             sample["paths_sha256"] for sample in [row["cold"], *row["samples"]]
-                        }
-                        if len(fingerprints) != 1:
-                            raise RuntimeError("Repeated requests changed ordered path content")
+                        )
                     report["rows"].append(row)
-                    args.output.parent.mkdir(parents=True, exist_ok=True)
-                    args.output.write_text(json.dumps(report, indent=2) + "\n")
                     print(
                         json.dumps(
                             {
@@ -180,6 +227,7 @@ def main():
                                     "family",
                                     "size",
                                     "collapse_corners",
+                                    "variant",
                                     "workers",
                                     "median_seconds",
                                     "error",
@@ -189,6 +237,10 @@ def main():
                         ),
                         flush=True,
                     )
+                if len(fingerprints) > 1:
+                    raise RuntimeError("Compared requests changed complete ordered path content")
+                args.output.parent.mkdir(parents=True, exist_ok=True)
+                args.output.write_text(json.dumps(report, indent=2) + "\n")
 
 
 if __name__ == "__main__":
