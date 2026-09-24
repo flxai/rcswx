@@ -49,6 +49,13 @@ class Architecture:
         return cls(text)
 
     @classmethod
+    def _from_validated_json(cls, text: str) -> Architecture:
+        """Wrap Rust-validated output, never unchecked caller-supplied JSON."""
+        architecture = object.__new__(cls)
+        object.__setattr__(architecture, "_json", text)
+        return architecture
+
+    @classmethod
     def from_tree(
         cls,
         description: Sequence[object],

@@ -610,7 +610,7 @@ class Alignment:
 
     def _materialize(self, architecture_json: str, recipe_json: str, root_handle: int):
         if self._first_legacy is None:
-            return Architecture.from_json(architecture_json)
+            return Architecture._from_validated_json(architecture_json)
         assert self._second_legacy is not None
         started = perf_counter() if self.profile else None
         try:
