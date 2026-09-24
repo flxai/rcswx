@@ -163,13 +163,18 @@ def request(case, parents, builder, guard, native, phase, collapse_corners=False
             from rcswx import raw_crossover
         else:
             raw_crossover = reference.algorithm.recursive_constrained_smith_waterman_crossover
-        return lambda: raw_crossover(*parents, limiter=guard)
+        options = {"sampler": "reference"} if native else {}
+        return lambda: raw_crossover(*parents, limiter=guard, **options)
     if phase == "validated":
         if native:
             from rcswx import validated_crossover
 
             return lambda: validated_crossover(
-                *parents, rebuild=builder.re_id, batch_shape=guard.batch_shape, limiter=guard
+                *parents,
+                rebuild=builder.re_id,
+                batch_shape=guard.batch_shape,
+                limiter=guard,
+                sampler="reference",
             )
         return lambda: builder.recursive_constrained_smith_waterman_crossover(*parents)
 
