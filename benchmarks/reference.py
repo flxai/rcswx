@@ -2,8 +2,10 @@
 
 import argparse
 import contextlib
+import copy
 import gc
 import hashlib
+import inspect
 import io
 import json
 import platform
@@ -111,6 +113,7 @@ def request(name, native):
                 return lambda: list(zip(*valid_combinations(edits), strict=True))
             return lambda: list(reference.algorithm.combinations(edits).items())
         function = select_operations if native else reference.algorithm.select_operations
+        options = {"sampler": "reference"} if native else {}
         if name == "selection_draw":
             choice = np.random.choice
             captured = []
@@ -121,12 +124,12 @@ def request(name, native):
 
             np.random.choice = capture
             try:
-                function(edits)
+                function(edits, **options)
             finally:
                 np.random.choice = choice
             ((args, kwargs),) = captured
             return lambda: choice(*args, **kwargs)
-        return lambda: function(edits)
+        return lambda: function(edits, **options)
     if name in ("validated_construction", "validated_retries"):
         parents = [
             build_case(
@@ -158,7 +161,7 @@ def request(name, native):
 
         if native:
             return lambda: validated_crossover(
-                *parents, rebuild=constrained, batch_shape=guard.batch_shape
+                *parents, rebuild=constrained, batch_shape=guard.batch_shape, sampler="reference"
             )
         sampler.re_id = constrained
         return lambda: sampler.recursive_constrained_smith_waterman_crossover(*parents)
@@ -170,9 +173,11 @@ def request(name, native):
             if native
             else reference.algorithm.recursive_constrained_smith_waterman_crossover
         )
+        options = {"sampler": "reference"} if native else {}
     else:
         function = Alignment if native else reference.algorithm.AlignmentMatrixRecursive
-    return lambda: function(*parents, limiter=guard)
+        options = {}
+    return lambda: function(*parents, limiter=guard, **options)
 
 
 def fingerprint(name, result):
@@ -207,27 +212,53 @@ def fingerprint(name, result):
 
 
 @contextlib.contextmanager
-def profile_stages(native):
-    """Separate diagnostic pass; primary timings never include instrumentation."""
+def profile_stages(native, *, details=None):
+    """Inclusive diagnostic spans; never add nested spans or use them as primary timings.
+
+    Supports both the frozen RCSWX package and the consolidated engine. Native
+    plans are retained only in this diagnostic pass, so its RSS is not a
+    substitute for uninstrumented production RSS.
+    """
     reference = load()
+    details = {} if details is None else details
+    plans = details.setdefault("plans", [])
     totals, depths, restores = {}, {}, []
-    decode_started = None
+    decode_started = probability_started = None
     previous_profile = sys.getprofile()
+    alignment = Alignment if native else reference.algorithm.AlignmentMatrixRecursive
+    supports_profile = native and "profile" in inspect.signature(alignment).parameters
+
+    def record(stage, seconds):
+        elapsed, calls = totals.get(stage, (0.0, 0))
+        totals[stage] = elapsed + seconds, calls + 1
 
     def watch(owner, name, stage):
-        function = getattr(owner, name)
+        descriptor = inspect.getattr_static(owner, name, None)
+        if descriptor is None:
+            return
+        if isinstance(descriptor, property):
+            function = descriptor.fget
+        elif isinstance(descriptor, (classmethod, staticmethod)):
+            function = descriptor.__func__
+        else:
+            function = getattr(owner, name)
 
         @wraps(function)
         def timed(*args, **kwargs):
-            nonlocal decode_started
+            nonlocal decode_started, probability_started
             if stage == "edit_translation" and decode_started is not None:
-                seconds, calls = totals.get("native_path_decoding", (0.0, 0))
-                totals["native_path_decoding"] = (
-                    seconds + time.perf_counter() - decode_started,
-                    calls + 1,
-                )
+                record("native_path_decoding", time.perf_counter() - decode_started)
                 decode_started = None
+            if stage == "categorical_draw" and probability_started is not None:
+                record("probability_construction", time.perf_counter() - probability_started)
+                probability_started = None
+            if stage == "alignment_total" and supports_profile:
+                kwargs["profile"] = True
             depths[stage] = depths.get(stage, 0) + 1
+            if stage == "deepcopy" and depths[stage] == 1:
+                kind = f"{type(args[0]).__module__}.{type(args[0]).__qualname__}"
+                counts = details.setdefault("deepcopy_root_types", {})
+                counts[kind] = counts.get(kind, 0) + 1
             start = time.perf_counter()
             completed = False
             try:
@@ -237,27 +268,61 @@ def profile_stages(native):
             finally:
                 depths[stage] -= 1
                 if depths[stage] == 0:
-                    seconds, calls = totals.get(stage, (0.0, 0))
-                    totals[stage] = seconds + time.perf_counter() - start, calls + 1
+                    record(stage, time.perf_counter() - start)
+                if completed and stage == "alignment_total":
+                    plans.append(args[0])
                 if completed and stage == "matrix_and_native_marshalling":
                     decode_started = time.perf_counter()
+                if (
+                    completed
+                    and not supports_profile
+                    and stage == "distribution_enumeration"
+                    and depths.get("distribution_and_selection", 0)
+                ):
+                    probability_started = time.perf_counter()
+                if stage == "distribution_and_selection":
+                    probability_started = None
 
-        restores.append((owner, name, function))
-        setattr(owner, name, timed)
+        restores.append((owner, name, descriptor))
+        if isinstance(descriptor, property):
+            replacement = property(timed, descriptor.fset, descriptor.fdel, descriptor.__doc__)
+        elif isinstance(descriptor, classmethod):
+            replacement = classmethod(timed)
+        elif isinstance(descriptor, staticmethod):
+            replacement = staticmethod(timed)
+        else:
+            replacement = timed
+        setattr(owner, name, replacement)
 
-    alignment = Alignment if native else reference.algorithm.AlignmentMatrixRecursive
+    watch(alignment, "__init__", "alignment_total")
     watch(alignment, "breakdown", "input_tokenization")
     watch(alignment, "update_id", "parent_id_update")
+    watch(alignment, "calculate_restrictions", "edit_translation")
+    watch(alignment, "generate_offspring", "edit_application_and_materialization")
+    watch(copy, "deepcopy", "deepcopy")
+    watch(np.random, "choice", "categorical_draw")
     if native:
         watch(_core, "recursive_align", "matrix_and_native_marshalling")
+        watch(_core, "prepare_architectures", "native_preparation_and_marshalling")
         watch(sampling, "valid_combinations", "distribution_enumeration")
         watch(recursive, "select_operations", "distribution_and_selection")
+        watch(alignment, "sample", "distribution_and_selection")
+        watch(alignment, "paths", "path_export_and_decoding")
+        watch(alignment, "_current_path", "selected_path_export_and_decoding")
+        watch(alignment, "_decode_path", "path_decoding")
+        watch(alignment, "_materialize", "materialization")
+        watch(recursive, "apply_edits", "edit_application_and_materialization")
+        if hasattr(recursive, "_LegacySnapshot"):
+            watch(recursive._LegacySnapshot, "from_root", "input_adaptation")
+        if hasattr(sampling, "probabilities"):
+            from rcswx import sampling_reference
+
+            watch(sampling_reference, "probabilities", "probability_construction")
     else:
         watch(alignment, "initialize_matrix", "matrix")
         watch(alignment, "calculate_matrix", "matrix")
         watch(reference.algorithm, "select_operations", "distribution_and_selection")
-    watch(alignment, "calculate_restrictions", "edit_translation")
-    watch(alignment, "generate_offspring", "edit_application")
+        watch(reference.algorithm, "combinations", "distribution_enumeration")
     watch(
         Reconstructor if native else reference.sampler.Sampler, "re_id", "metadata_reconstruction"
     )
@@ -267,35 +332,44 @@ def profile_stages(native):
         "model_construction",
     )
     watch(torch.nn.Module, "_call_impl", "validation_forward")
-    if native:
-        snapshot_code = next(
-            value
-            for value in Alignment.__init__.__code__.co_consts
-            if getattr(value, "co_name", None) == "snapshot"
+    original_init = next(
+        function for owner, name, function in restores if owner is alignment and name == "__init__"
+    )
+    snapshot_code = (
+        next(
+            (
+                value
+                for value in original_init.__code__.co_consts
+                if getattr(value, "co_name", None) == "snapshot"
+            ),
+            None,
         )
-        encoding_starts = []
+        if native
+        else None
+    )
+    encoding_starts = []
 
-        def encoding_profile(frame, event, argument):
-            if previous_profile is not None:
-                previous_profile(frame, event, argument)
-            if frame.f_code is snapshot_code:
-                if event == "call":
-                    encoding_starts.append(time.perf_counter())
-                elif event == "return":
-                    seconds, calls = totals.get("native_token_encoding", (0.0, 0))
-                    totals["native_token_encoding"] = (
-                        seconds + time.perf_counter() - encoding_starts.pop(),
-                        calls + 1,
-                    )
+    def encoding_profile(frame, event, argument):
+        if previous_profile is not None:
+            previous_profile(frame, event, argument)
+        if frame.f_code is snapshot_code:
+            if event == "call":
+                encoding_starts.append(time.perf_counter())
+            elif event == "return":
+                record("native_token_encoding", time.perf_counter() - encoding_starts.pop())
 
+    if snapshot_code is not None:
         sys.setprofile(encoding_profile)
     try:
         yield totals
     finally:
-        if native:
+        if snapshot_code is not None:
             sys.setprofile(previous_profile)
-        for owner, name, function in reversed(restores):
-            setattr(owner, name, function)
+        for plan in plans:
+            for stage, seconds in getattr(plan, "timings", {}).items():
+                record("native." + stage, seconds)
+        for owner, name, descriptor in reversed(restores):
+            setattr(owner, name, descriptor)
 
 
 def seed_rng(seed):
