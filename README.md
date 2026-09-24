@@ -5,7 +5,7 @@ architecture search. The portable Rust-backed API aligns and applies edits to
 architecture data; PyTorch integration is an explicit optional layer.
 
 RCSWX reimplements [Evolutionary Architecture Search through Grammar-Based
-Sequence Alignment](https://arxiv.org/abs/2512.04992). The original
+Sequence Alignment](https://openreview.net/forum?id=YK8HlgLJd7). The original
 implementation is [flxai/rcswx-paper](https://github.com/flxai/rcswx-paper).
 
 ## Installation
@@ -170,17 +170,14 @@ dependency notices in [LICENSE.rust-dependencies](LICENSE.rust-dependencies).
 ## Cite
 
 ```bibtex
-@misc{rcswx2025,
-  author        = {Gómez Martín, Adri and Möller, Felix and
-                   McDonagh, Steven and Abella, Monica and Desco, Manuel and
-                   Crowley, Elliot J. and Klein, Aaron and Ericsson, Linus},
-  title         = {{Evolutionary Architecture Search through Grammar-Based Sequence Alignment}},
-  year          = {2025},
-  eprint        = {2512.04992},
-  archivePrefix = {arXiv},
-  primaryClass  = {cs.NE},
-  doi           = {10.48550/arXiv.2512.04992},
-  url           = {https://arxiv.org/abs/2512.04992}
+@inproceedings{gomez2026evolutionary,
+  author    = {Gómez Martín, Adri and Möller, Felix and McDonagh, Steven and
+               Abella, Monica and Desco, Manuel and Crowley, Elliot J. and
+               Klein, Aaron and Ericsson, Linus},
+  title     = {Evolutionary Architecture Search through Grammar-Based Sequence Alignment},
+  booktitle = {International Conference on Automated Machine Learning (AutoML)},
+  year      = {2026},
+  url       = {https://openreview.net/forum?id=YK8HlgLJd7}
 }
 ```
 

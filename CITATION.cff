@@ -22,7 +22,9 @@ authors:
 license: MIT
 repository-code: "https://github.com/flxai/rcswx"
 preferred-citation:
-  type: article
+  type: conference-paper
+  conference:
+    name: "International Conference on Automated Machine Learning"
   authors:
     - family-names: "Gómez Martín"
       given-names: Adri
@@ -41,6 +43,5 @@ preferred-citation:
     - family-names: Ericsson
       given-names: Linus
   title: "Evolutionary Architecture Search through Grammar-Based Sequence Alignment"
-  year: 2025
-  doi: "10.48550/arXiv.2512.04992"
-  url: "https://arxiv.org/abs/2512.04992"
+  year: 2026
+  url: "https://openreview.net/forum?id=YK8HlgLJd7"
