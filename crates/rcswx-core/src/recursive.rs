@@ -655,7 +655,7 @@ impl Kernel<'_> {
         Ok(result)
     }
 
-    fn closing_cost(
+    fn closing_cost<const CANCELLABLE: bool>(
         path: &Path,
         token: &Token,
         first: bool,
@@ -667,10 +667,12 @@ impl Kernel<'_> {
         let mut current = Some(path.as_ref());
         let mut walked = 0_usize;
         while let Some(history) = current {
-            if walked % 64 == 0 {
+            if CANCELLABLE && walked % 64 == 0 {
                 cell_eval::check_cancel(cancelled)?;
             }
-            walked += 1;
+            if CANCELLABLE {
+                walked += 1;
+            }
             let op = &history.step;
             let own_id = if first { op.node1_id } else { op.node2_id };
             let own_kind = if first { op.kind.add() } else { op.kind.rem() };
@@ -708,7 +710,7 @@ impl Kernel<'_> {
             Ok(f64::INFINITY)
         }
     }
-    fn closing_mutation(
+    fn closing_mutation<const CANCELLABLE: bool>(
         path: &Path,
         first: &Token,
         second: &Token,
@@ -720,10 +722,12 @@ impl Kernel<'_> {
         let mut current = Some(path.as_ref());
         let mut walked = 0_usize;
         while let Some(history) = current {
-            if walked % 64 == 0 {
+            if CANCELLABLE && walked % 64 == 0 {
                 cell_eval::check_cancel(cancelled)?;
             }
-            walked += 1;
+            if CANCELLABLE {
+                walked += 1;
+            }
             let op = &history.step;
             if op.node1_id == Some(first.id) && op.kind.mutation() {
                 closed1 += 1;
@@ -792,9 +796,19 @@ impl Kernel<'_> {
                 second: two,
                 position: (i + start_i, j + start_j),
             };
-            cell_eval::Draft::evaluate(&input, || self.account_history(), None)
+            cell_eval::Draft::evaluate(
+                &input,
+                || self.account_history(),
+                |direction, _, value, parent| {
+                    History::new(
+                        input.step(direction, parent, value),
+                        Some(parent.clone()),
+                        parent.len + 1,
+                    )
+                },
+            )
         };
-        self.publish_cell(matrix, i, j, draft, false)?;
+        self.publish_cell(matrix, i, j, draft)?;
         Ok(true)
     }
 
@@ -804,14 +818,8 @@ impl Kernel<'_> {
         i: usize,
         j: usize,
         mut draft: cell_eval::Draft,
-        account_paths: bool,
     ) -> Result<()> {
         let destination = cell(matrix, i as isize, j as isize)?;
-        if account_paths {
-            for _ in 0..draft.history_requests {
-                self.account_history()?;
-            }
-        }
         {
             let mut data = destination.borrow_mut();
             if let Some(top) = draft.candidates[0].take() {
@@ -1190,7 +1198,7 @@ impl Kernel<'_> {
                             count
                         };
                         #[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
-                        let mut batch = if parallel {
+                        let (count, mut batch) = if parallel {
                             wave::evaluate(
                                 self,
                                 wave::Round {
@@ -1208,7 +1216,7 @@ impl Kernel<'_> {
                                 },
                             )?
                         } else {
-                            None
+                            (count, None)
                         };
                         #[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
                         let mut next_draft = 0;
@@ -1223,7 +1231,15 @@ impl Kernel<'_> {
                                                 "joined native round is missing a cell".into(),
                                             ))
                                         })?;
-                                    self.publish_cell(&matrix, i, j, draft, true)?;
+                                    let draft = wave::materialize(
+                                        self,
+                                        &matrix,
+                                        (first, second),
+                                        (i, j),
+                                        (start_i, start_j),
+                                        draft,
+                                    )?;
+                                    self.publish_cell(&matrix, i, j, draft)?;
                                     next_draft += 1;
                                     true
                                 } else {

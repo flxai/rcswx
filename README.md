@@ -204,7 +204,9 @@ libraries are serialization (`serde`/`serde_json`), arbitrary IDs
 (`num-bigint`), `libm`, and `rand_chacha`/`rand_core`. Their installed Cargo
 manifests declare MIT for `libm` and MIT OR Apache-2.0 for the other listed
 libraries. The dev-only execution harness pins `wasm-bindgen-test` 0.3.77, whose `wasm-bindgen` 0.2.127 matches the locked Nix CLI; its manifest declares MIT OR Apache-2.0.
-Wheels include the original algorithm attribution and the verbatim numerical
+Native parallel builds additionally link Rayon and its MIT OR Apache-2.0
+dependencies. Wheels retain the original algorithm attribution and the verbatim
+numerical and optional parallel
 dependency notices in [LICENSE.rust-dependencies](LICENSE.rust-dependencies).
 
 ## Cite
