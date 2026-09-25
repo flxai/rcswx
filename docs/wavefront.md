@@ -170,7 +170,21 @@ Use the exact filename produced by the build, not a wildcard or the example
 Python tag above. The serial wheel has its own `make wheel` / `make wheel-test`
 gate. Both gates use fresh minimal, Torch, reference and combined installations.
 
-## Serial ownership gate
+The final native candidate passed the full Python suite in both builds:
+643 passed / one serial-artifact-only skip in the parallel build, and
+624 passed / 20 parallel-only skips in the default build. The focused parallel
+suite passed 32 tests. Rust passed 40 unit tests with `trace,parallel`, plus the
+resource, trace, smoke and frozen-oracle integration gates. The default Rust
+build passed its 29 unit tests and applicable integrations.
+
+Both exact release wheels passed the isolated minimal, Torch, reference and
+combined installation gates, including their examples. Real wasm32 execution
+passed with and without `parallel`; the binding also passed its browser-worker
+test. All 30 browser tests passed across Chromium, Firefox and WebKit. Regenerated
+browser recordings changed only six build-provenance fields; all algorithm
+content remained identical.
+
+## Serial ownership gate (before scheduling)
 
 The common evaluator and deterministic publisher pass all 32 frozen cases on
 native Rust and on real wasm32 execution in Node, including exact trace events
@@ -201,3 +215,98 @@ The `cold` field is the first call for that case/mode, not a claim that each
 row starts a fresh process or pool. Exact extension/wheel hashes identify the
 executed binaries; recorded Git revisions are the checkout HEAD at measurement
 time, before the corresponding semantic commit.
+
+## Final release-wheel measurements
+
+The final scheduler was measured without profiling on the same i7-1355U,
+CPython 3.14.7, with CPU affinity `0,2,4,6` (two physical performance cores and
+two efficiency cores). No build or validation ran concurrently. Each table entry
+is the median of 12 warm public `edit_path` calls. Original, same-wheel serial
+and four-worker calls alternated through all six orderings twice, after a
+separately recorded first call.
+
+The `nested` family is a valid, deeply nested routing/sequence architecture with
+unique linear parameters and one changed middle computation. It creates
+history-heavy intermediate ties; it does not replace algorithm work with sleeps
+or an artificial parallel loop. Inputs and result fingerprints are outside the
+timed interval; preparation and retained-plan assembly are inside it.
+
+| Nested modules | Collapse | Token matrix | Original serial | Parallel wheel, `workers=1` | `workers=4` | Speedup vs original / same-wheel serial |
+|---|---|---|---:|---:|---:|---:|
+| 80 | Off | 239 × 239 | 3.516 s | 3.856 s | **2.678 s** | **1.31× / 1.44×** |
+| 128 | On | 383 × 383 | 2.466 s | 2.278 s | 2.499 s | 0.99× / 0.91× |
+
+The 80-module parallel call beat both serial controls in **all 12 paired
+repetitions**. Every cold and warm result matched the independently installed
+original in distance, complete ordered-path fingerprint and all canonical
+statistics. Each parallel call evaluated 38,733 cells in 254 rounds, reported
+four overlapping compute jobs, and reserved at most 7,773,432 bytes of scratch.
+This is a measured end-to-end speedup over the untouched original, not merely
+over a slowed parallel-capable serial build.
+
+The collapse-enabled case is retained as a negative control, not excluded from
+the results: only 24,316 of its 146,688 evaluated cells ran in parallel, and its
+median did not improve. Pool dispatch, read-view preparation, canonical
+publication, recursive orchestration and memory traffic can dominate. Width
+alone does not justify parallelism. The serial default remains intentional.
+
+Reproduce the primary comparison using separate installed release wheels:
+
+```sh
+taskset -c 0,2,4,6 target/wavefront-parallel/venv/bin/python \
+  -m benchmarks.wavefront --label wavefront-final --workers 1 4 \
+  --families nested --sizes 80 --collapse off --repeats 12 \
+  --compare-package target/wavefront-baseline/venv/lib/python3.14/site-packages/rcswx \
+  --output target/wavefront-parallel/final-80.json
+```
+
+Use available physical CPUs and the installed Python tag on another machine.
+For the negative control, use `--sizes 128 --collapse on`. The comparison package
+must be the independently built original revision, not the current implementation
+with `workers=1`. Exact wheel and extension hashes, individual samples, cold
+calls, input fingerprints, execution reports and canonical counters accompany
+the committed [raw measurement data](../benchmarks/results/wavefront-final.json)
+(440 cold/warm samples across all runs).
+
+### Serial and fallback controls
+
+The final default wheel remains a separate, non-atomic serial build. On the
+eight chain/wrapper cases (128/256 modules, both collapse modes), nine-repeat
+**median paired candidate/original ratios** were 0.931–1.021. Ratios of the
+separate medians were noisier, 0.954–1.129; both calculations and every sample
+are retained in the data rather than treating frequency drift as a code change.
+
+The additional nested 80-module case did expose a serial cost: the default
+wheel's eight-repeat median was 3.811 s versus 3.484 s originally, **9.4% slower**
+(median paired ratio 1.113). This is not a blanket zero-regression result.
+The four-worker primary result still beats the untouched original, not just
+this slower control.
+
+Opting into four workers is also not free when waves fall back. The flat
+chain/wrapper controls (32/256 modules, both collapse modes) were approximately
+4–17% slower than the original by ratio of medians. Seven cases dispatched no
+compute jobs; the remaining case parallelized only 1,155 cells. Admission
+inspection and the parallel-capable ownership model still have costs. Keep
+`workers=1` unless the workload benefits from parallel execution.
+
+### Isolated memory check
+
+Each mode below ran the nested 80-module, collapse-disabled case in a separate
+process, with one first call and three warm calls. Values are the maximum
+per-call RSS high-water mark across those calls, not RSS from the shared-process
+latency comparison:
+
+| Artifact / mode | Peak RSS |
+|---|---:|
+| Original serial | 157.36 MiB |
+| Final default serial wheel | 156.92 MiB |
+| Final parallel wheel, `workers=1` | 157.68 MiB |
+| Final parallel wheel, `workers=4` | 154.62 MiB |
+
+All four modes had identical inputs, complete paths, distance and canonical
+statistics. The parallel run remained below the 8 MiB scratch payload ceiling;
+these RSS observations do not turn that payload bound into a hard process-memory
+limit or promise that parallelism always reduces RSS. The final serial modes reported
+no pool access. Reproduce isolated checks by omitting `--compare-package` and
+launching the Python from each wheel installation separately (`--baseline` for
+the original, and `--workers 1` or `--workers 4` for the final wheel).
