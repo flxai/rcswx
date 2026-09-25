@@ -12,6 +12,8 @@ result
 benchmark-results/
 # Local generated datasets and figures; never force-add.
 benchmarks/results/
+# Implementation plans stay out of version control.
+*IMPLEMENTATION_PLAN.md
 crates/rcswx-wasm/pkg/
 examples/web/node_modules/
 examples/web/test-results/
