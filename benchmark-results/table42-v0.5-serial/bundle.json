@@ -1,0 +1,44 @@
+{
+  "schema": "rcswx-table42-serial-control-bundle-v1",
+  "remote_root": "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0",
+  "launch_command": "ssh ono systemd-run --user --scope --quiet -p MemoryMax=20G -p MemorySwapMax=0 /home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python /home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+  "verification": {
+    "complete_measurements": 24,
+    "repetitions_per_case_and_release": 3,
+    "all_outcomes_and_fixtures_match_previous_four_version_campaign": true,
+    "all_request_hashes_verified_against_raw_archive": true,
+    "frozen_harness_and_target_hashes_verified": true,
+    "all_v05_calls_parallel_capable_but_serial_without_pool_or_jobs": true
+  },
+  "interpretation": "Matched medians on four Table 4.2 cases, not a universal performance-equivalence guarantee. Both tags were remeasured; v0.5 uses the same parallel-enabled wheel as the preceding ten-worker campaign.",
+  "files": {
+    "campaign.json": {
+      "bytes": 3499,
+      "sha256": "d7a0383a897a929e78f67bdcb767b3bf58b8bf69dc4d4aace8ebf20d3219910a"
+    },
+    "run-campaign.py": {
+      "bytes": 7147,
+      "sha256": "acd53c91ef161ccc93be79fbb7dfd1c819f3db478c4e543674a3a1023647092a"
+    },
+    "collect-results.py": {
+      "bytes": 7983,
+      "sha256": "1ccee4069d8eef9eff10c79d16b8f3943a079afb0500c6e6314cdba03212f8ad"
+    },
+    "observations.json": {
+      "bytes": 148933,
+      "sha256": "815828052d495c6ae7fa3788dbc12649436ee10e311a429f46ec3b39c38d031e"
+    },
+    "summary.json": {
+      "bytes": 4976,
+      "sha256": "8e1e04bf9e5b2d865a14c55b02c49e45c650b8a2622d23fc5336df01a95c848c"
+    },
+    "comparison.csv": {
+      "bytes": 581,
+      "sha256": "5a760afba2e53d305a198bb56f9b9fcba8a7b2ba612488f7a1baacbe8d8ddc2b"
+    },
+    "raw-evidence.tar.gz": {
+      "bytes": 12051684,
+      "sha256": "b06e10dda9277d657304ef762d06c260c47a145c8f7f78859876c362549dc605"
+    }
+  }
+}

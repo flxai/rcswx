@@ -1,0 +1,3841 @@
+{
+  "schema": "rcswx-table42-serial-control-observations-v1",
+  "campaign_sha256": "d7a0383a897a929e78f67bdcb767b3bf58b8bf69dc4d4aace8ebf20d3219910a",
+  "targets_sha256": "30491b8acd0d60299b9a8112761d879250e45755b4835679c68f0da17731e789",
+  "runner_sha256": "acd53c91ef161ccc93be79fbb7dfd1c819f3db478c4e543674a3a1023647092a",
+  "collector_sha256": "1ccee4069d8eef9eff10c79d16b8f3943a079afb0500c6e6314cdba03212f8ad",
+  "harness_archive_sha256": "ae45b96b4b8eb95ec8ca3519ecb21b652b9b04fee634fb4cba950aacc86c3277",
+  "memory_worker_sha256": "2f89e1441eca93c05711b6e6643ba2fc909f39f49063a6004f94ea065ae5f275",
+  "source_request_sha256": {
+    "requests/resnet18-mixer8-v0.3-0.json": "8a4b86751fe38076e22d7d6216f0a52dadea4cea654fc4c9d09515b67e585ea0",
+    "requests/resnet18-mixer8-v0.3-1.json": "fe4ff13a316d2f73e389cab4609c5ba29c6dc6aeeec5ec61bf8cea3e79cee05a",
+    "requests/resnet18-mixer8-v0.3-2.json": "7ed265f319beb4b54f997131ab780edf70e8be9517e7ac7325a6b5138da70199",
+    "requests/resnet18-mixer8-v0.5-0.json": "dbc2f5980b9c37ea520d002c88dd9832c17492e0e140257d9dcf8d9efad84fb4",
+    "requests/resnet18-mixer8-v0.5-1.json": "885b9bda0a66baf3fdba86a861d9632d140706d6f9791bbc1e11ad8cfd97c292",
+    "requests/resnet18-mixer8-v0.5-2.json": "f8aced776abe74abed655af80b5deac07626d6367ff7d4ae2eaa25e0045459cb",
+    "requests/resnet18-mixer12-v0.3-0.json": "d172a3958373320c9b5194c0717c050bf49aa9ff868b8e1978b2613e9e8eba01",
+    "requests/resnet18-mixer12-v0.3-1.json": "1f3bc659493e52fa5f9d35fe45576b7bc7a85adbacc6962a9e3516e0d192a134",
+    "requests/resnet18-mixer12-v0.3-2.json": "d53c531c5417cd0ee415a7d89f5946c4d5dcf7332f5ca9cd90320cee09b3b444",
+    "requests/resnet18-mixer12-v0.5-0.json": "3ee4b2bf290e55378d0c2ff1fcf1285eb8ab54b38656180c232d7e7d6400042f",
+    "requests/resnet18-mixer12-v0.5-1.json": "db12a17c7399b318fdf7f2babd5510824607de9b8111eefbd6b3018a9073853f",
+    "requests/resnet18-mixer12-v0.5-2.json": "a008d2c27eb720cf184c9e04eb8896d20dc51ff8371fefc4a745c5ae603c1f2a",
+    "requests/resnet34-mixer8-v0.3-0.json": "43b6099c78d07678edcecdcab58f066356904976f9bb73e8ec1653ef77fdb616",
+    "requests/resnet34-mixer8-v0.3-1.json": "2e8f7ca0c10c9651c02bf498d11780331a827b31d66d871d9d937ae4efdf603d",
+    "requests/resnet34-mixer8-v0.3-2.json": "5740cdbaecf714981a2019d9ac21fad9a723c748714a1aa6cd2c4b36c6e7ace1",
+    "requests/resnet34-mixer8-v0.5-0.json": "4ca5ab28cabb07fda529c4117060cb62d833ed0a0fabac149ededad3810cb334",
+    "requests/resnet34-mixer8-v0.5-1.json": "162eda6b4dff9bb2f86d2e20dc86e825eed934b23ea5e486f8e76c2b68821f91",
+    "requests/resnet34-mixer8-v0.5-2.json": "da38b14062f37e1c81bba1d0fbf21b05168510a9e07410c8410e9cbfc60ebdff",
+    "requests/resnet34-mixer12-v0.3-0.json": "a3d84feb2daf059f9efff6a2ae548f07809ac429160509b33d3e42e49c955522",
+    "requests/resnet34-mixer12-v0.3-1.json": "9a1eeee061bf86c62b76a465a6cf8b6ad99c5526f197c1eb4214ca4c17ac2fbf",
+    "requests/resnet34-mixer12-v0.3-2.json": "17f6fa48db36b3c6e103fd85d20a19e8b0c47069207bea5e6971724dd6bd520b",
+    "requests/resnet34-mixer12-v0.5-0.json": "c4578dd439997780e3ef527979c04c09acdae3dccf295c81bf33b88c0e0e198f",
+    "requests/resnet34-mixer12-v0.5-1.json": "c1ebe458867ab477dd93f60acd7dcb725c212875e8c53ff5df5dbc1adbf9d061",
+    "requests/resnet34-mixer12-v0.5-2.json": "6a35ac294334b7decb66233a635eb8bd435e396b3625ab85e50e0143cf0eebb0"
+  },
+  "commands": [
+    {
+      "kind": "resolve",
+      "version": "v0.3",
+      "command": [
+        "taskset",
+        "-c",
+        "24",
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "-m",
+        "tests.reference.table42",
+        "--resolve-config",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/v0.3-runtime.json",
+        "--admit-supplied-factories",
+        "--cpu",
+        "24"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.3:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "kind": "resolve",
+      "version": "v0.5",
+      "command": [
+        "taskset",
+        "-c",
+        "24",
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "-m",
+        "tests.reference.table42",
+        "--resolve-config",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/v0.5-runtime.json",
+        "--admit-supplied-factories",
+        "--cpu",
+        "24"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.5:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet18-mixer8",
+      "version": "v0.3",
+      "repeat": 0,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.3",
+        "resnet18-mixer8",
+        "0"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.3:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          2.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "available_memory": 108773625856
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet18-mixer8\", \"version\": \"v0.3\", \"repeat\": 0, \"seconds\": 0.742789218085818, \"distance\": 60.375}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet18-mixer8",
+      "version": "v0.5",
+      "repeat": 0,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.5",
+        "resnet18-mixer8",
+        "0"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.5:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          2.0,
+          0.0,
+          1.0,
+          0.0,
+          2.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          2.0
+        ],
+        "available_memory": 108485201920
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet18-mixer8\", \"version\": \"v0.5\", \"repeat\": 0, \"seconds\": 0.7652148699853569, \"distance\": 60.375}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet18-mixer8",
+      "version": "v0.5",
+      "repeat": 1,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.5",
+        "resnet18-mixer8",
+        "1"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.5:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          2.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          2.9,
+          1.0,
+          1.0,
+          2.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "available_memory": 108751122432
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet18-mixer8\", \"version\": \"v0.5\", \"repeat\": 1, \"seconds\": 0.736648476915434, \"distance\": 60.375}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet18-mixer8",
+      "version": "v0.3",
+      "repeat": 1,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.3",
+        "resnet18-mixer8",
+        "1"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.3:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          100.0,
+          0.0,
+          0.0,
+          2.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          2.0,
+          0.0,
+          0.0,
+          2.0,
+          1.0
+        ],
+        "available_memory": 108251537408
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet18-mixer8\", \"version\": \"v0.3\", \"repeat\": 1, \"seconds\": 0.7173931859433651, \"distance\": 60.375}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet18-mixer8",
+      "version": "v0.3",
+      "repeat": 2,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.3",
+        "resnet18-mixer8",
+        "2"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.3:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          4.0,
+          1.0,
+          2.0,
+          100.0,
+          7.0,
+          0.0,
+          4.0,
+          25.0,
+          0.0,
+          0.0,
+          4.0,
+          2.0,
+          2.0,
+          3.0,
+          1.0,
+          0.0
+        ],
+        "available_memory": 108297834496
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet18-mixer8\", \"version\": \"v0.3\", \"repeat\": 2, \"seconds\": 0.7188475310103968, \"distance\": 60.375}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet18-mixer8",
+      "version": "v0.5",
+      "repeat": 2,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.5",
+        "resnet18-mixer8",
+        "2"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.5:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          2.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          100.0,
+          0.0,
+          0.0,
+          1.0,
+          2.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "available_memory": 108463239168
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet18-mixer8\", \"version\": \"v0.5\", \"repeat\": 2, \"seconds\": 0.7311549239093438, \"distance\": 60.375}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet18-mixer12",
+      "version": "v0.3",
+      "repeat": 0,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.3",
+        "resnet18-mixer12",
+        "0"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.3:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          2.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          100.0,
+          2.0,
+          1.0,
+          11.1,
+          22.0,
+          0.0,
+          1.0,
+          1.0,
+          2.0,
+          2.0,
+          1.0,
+          2.0,
+          0.0
+        ],
+        "available_memory": 108427575296
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet18-mixer12\", \"version\": \"v0.3\", \"repeat\": 0, \"seconds\": 5.369088169070892, \"distance\": 95.375}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet18-mixer12",
+      "version": "v0.5",
+      "repeat": 0,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.5",
+        "resnet18-mixer12",
+        "0"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.5:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          2.0,
+          100.0,
+          1.0,
+          8.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          2.0,
+          1.0,
+          1.0,
+          0.0,
+          7.0,
+          1.0
+        ],
+        "available_memory": 108435169280
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet18-mixer12\", \"version\": \"v0.5\", \"repeat\": 0, \"seconds\": 5.382898042909801, \"distance\": 95.375}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet18-mixer12",
+      "version": "v0.5",
+      "repeat": 1,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.5",
+        "resnet18-mixer12",
+        "1"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.5:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          2.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          100.0,
+          25.7,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          5.8,
+          2.0,
+          1.0,
+          1.0,
+          0.0
+        ],
+        "available_memory": 108407635968
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet18-mixer12\", \"version\": \"v0.5\", \"repeat\": 1, \"seconds\": 5.359278036979958, \"distance\": 95.375}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet18-mixer12",
+      "version": "v0.3",
+      "repeat": 1,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.3",
+        "resnet18-mixer12",
+        "1"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.3:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          2.0,
+          0.0,
+          0.0,
+          100.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "available_memory": 108381294592
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet18-mixer12\", \"version\": \"v0.3\", \"repeat\": 1, \"seconds\": 5.4000820849323645, \"distance\": 95.375}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet18-mixer12",
+      "version": "v0.3",
+      "repeat": 2,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.3",
+        "resnet18-mixer12",
+        "2"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.3:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          2.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          4.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "available_memory": 108437962752
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet18-mixer12\", \"version\": \"v0.3\", \"repeat\": 2, \"seconds\": 5.440164429019205, \"distance\": 95.375}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet18-mixer12",
+      "version": "v0.5",
+      "repeat": 2,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.5",
+        "resnet18-mixer12",
+        "2"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.5:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          2.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          100.0,
+          1.0,
+          2.0,
+          1.0,
+          2.0,
+          0.0,
+          0.0,
+          0.0,
+          20.8,
+          1.0,
+          1.0,
+          2.0,
+          1.0
+        ],
+        "available_memory": 108192120832
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet18-mixer12\", \"version\": \"v0.5\", \"repeat\": 2, \"seconds\": 5.35399526997935, \"distance\": 95.375}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet34-mixer8",
+      "version": "v0.3",
+      "repeat": 0,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.3",
+        "resnet34-mixer8",
+        "0"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.3:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          100.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "available_memory": 108321488896
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet34-mixer8\", \"version\": \"v0.3\", \"repeat\": 0, \"seconds\": 1.0992043860023841, \"distance\": 119.625}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet34-mixer8",
+      "version": "v0.5",
+      "repeat": 0,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.5",
+        "resnet34-mixer8",
+        "0"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.5:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          10.0,
+          0.0,
+          0.0,
+          91.1,
+          0.0,
+          1.0,
+          1.0,
+          3.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "available_memory": 108449722368
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet34-mixer8\", \"version\": \"v0.5\", \"repeat\": 0, \"seconds\": 1.1395011889981106, \"distance\": 119.625}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet34-mixer8",
+      "version": "v0.5",
+      "repeat": 1,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.5",
+        "resnet34-mixer8",
+        "1"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.5:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          2.0,
+          0.0,
+          100.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          2.0,
+          0.0,
+          3.0,
+          0.0
+        ],
+        "available_memory": 108455407616
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet34-mixer8\", \"version\": \"v0.5\", \"repeat\": 1, \"seconds\": 1.1795013289665803, \"distance\": 119.625}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet34-mixer8",
+      "version": "v0.3",
+      "repeat": 1,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.3",
+        "resnet34-mixer8",
+        "1"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.3:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          2.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          100.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          3.0,
+          1.0,
+          0.0
+        ],
+        "available_memory": 108485488640
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet34-mixer8\", \"version\": \"v0.3\", \"repeat\": 1, \"seconds\": 1.1151215890422463, \"distance\": 119.625}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet34-mixer8",
+      "version": "v0.3",
+      "repeat": 2,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.3",
+        "resnet34-mixer8",
+        "2"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.3:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          58.4,
+          19.8,
+          36.0,
+          0.0,
+          5.0,
+          1.0,
+          1.0,
+          2.0,
+          0.0,
+          1.0,
+          11.9,
+          2.0,
+          43.0,
+          1.0,
+          6.0,
+          1.0
+        ],
+        "available_memory": 108487172096
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet34-mixer8\", \"version\": \"v0.3\", \"repeat\": 2, \"seconds\": 1.114950429997407, \"distance\": 119.625}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet34-mixer8",
+      "version": "v0.5",
+      "repeat": 2,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.5",
+        "resnet34-mixer8",
+        "2"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.5:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          2.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          2.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          100.0,
+          0.0,
+          1.0
+        ],
+        "available_memory": 108473778176
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet34-mixer8\", \"version\": \"v0.5\", \"repeat\": 2, \"seconds\": 1.1409250060096383, \"distance\": 119.625}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet34-mixer12",
+      "version": "v0.3",
+      "repeat": 0,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.3",
+        "resnet34-mixer12",
+        "0"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.3:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          2.0,
+          0.0,
+          4.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          2.0,
+          1.0,
+          2.0,
+          0.0,
+          1.0,
+          1.0,
+          4.0,
+          2.0,
+          2.0,
+          1.0,
+          2.0,
+          100.0,
+          0.0,
+          2.0
+        ],
+        "available_memory": 108469317632
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet34-mixer12\", \"version\": \"v0.3\", \"repeat\": 0, \"seconds\": 96.06271772598848, \"distance\": 115.625}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet34-mixer12",
+      "version": "v0.5",
+      "repeat": 0,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.5",
+        "resnet34-mixer12",
+        "0"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.5:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          2.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          100.0,
+          0.0,
+          0.0
+        ],
+        "available_memory": 108165709824
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet34-mixer12\", \"version\": \"v0.5\", \"repeat\": 0, \"seconds\": 93.33831242995802, \"distance\": 115.625}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet34-mixer12",
+      "version": "v0.5",
+      "repeat": 1,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.5",
+        "resnet34-mixer12",
+        "1"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.5:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "available_memory": 108239974400
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet34-mixer12\", \"version\": \"v0.5\", \"repeat\": 1, \"seconds\": 93.25123777193949, \"distance\": 115.625}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet34-mixer12",
+      "version": "v0.3",
+      "repeat": 1,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.3",
+        "resnet34-mixer12",
+        "1"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.3:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          0.0,
+          0.0,
+          2.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          2.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "available_memory": 108307681280
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet34-mixer12\", \"version\": \"v0.3\", \"repeat\": 1, \"seconds\": 96.71342212695163, \"distance\": 115.625}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet34-mixer12",
+      "version": "v0.3",
+      "repeat": 2,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.3",
+        "resnet34-mixer12",
+        "2"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.3:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          2.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          3.0,
+          1.0
+        ],
+        "available_memory": 108155162624
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet34-mixer12\", \"version\": \"v0.3\", \"repeat\": 2, \"seconds\": 96.53301926702261, \"distance\": 115.625}\n",
+      "stderr": ""
+    },
+    {
+      "kind": "request",
+      "case": "resnet34-mixer12",
+      "version": "v0.5",
+      "repeat": 2,
+      "command": [
+        "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+        "/home/cfg/tmp/rcswx-table42-v0.5-serial-e9eb4b0/run-campaign.py",
+        "--request",
+        "v0.5",
+        "resnet34-mixer12",
+        "2"
+      ],
+      "environment": {
+        "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "PYTHONHASHSEED": "42",
+        "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch",
+        "PYTHONPATH": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.5:/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness"
+      },
+      "preflight": {
+        "cpu_percent": [
+          2.0,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          2.0,
+          2.9,
+          4.0,
+          3.0,
+          31.7,
+          5.0,
+          4.0,
+          26.0,
+          0.0,
+          0.0,
+          2.0,
+          1.0,
+          1.0,
+          100.0,
+          1.0,
+          0.0
+        ],
+        "available_memory": 108058656768
+      },
+      "returncode": 0,
+      "stdout": "{\"case\": \"resnet34-mixer12\", \"version\": \"v0.5\", \"repeat\": 2, \"seconds\": 93.08007396501489, \"distance\": 115.625}\n",
+      "stderr": ""
+    }
+  ],
+  "rows": [
+    {
+      "case": "resnet18-mixer8",
+      "release": "v0.3",
+      "repeat": 0,
+      "status": "complete",
+      "nodes": [
+        267,
+        264
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 572399616,
+        "align_wall_seconds": 0.742789218085818,
+        "baseline_rss_bytes": 289116160,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 462856192,
+        "profiled": false,
+        "retained_rss_bytes": 453734400,
+        "retained_rss_delta_bytes": 164618240,
+        "rss_peak_bytes": 462856192,
+        "rss_peak_delta_bytes": 173740032,
+        "rss_peak_reset_error": null,
+        "seconds": 0.742789218085818
+      },
+      "outcome": {
+        "details": {
+          "distance": 60.375,
+          "histories_digest": "a4086712103d3c887231f7fbf6701146f37283c6fc70ac6ed83e2c9aff437bb9",
+          "matrix_shape": [
+            130,
+            125
+          ],
+          "operations_digest": "91073668f8320f8ef9724e74051293e0afeba8d94ba344f6741a5a1eecd54851",
+          "path_count": 972
+        },
+        "digest": "e63c26f1c84a57ee7b665b197d6f05bc26b69a40e00658602f0946350ffdc744",
+        "error": null,
+        "parents_after_digest": "0fd653526104283b9be1476e6ac1853ec941bee2b322979e432bd45a9da1feff",
+        "parents_before_digest": "3b4a7f32b8feb12f0237e7c990c5e4c9a7364bd41feb0094baab32a4ebbf0dac",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "19f2add8e15e4ea039811ec5be9b19db3d2aa4d76ca3f7f658f3b7467d63a666",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "d56dc0c9bd2c71c8e95829d84d3cdef5c6cb6d99b13f1856f6e92b96c416475c",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "8a4b86751fe38076e22d7d6216f0a52dadea4cea654fc4c9d09515b67e585ea0"
+    },
+    {
+      "case": "resnet18-mixer8",
+      "release": "v0.3",
+      "repeat": 1,
+      "status": "complete",
+      "nodes": [
+        267,
+        264
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 576516096,
+        "align_wall_seconds": 0.7173931859433651,
+        "baseline_rss_bytes": 289423360,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 463163392,
+        "profiled": false,
+        "retained_rss_bytes": 457805824,
+        "retained_rss_delta_bytes": 168382464,
+        "rss_peak_bytes": 463163392,
+        "rss_peak_delta_bytes": 173740032,
+        "rss_peak_reset_error": null,
+        "seconds": 0.7173931859433651
+      },
+      "outcome": {
+        "details": {
+          "distance": 60.375,
+          "histories_digest": "a4086712103d3c887231f7fbf6701146f37283c6fc70ac6ed83e2c9aff437bb9",
+          "matrix_shape": [
+            130,
+            125
+          ],
+          "operations_digest": "91073668f8320f8ef9724e74051293e0afeba8d94ba344f6741a5a1eecd54851",
+          "path_count": 972
+        },
+        "digest": "e63c26f1c84a57ee7b665b197d6f05bc26b69a40e00658602f0946350ffdc744",
+        "error": null,
+        "parents_after_digest": "0fd653526104283b9be1476e6ac1853ec941bee2b322979e432bd45a9da1feff",
+        "parents_before_digest": "3b4a7f32b8feb12f0237e7c990c5e4c9a7364bd41feb0094baab32a4ebbf0dac",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "19f2add8e15e4ea039811ec5be9b19db3d2aa4d76ca3f7f658f3b7467d63a666",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "d56dc0c9bd2c71c8e95829d84d3cdef5c6cb6d99b13f1856f6e92b96c416475c",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "fe4ff13a316d2f73e389cab4609c5ba29c6dc6aeeec5ec61bf8cea3e79cee05a"
+    },
+    {
+      "case": "resnet18-mixer8",
+      "release": "v0.3",
+      "repeat": 2,
+      "status": "complete",
+      "nodes": [
+        267,
+        264
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 580861952,
+        "align_wall_seconds": 0.7188475310103968,
+        "baseline_rss_bytes": 288067584,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 462311424,
+        "profiled": false,
+        "retained_rss_bytes": 462311424,
+        "retained_rss_delta_bytes": 174243840,
+        "rss_peak_bytes": 462311424,
+        "rss_peak_delta_bytes": 174243840,
+        "rss_peak_reset_error": null,
+        "seconds": 0.7188475310103968
+      },
+      "outcome": {
+        "details": {
+          "distance": 60.375,
+          "histories_digest": "a4086712103d3c887231f7fbf6701146f37283c6fc70ac6ed83e2c9aff437bb9",
+          "matrix_shape": [
+            130,
+            125
+          ],
+          "operations_digest": "91073668f8320f8ef9724e74051293e0afeba8d94ba344f6741a5a1eecd54851",
+          "path_count": 972
+        },
+        "digest": "e63c26f1c84a57ee7b665b197d6f05bc26b69a40e00658602f0946350ffdc744",
+        "error": null,
+        "parents_after_digest": "0fd653526104283b9be1476e6ac1853ec941bee2b322979e432bd45a9da1feff",
+        "parents_before_digest": "3b4a7f32b8feb12f0237e7c990c5e4c9a7364bd41feb0094baab32a4ebbf0dac",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "19f2add8e15e4ea039811ec5be9b19db3d2aa4d76ca3f7f658f3b7467d63a666",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "d56dc0c9bd2c71c8e95829d84d3cdef5c6cb6d99b13f1856f6e92b96c416475c",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "7ed265f319beb4b54f997131ab780edf70e8be9517e7ac7325a6b5138da70199"
+    },
+    {
+      "case": "resnet18-mixer8",
+      "release": "v0.5",
+      "repeat": 0,
+      "status": "complete",
+      "nodes": [
+        267,
+        264
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 551903232,
+        "align_wall_seconds": 0.7652148699853569,
+        "baseline_rss_bytes": 288354304,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 461996032,
+        "native_execution": {
+          "alias_fallbacks": 0,
+          "host_polls": 0,
+          "jobs": 0,
+          "narrow_fallbacks": 0,
+          "parallel_capable": true,
+          "parallel_cells": 0,
+          "parallel_rounds": 0,
+          "peak_jobs": 0,
+          "pool_capacity": null,
+          "requested_workers": 1,
+          "scratch_fallbacks": 0,
+          "scratch_peak_bytes": 0,
+          "serial_cells": 59859,
+          "worker_limit": 1
+        },
+        "profiled": false,
+        "retained_rss_bytes": 432525312,
+        "retained_rss_delta_bytes": 144171008,
+        "rss_peak_bytes": 461996032,
+        "rss_peak_delta_bytes": 173641728,
+        "rss_peak_reset_error": null,
+        "seconds": 0.7652148699853569
+      },
+      "outcome": {
+        "details": {
+          "distance": 60.375,
+          "histories_digest": "a4086712103d3c887231f7fbf6701146f37283c6fc70ac6ed83e2c9aff437bb9",
+          "matrix_shape": [
+            130,
+            125
+          ],
+          "operations_digest": "91073668f8320f8ef9724e74051293e0afeba8d94ba344f6741a5a1eecd54851",
+          "path_count": 972
+        },
+        "digest": "e63c26f1c84a57ee7b665b197d6f05bc26b69a40e00658602f0946350ffdc744",
+        "error": null,
+        "parents_after_digest": "0fd653526104283b9be1476e6ac1853ec941bee2b322979e432bd45a9da1feff",
+        "parents_before_digest": "3b4a7f32b8feb12f0237e7c990c5e4c9a7364bd41feb0094baab32a4ebbf0dac",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "19f2add8e15e4ea039811ec5be9b19db3d2aa4d76ca3f7f658f3b7467d63a666",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "8b150033a24e98311531dbf028b5c20258a5892259facc761876e7d17813a95f",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "dbc2f5980b9c37ea520d002c88dd9832c17492e0e140257d9dcf8d9efad84fb4"
+    },
+    {
+      "case": "resnet18-mixer8",
+      "release": "v0.5",
+      "repeat": 1,
+      "status": "complete",
+      "nodes": [
+        267,
+        264
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 559984640,
+        "align_wall_seconds": 0.736648476915434,
+        "baseline_rss_bytes": 289681408,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 463093760,
+        "native_execution": {
+          "alias_fallbacks": 0,
+          "host_polls": 0,
+          "jobs": 0,
+          "narrow_fallbacks": 0,
+          "parallel_capable": true,
+          "parallel_cells": 0,
+          "parallel_rounds": 0,
+          "peak_jobs": 0,
+          "pool_capacity": null,
+          "requested_workers": 1,
+          "scratch_fallbacks": 0,
+          "scratch_peak_bytes": 0,
+          "serial_cells": 59859,
+          "worker_limit": 1
+        },
+        "profiled": false,
+        "retained_rss_bytes": 441556992,
+        "retained_rss_delta_bytes": 151875584,
+        "rss_peak_bytes": 463093760,
+        "rss_peak_delta_bytes": 173412352,
+        "rss_peak_reset_error": null,
+        "seconds": 0.736648476915434
+      },
+      "outcome": {
+        "details": {
+          "distance": 60.375,
+          "histories_digest": "a4086712103d3c887231f7fbf6701146f37283c6fc70ac6ed83e2c9aff437bb9",
+          "matrix_shape": [
+            130,
+            125
+          ],
+          "operations_digest": "91073668f8320f8ef9724e74051293e0afeba8d94ba344f6741a5a1eecd54851",
+          "path_count": 972
+        },
+        "digest": "e63c26f1c84a57ee7b665b197d6f05bc26b69a40e00658602f0946350ffdc744",
+        "error": null,
+        "parents_after_digest": "0fd653526104283b9be1476e6ac1853ec941bee2b322979e432bd45a9da1feff",
+        "parents_before_digest": "3b4a7f32b8feb12f0237e7c990c5e4c9a7364bd41feb0094baab32a4ebbf0dac",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "19f2add8e15e4ea039811ec5be9b19db3d2aa4d76ca3f7f658f3b7467d63a666",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "8b150033a24e98311531dbf028b5c20258a5892259facc761876e7d17813a95f",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "885b9bda0a66baf3fdba86a861d9632d140706d6f9791bbc1e11ad8cfd97c292"
+    },
+    {
+      "case": "resnet18-mixer8",
+      "release": "v0.5",
+      "repeat": 2,
+      "status": "complete",
+      "nodes": [
+        267,
+        264
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 575836160,
+        "align_wall_seconds": 0.7311549239093438,
+        "baseline_rss_bytes": 288256000,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 462188544,
+        "native_execution": {
+          "alias_fallbacks": 0,
+          "host_polls": 0,
+          "jobs": 0,
+          "narrow_fallbacks": 0,
+          "parallel_capable": true,
+          "parallel_cells": 0,
+          "parallel_rounds": 0,
+          "peak_jobs": 0,
+          "pool_capacity": null,
+          "requested_workers": 1,
+          "scratch_fallbacks": 0,
+          "scratch_peak_bytes": 0,
+          "serial_cells": 59859,
+          "worker_limit": 1
+        },
+        "profiled": false,
+        "retained_rss_bytes": 456454144,
+        "retained_rss_delta_bytes": 168198144,
+        "rss_peak_bytes": 462188544,
+        "rss_peak_delta_bytes": 173932544,
+        "rss_peak_reset_error": null,
+        "seconds": 0.7311549239093438
+      },
+      "outcome": {
+        "details": {
+          "distance": 60.375,
+          "histories_digest": "a4086712103d3c887231f7fbf6701146f37283c6fc70ac6ed83e2c9aff437bb9",
+          "matrix_shape": [
+            130,
+            125
+          ],
+          "operations_digest": "91073668f8320f8ef9724e74051293e0afeba8d94ba344f6741a5a1eecd54851",
+          "path_count": 972
+        },
+        "digest": "e63c26f1c84a57ee7b665b197d6f05bc26b69a40e00658602f0946350ffdc744",
+        "error": null,
+        "parents_after_digest": "0fd653526104283b9be1476e6ac1853ec941bee2b322979e432bd45a9da1feff",
+        "parents_before_digest": "3b4a7f32b8feb12f0237e7c990c5e4c9a7364bd41feb0094baab32a4ebbf0dac",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "19f2add8e15e4ea039811ec5be9b19db3d2aa4d76ca3f7f658f3b7467d63a666",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "8b150033a24e98311531dbf028b5c20258a5892259facc761876e7d17813a95f",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "f8aced776abe74abed655af80b5deac07626d6367ff7d4ae2eaa25e0045459cb"
+    },
+    {
+      "case": "resnet18-mixer12",
+      "release": "v0.3",
+      "repeat": 0,
+      "status": "complete",
+      "nodes": [
+        267,
+        392
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 1429975040,
+        "align_wall_seconds": 5.369088169070892,
+        "baseline_rss_bytes": 290238464,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 1506983936,
+        "profiled": false,
+        "retained_rss_bytes": 1425514496,
+        "retained_rss_delta_bytes": 1135276032,
+        "rss_peak_bytes": 1506983936,
+        "rss_peak_delta_bytes": 1216745472,
+        "rss_peak_reset_error": null,
+        "seconds": 5.369088169070892
+      },
+      "outcome": {
+        "details": {
+          "distance": 95.375,
+          "histories_digest": "1a558fe76b399a92204a7f0bfb51b56a7911a03cb64b089a1ad34ba8a3570a7c",
+          "matrix_shape": [
+            130,
+            185
+          ],
+          "operations_digest": "fe6dccdce43d20e9b419e5d909e3b9a3457d9f078d96b17766ea5d2f9a69b2a0",
+          "path_count": 1
+        },
+        "digest": "00598987fdae2efe70aaed28f10182e72d18fb3c96ca92f44fb32466c9a7e50c",
+        "error": null,
+        "parents_after_digest": "e4e18ef22a68af1b154dd9665c12e6f979295afd85b4d63593bda5ddbfeb7fa9",
+        "parents_before_digest": "3319638d4a04190cf5d774c8957e12f2f5c2edd441cae2ae726a0b5386363166",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "0e813af63368921736a9c82f7008ceee74f4dd07fb9d0b0740ec29584a02fe9c",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "d56dc0c9bd2c71c8e95829d84d3cdef5c6cb6d99b13f1856f6e92b96c416475c",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "d172a3958373320c9b5194c0717c050bf49aa9ff868b8e1978b2613e9e8eba01"
+    },
+    {
+      "case": "resnet18-mixer12",
+      "release": "v0.3",
+      "repeat": 1,
+      "status": "complete",
+      "nodes": [
+        267,
+        392
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 1430110208,
+        "align_wall_seconds": 5.4000820849323645,
+        "baseline_rss_bytes": 290340864,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 1507344384,
+        "profiled": false,
+        "retained_rss_bytes": 1425653760,
+        "retained_rss_delta_bytes": 1135312896,
+        "rss_peak_bytes": 1507344384,
+        "rss_peak_delta_bytes": 1217003520,
+        "rss_peak_reset_error": null,
+        "seconds": 5.4000820849323645
+      },
+      "outcome": {
+        "details": {
+          "distance": 95.375,
+          "histories_digest": "1a558fe76b399a92204a7f0bfb51b56a7911a03cb64b089a1ad34ba8a3570a7c",
+          "matrix_shape": [
+            130,
+            185
+          ],
+          "operations_digest": "fe6dccdce43d20e9b419e5d909e3b9a3457d9f078d96b17766ea5d2f9a69b2a0",
+          "path_count": 1
+        },
+        "digest": "00598987fdae2efe70aaed28f10182e72d18fb3c96ca92f44fb32466c9a7e50c",
+        "error": null,
+        "parents_after_digest": "e4e18ef22a68af1b154dd9665c12e6f979295afd85b4d63593bda5ddbfeb7fa9",
+        "parents_before_digest": "3319638d4a04190cf5d774c8957e12f2f5c2edd441cae2ae726a0b5386363166",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "0e813af63368921736a9c82f7008ceee74f4dd07fb9d0b0740ec29584a02fe9c",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "d56dc0c9bd2c71c8e95829d84d3cdef5c6cb6d99b13f1856f6e92b96c416475c",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "1f3bc659493e52fa5f9d35fe45576b7bc7a85adbacc6962a9e3516e0d192a134"
+    },
+    {
+      "case": "resnet18-mixer12",
+      "release": "v0.3",
+      "repeat": 2,
+      "status": "complete",
+      "nodes": [
+        267,
+        392
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 1459843072,
+        "align_wall_seconds": 5.440164429019205,
+        "baseline_rss_bytes": 289923072,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 1506877440,
+        "profiled": false,
+        "retained_rss_bytes": 1455337472,
+        "retained_rss_delta_bytes": 1165414400,
+        "rss_peak_bytes": 1506877440,
+        "rss_peak_delta_bytes": 1216954368,
+        "rss_peak_reset_error": null,
+        "seconds": 5.440164429019205
+      },
+      "outcome": {
+        "details": {
+          "distance": 95.375,
+          "histories_digest": "1a558fe76b399a92204a7f0bfb51b56a7911a03cb64b089a1ad34ba8a3570a7c",
+          "matrix_shape": [
+            130,
+            185
+          ],
+          "operations_digest": "fe6dccdce43d20e9b419e5d909e3b9a3457d9f078d96b17766ea5d2f9a69b2a0",
+          "path_count": 1
+        },
+        "digest": "00598987fdae2efe70aaed28f10182e72d18fb3c96ca92f44fb32466c9a7e50c",
+        "error": null,
+        "parents_after_digest": "e4e18ef22a68af1b154dd9665c12e6f979295afd85b4d63593bda5ddbfeb7fa9",
+        "parents_before_digest": "3319638d4a04190cf5d774c8957e12f2f5c2edd441cae2ae726a0b5386363166",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "0e813af63368921736a9c82f7008ceee74f4dd07fb9d0b0740ec29584a02fe9c",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "d56dc0c9bd2c71c8e95829d84d3cdef5c6cb6d99b13f1856f6e92b96c416475c",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "d53c531c5417cd0ee415a7d89f5946c4d5dcf7332f5ca9cd90320cee09b3b444"
+    },
+    {
+      "case": "resnet18-mixer12",
+      "release": "v0.5",
+      "repeat": 0,
+      "status": "complete",
+      "nodes": [
+        267,
+        392
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 1472892928,
+        "align_wall_seconds": 5.382898042909801,
+        "baseline_rss_bytes": 291397632,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 1508397056,
+        "native_execution": {
+          "alias_fallbacks": 0,
+          "host_polls": 0,
+          "jobs": 0,
+          "narrow_fallbacks": 0,
+          "parallel_capable": true,
+          "parallel_cells": 0,
+          "parallel_rounds": 0,
+          "peak_jobs": 0,
+          "pool_capacity": null,
+          "requested_workers": 1,
+          "scratch_fallbacks": 0,
+          "scratch_peak_bytes": 0,
+          "serial_cells": 88939,
+          "worker_limit": 1
+        },
+        "profiled": false,
+        "retained_rss_bytes": 1469378560,
+        "retained_rss_delta_bytes": 1177980928,
+        "rss_peak_bytes": 1508397056,
+        "rss_peak_delta_bytes": 1216999424,
+        "rss_peak_reset_error": null,
+        "seconds": 5.382898042909801
+      },
+      "outcome": {
+        "details": {
+          "distance": 95.375,
+          "histories_digest": "1a558fe76b399a92204a7f0bfb51b56a7911a03cb64b089a1ad34ba8a3570a7c",
+          "matrix_shape": [
+            130,
+            185
+          ],
+          "operations_digest": "fe6dccdce43d20e9b419e5d909e3b9a3457d9f078d96b17766ea5d2f9a69b2a0",
+          "path_count": 1
+        },
+        "digest": "00598987fdae2efe70aaed28f10182e72d18fb3c96ca92f44fb32466c9a7e50c",
+        "error": null,
+        "parents_after_digest": "e4e18ef22a68af1b154dd9665c12e6f979295afd85b4d63593bda5ddbfeb7fa9",
+        "parents_before_digest": "3319638d4a04190cf5d774c8957e12f2f5c2edd441cae2ae726a0b5386363166",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "0e813af63368921736a9c82f7008ceee74f4dd07fb9d0b0740ec29584a02fe9c",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "8b150033a24e98311531dbf028b5c20258a5892259facc761876e7d17813a95f",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "3ee4b2bf290e55378d0c2ff1fcf1285eb8ab54b38656180c232d7e7d6400042f"
+    },
+    {
+      "case": "resnet18-mixer12",
+      "release": "v0.5",
+      "repeat": 1,
+      "status": "complete",
+      "nodes": [
+        267,
+        392
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 1472856064,
+        "align_wall_seconds": 5.359278036979958,
+        "baseline_rss_bytes": 291344384,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 1508155392,
+        "native_execution": {
+          "alias_fallbacks": 0,
+          "host_polls": 0,
+          "jobs": 0,
+          "narrow_fallbacks": 0,
+          "parallel_capable": true,
+          "parallel_cells": 0,
+          "parallel_rounds": 0,
+          "peak_jobs": 0,
+          "pool_capacity": null,
+          "requested_workers": 1,
+          "scratch_fallbacks": 0,
+          "scratch_peak_bytes": 0,
+          "serial_cells": 88939,
+          "worker_limit": 1
+        },
+        "profiled": false,
+        "retained_rss_bytes": 1469423616,
+        "retained_rss_delta_bytes": 1178079232,
+        "rss_peak_bytes": 1508155392,
+        "rss_peak_delta_bytes": 1216811008,
+        "rss_peak_reset_error": null,
+        "seconds": 5.359278036979958
+      },
+      "outcome": {
+        "details": {
+          "distance": 95.375,
+          "histories_digest": "1a558fe76b399a92204a7f0bfb51b56a7911a03cb64b089a1ad34ba8a3570a7c",
+          "matrix_shape": [
+            130,
+            185
+          ],
+          "operations_digest": "fe6dccdce43d20e9b419e5d909e3b9a3457d9f078d96b17766ea5d2f9a69b2a0",
+          "path_count": 1
+        },
+        "digest": "00598987fdae2efe70aaed28f10182e72d18fb3c96ca92f44fb32466c9a7e50c",
+        "error": null,
+        "parents_after_digest": "e4e18ef22a68af1b154dd9665c12e6f979295afd85b4d63593bda5ddbfeb7fa9",
+        "parents_before_digest": "3319638d4a04190cf5d774c8957e12f2f5c2edd441cae2ae726a0b5386363166",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "0e813af63368921736a9c82f7008ceee74f4dd07fb9d0b0740ec29584a02fe9c",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "8b150033a24e98311531dbf028b5c20258a5892259facc761876e7d17813a95f",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "db12a17c7399b318fdf7f2babd5510824607de9b8111eefbd6b3018a9073853f"
+    },
+    {
+      "case": "resnet18-mixer12",
+      "release": "v0.5",
+      "repeat": 2,
+      "status": "complete",
+      "nodes": [
+        267,
+        392
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 1473179648,
+        "align_wall_seconds": 5.35399526997935,
+        "baseline_rss_bytes": 290750464,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 1507561472,
+        "native_execution": {
+          "alias_fallbacks": 0,
+          "host_polls": 0,
+          "jobs": 0,
+          "narrow_fallbacks": 0,
+          "parallel_capable": true,
+          "parallel_cells": 0,
+          "parallel_rounds": 0,
+          "peak_jobs": 0,
+          "pool_capacity": null,
+          "requested_workers": 1,
+          "scratch_fallbacks": 0,
+          "scratch_peak_bytes": 0,
+          "serial_cells": 88939,
+          "worker_limit": 1
+        },
+        "profiled": false,
+        "retained_rss_bytes": 1468723200,
+        "retained_rss_delta_bytes": 1177972736,
+        "rss_peak_bytes": 1507561472,
+        "rss_peak_delta_bytes": 1216811008,
+        "rss_peak_reset_error": null,
+        "seconds": 5.35399526997935
+      },
+      "outcome": {
+        "details": {
+          "distance": 95.375,
+          "histories_digest": "1a558fe76b399a92204a7f0bfb51b56a7911a03cb64b089a1ad34ba8a3570a7c",
+          "matrix_shape": [
+            130,
+            185
+          ],
+          "operations_digest": "fe6dccdce43d20e9b419e5d909e3b9a3457d9f078d96b17766ea5d2f9a69b2a0",
+          "path_count": 1
+        },
+        "digest": "00598987fdae2efe70aaed28f10182e72d18fb3c96ca92f44fb32466c9a7e50c",
+        "error": null,
+        "parents_after_digest": "e4e18ef22a68af1b154dd9665c12e6f979295afd85b4d63593bda5ddbfeb7fa9",
+        "parents_before_digest": "3319638d4a04190cf5d774c8957e12f2f5c2edd441cae2ae726a0b5386363166",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "0e813af63368921736a9c82f7008ceee74f4dd07fb9d0b0740ec29584a02fe9c",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "8b150033a24e98311531dbf028b5c20258a5892259facc761876e7d17813a95f",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "a008d2c27eb720cf184c9e04eb8896d20dc51ff8371fefc4a745c5ae603c1f2a"
+    },
+    {
+      "case": "resnet34-mixer8",
+      "release": "v0.3",
+      "repeat": 0,
+      "status": "complete",
+      "nodes": [
+        499,
+        264
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 595570688,
+        "align_wall_seconds": 1.0992043860023841,
+        "baseline_rss_bytes": 294125568,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 592584704,
+        "profiled": false,
+        "retained_rss_bytes": 592584704,
+        "retained_rss_delta_bytes": 298459136,
+        "rss_peak_bytes": 592584704,
+        "rss_peak_delta_bytes": 298459136,
+        "rss_peak_reset_error": null,
+        "seconds": 1.0992043860023841
+      },
+      "outcome": {
+        "details": {
+          "distance": 119.625,
+          "histories_digest": "e703f3b0cecf7cc146d48aca4a91f0b61314ec426eab8bd6edb2d6eb9024c79b",
+          "matrix_shape": [
+            242,
+            125
+          ],
+          "operations_digest": "a929b3042100aa6e36098ab9e23005448a75ed8cce11a088070033d106552cae",
+          "path_count": 1
+        },
+        "digest": "a90f3475c136e04579d4aec1add35de9836700a1c8d6aa251d9053babf26033c",
+        "error": null,
+        "parents_after_digest": "21d0cb484c45a830cab4f2562d0c9d8e4519da7c26669196d3f4cba3d4701765",
+        "parents_before_digest": "9cb2c4793ab1f45559a604b07b404c093cd54290abfd868677de7b5fac155c6f",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "fccf67bb906234a5a26cc9676c01ca1c0d799dea5d4fe740bbd685c7486b7288",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "d56dc0c9bd2c71c8e95829d84d3cdef5c6cb6d99b13f1856f6e92b96c416475c",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "43b6099c78d07678edcecdcab58f066356904976f9bb73e8ec1653ef77fdb616"
+    },
+    {
+      "case": "resnet34-mixer8",
+      "release": "v0.3",
+      "repeat": 1,
+      "status": "complete",
+      "nodes": [
+        499,
+        264
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 595980288,
+        "align_wall_seconds": 1.1151215890422463,
+        "baseline_rss_bytes": 293249024,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 591953920,
+        "profiled": false,
+        "retained_rss_bytes": 591953920,
+        "retained_rss_delta_bytes": 298704896,
+        "rss_peak_bytes": 591953920,
+        "rss_peak_delta_bytes": 298704896,
+        "rss_peak_reset_error": null,
+        "seconds": 1.1151215890422463
+      },
+      "outcome": {
+        "details": {
+          "distance": 119.625,
+          "histories_digest": "e703f3b0cecf7cc146d48aca4a91f0b61314ec426eab8bd6edb2d6eb9024c79b",
+          "matrix_shape": [
+            242,
+            125
+          ],
+          "operations_digest": "a929b3042100aa6e36098ab9e23005448a75ed8cce11a088070033d106552cae",
+          "path_count": 1
+        },
+        "digest": "a90f3475c136e04579d4aec1add35de9836700a1c8d6aa251d9053babf26033c",
+        "error": null,
+        "parents_after_digest": "21d0cb484c45a830cab4f2562d0c9d8e4519da7c26669196d3f4cba3d4701765",
+        "parents_before_digest": "9cb2c4793ab1f45559a604b07b404c093cd54290abfd868677de7b5fac155c6f",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "fccf67bb906234a5a26cc9676c01ca1c0d799dea5d4fe740bbd685c7486b7288",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "d56dc0c9bd2c71c8e95829d84d3cdef5c6cb6d99b13f1856f6e92b96c416475c",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "2e8f7ca0c10c9651c02bf498d11780331a827b31d66d871d9d937ae4efdf603d"
+    },
+    {
+      "case": "resnet34-mixer8",
+      "release": "v0.3",
+      "repeat": 2,
+      "status": "complete",
+      "nodes": [
+        499,
+        264
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 595300352,
+        "align_wall_seconds": 1.114950429997407,
+        "baseline_rss_bytes": 293969920,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 592433152,
+        "profiled": false,
+        "retained_rss_bytes": 592433152,
+        "retained_rss_delta_bytes": 298463232,
+        "rss_peak_bytes": 592433152,
+        "rss_peak_delta_bytes": 298463232,
+        "rss_peak_reset_error": null,
+        "seconds": 1.114950429997407
+      },
+      "outcome": {
+        "details": {
+          "distance": 119.625,
+          "histories_digest": "e703f3b0cecf7cc146d48aca4a91f0b61314ec426eab8bd6edb2d6eb9024c79b",
+          "matrix_shape": [
+            242,
+            125
+          ],
+          "operations_digest": "a929b3042100aa6e36098ab9e23005448a75ed8cce11a088070033d106552cae",
+          "path_count": 1
+        },
+        "digest": "a90f3475c136e04579d4aec1add35de9836700a1c8d6aa251d9053babf26033c",
+        "error": null,
+        "parents_after_digest": "21d0cb484c45a830cab4f2562d0c9d8e4519da7c26669196d3f4cba3d4701765",
+        "parents_before_digest": "9cb2c4793ab1f45559a604b07b404c093cd54290abfd868677de7b5fac155c6f",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "fccf67bb906234a5a26cc9676c01ca1c0d799dea5d4fe740bbd685c7486b7288",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "d56dc0c9bd2c71c8e95829d84d3cdef5c6cb6d99b13f1856f6e92b96c416475c",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "5740cdbaecf714981a2019d9ac21fad9a723c748714a1aa6cd2c4b36c6e7ace1"
+    },
+    {
+      "case": "resnet34-mixer8",
+      "release": "v0.5",
+      "repeat": 0,
+      "status": "complete",
+      "nodes": [
+        499,
+        264
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 595558400,
+        "align_wall_seconds": 1.1395011889981106,
+        "baseline_rss_bytes": 294150144,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 592650240,
+        "native_execution": {
+          "alias_fallbacks": 0,
+          "host_polls": 0,
+          "jobs": 0,
+          "narrow_fallbacks": 0,
+          "parallel_capable": true,
+          "parallel_cells": 0,
+          "parallel_rounds": 0,
+          "peak_jobs": 0,
+          "pool_capacity": null,
+          "requested_workers": 1,
+          "scratch_fallbacks": 0,
+          "scratch_peak_bytes": 0,
+          "serial_cells": 112195,
+          "worker_limit": 1
+        },
+        "profiled": false,
+        "retained_rss_bytes": 592650240,
+        "retained_rss_delta_bytes": 298500096,
+        "rss_peak_bytes": 592650240,
+        "rss_peak_delta_bytes": 298500096,
+        "rss_peak_reset_error": null,
+        "seconds": 1.1395011889981106
+      },
+      "outcome": {
+        "details": {
+          "distance": 119.625,
+          "histories_digest": "e703f3b0cecf7cc146d48aca4a91f0b61314ec426eab8bd6edb2d6eb9024c79b",
+          "matrix_shape": [
+            242,
+            125
+          ],
+          "operations_digest": "a929b3042100aa6e36098ab9e23005448a75ed8cce11a088070033d106552cae",
+          "path_count": 1
+        },
+        "digest": "a90f3475c136e04579d4aec1add35de9836700a1c8d6aa251d9053babf26033c",
+        "error": null,
+        "parents_after_digest": "21d0cb484c45a830cab4f2562d0c9d8e4519da7c26669196d3f4cba3d4701765",
+        "parents_before_digest": "9cb2c4793ab1f45559a604b07b404c093cd54290abfd868677de7b5fac155c6f",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "fccf67bb906234a5a26cc9676c01ca1c0d799dea5d4fe740bbd685c7486b7288",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "8b150033a24e98311531dbf028b5c20258a5892259facc761876e7d17813a95f",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "4ca5ab28cabb07fda529c4117060cb62d833ed0a0fabac149ededad3810cb334"
+    },
+    {
+      "case": "resnet34-mixer8",
+      "release": "v0.5",
+      "repeat": 1,
+      "status": "complete",
+      "nodes": [
+        499,
+        264
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 595386368,
+        "align_wall_seconds": 1.1795013289665803,
+        "baseline_rss_bytes": 294043648,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 592531456,
+        "native_execution": {
+          "alias_fallbacks": 0,
+          "host_polls": 0,
+          "jobs": 0,
+          "narrow_fallbacks": 0,
+          "parallel_capable": true,
+          "parallel_cells": 0,
+          "parallel_rounds": 0,
+          "peak_jobs": 0,
+          "pool_capacity": null,
+          "requested_workers": 1,
+          "scratch_fallbacks": 0,
+          "scratch_peak_bytes": 0,
+          "serial_cells": 112195,
+          "worker_limit": 1
+        },
+        "profiled": false,
+        "retained_rss_bytes": 592531456,
+        "retained_rss_delta_bytes": 298487808,
+        "rss_peak_bytes": 592531456,
+        "rss_peak_delta_bytes": 298487808,
+        "rss_peak_reset_error": null,
+        "seconds": 1.1795013289665803
+      },
+      "outcome": {
+        "details": {
+          "distance": 119.625,
+          "histories_digest": "e703f3b0cecf7cc146d48aca4a91f0b61314ec426eab8bd6edb2d6eb9024c79b",
+          "matrix_shape": [
+            242,
+            125
+          ],
+          "operations_digest": "a929b3042100aa6e36098ab9e23005448a75ed8cce11a088070033d106552cae",
+          "path_count": 1
+        },
+        "digest": "a90f3475c136e04579d4aec1add35de9836700a1c8d6aa251d9053babf26033c",
+        "error": null,
+        "parents_after_digest": "21d0cb484c45a830cab4f2562d0c9d8e4519da7c26669196d3f4cba3d4701765",
+        "parents_before_digest": "9cb2c4793ab1f45559a604b07b404c093cd54290abfd868677de7b5fac155c6f",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "fccf67bb906234a5a26cc9676c01ca1c0d799dea5d4fe740bbd685c7486b7288",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "8b150033a24e98311531dbf028b5c20258a5892259facc761876e7d17813a95f",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "162eda6b4dff9bb2f86d2e20dc86e825eed934b23ea5e486f8e76c2b68821f91"
+    },
+    {
+      "case": "resnet34-mixer8",
+      "release": "v0.5",
+      "repeat": 2,
+      "status": "complete",
+      "nodes": [
+        499,
+        264
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 595701760,
+        "align_wall_seconds": 1.1409250060096383,
+        "baseline_rss_bytes": 294313984,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 592842752,
+        "native_execution": {
+          "alias_fallbacks": 0,
+          "host_polls": 0,
+          "jobs": 0,
+          "narrow_fallbacks": 0,
+          "parallel_capable": true,
+          "parallel_cells": 0,
+          "parallel_rounds": 0,
+          "peak_jobs": 0,
+          "pool_capacity": null,
+          "requested_workers": 1,
+          "scratch_fallbacks": 0,
+          "scratch_peak_bytes": 0,
+          "serial_cells": 112195,
+          "worker_limit": 1
+        },
+        "profiled": false,
+        "retained_rss_bytes": 592842752,
+        "retained_rss_delta_bytes": 298528768,
+        "rss_peak_bytes": 592842752,
+        "rss_peak_delta_bytes": 298528768,
+        "rss_peak_reset_error": null,
+        "seconds": 1.1409250060096383
+      },
+      "outcome": {
+        "details": {
+          "distance": 119.625,
+          "histories_digest": "e703f3b0cecf7cc146d48aca4a91f0b61314ec426eab8bd6edb2d6eb9024c79b",
+          "matrix_shape": [
+            242,
+            125
+          ],
+          "operations_digest": "a929b3042100aa6e36098ab9e23005448a75ed8cce11a088070033d106552cae",
+          "path_count": 1
+        },
+        "digest": "a90f3475c136e04579d4aec1add35de9836700a1c8d6aa251d9053babf26033c",
+        "error": null,
+        "parents_after_digest": "21d0cb484c45a830cab4f2562d0c9d8e4519da7c26669196d3f4cba3d4701765",
+        "parents_before_digest": "9cb2c4793ab1f45559a604b07b404c093cd54290abfd868677de7b5fac155c6f",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "fccf67bb906234a5a26cc9676c01ca1c0d799dea5d4fe740bbd685c7486b7288",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "8b150033a24e98311531dbf028b5c20258a5892259facc761876e7d17813a95f",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "da38b14062f37e1c81bba1d0fbf21b05168510a9e07410c8410e9cbfc60ebdff"
+    },
+    {
+      "case": "resnet34-mixer12",
+      "release": "v0.3",
+      "repeat": 0,
+      "status": "complete",
+      "nodes": [
+        499,
+        392
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 13067395072,
+        "align_wall_seconds": 96.06271772598848,
+        "baseline_rss_bytes": 295723008,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 13449981952,
+        "profiled": false,
+        "retained_rss_bytes": 13270798336,
+        "retained_rss_delta_bytes": 12975075328,
+        "rss_peak_bytes": 13449981952,
+        "rss_peak_delta_bytes": 13154258944,
+        "rss_peak_reset_error": null,
+        "seconds": 96.06271772598848
+      },
+      "outcome": {
+        "details": {
+          "distance": 115.625,
+          "histories_digest": "3ce50ef3da9b3a019f72c0ea4877ce0201486088af8129aa64d544a25962411a",
+          "matrix_shape": [
+            242,
+            185
+          ],
+          "operations_digest": "485d367032af8e50ebfebee780dbc1c29500675779b678f5bf8528066db89584",
+          "path_count": 972
+        },
+        "digest": "677c2423f8e2c901dca4fcc28f4ca13d4891e57c00f49cc9f1bd0830e05b86d4",
+        "error": null,
+        "parents_after_digest": "7eaa50575405b84c1ad085e1048b8c415dc02d6854869c19baa8cdf79c37df56",
+        "parents_before_digest": "ac7886e82b7a6bafefbd4ef46bef2b7fb1c3bb669982c137a943440d830d8380",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "c1218533035a3c3dade2be20ca1ea5dd51a882fc0d46ed215dd4904f4838f4c8",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "d56dc0c9bd2c71c8e95829d84d3cdef5c6cb6d99b13f1856f6e92b96c416475c",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "a3d84feb2daf059f9efff6a2ae548f07809ac429160509b33d3e42e49c955522"
+    },
+    {
+      "case": "resnet34-mixer12",
+      "release": "v0.3",
+      "repeat": 1,
+      "status": "complete",
+      "nodes": [
+        499,
+        392
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 13107269632,
+        "align_wall_seconds": 96.71342212695163,
+        "baseline_rss_bytes": 297017344,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 13451362304,
+        "profiled": false,
+        "retained_rss_bytes": 13312933888,
+        "retained_rss_delta_bytes": 13015916544,
+        "rss_peak_bytes": 13451362304,
+        "rss_peak_delta_bytes": 13154344960,
+        "rss_peak_reset_error": null,
+        "seconds": 96.71342212695163
+      },
+      "outcome": {
+        "details": {
+          "distance": 115.625,
+          "histories_digest": "3ce50ef3da9b3a019f72c0ea4877ce0201486088af8129aa64d544a25962411a",
+          "matrix_shape": [
+            242,
+            185
+          ],
+          "operations_digest": "485d367032af8e50ebfebee780dbc1c29500675779b678f5bf8528066db89584",
+          "path_count": 972
+        },
+        "digest": "677c2423f8e2c901dca4fcc28f4ca13d4891e57c00f49cc9f1bd0830e05b86d4",
+        "error": null,
+        "parents_after_digest": "7eaa50575405b84c1ad085e1048b8c415dc02d6854869c19baa8cdf79c37df56",
+        "parents_before_digest": "ac7886e82b7a6bafefbd4ef46bef2b7fb1c3bb669982c137a943440d830d8380",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "c1218533035a3c3dade2be20ca1ea5dd51a882fc0d46ed215dd4904f4838f4c8",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "d56dc0c9bd2c71c8e95829d84d3cdef5c6cb6d99b13f1856f6e92b96c416475c",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "9a1eeee061bf86c62b76a465a6cf8b6ad99c5526f197c1eb4214ca4c17ac2fbf"
+    },
+    {
+      "case": "resnet34-mixer12",
+      "release": "v0.3",
+      "repeat": 2,
+      "status": "complete",
+      "nodes": [
+        499,
+        392
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 13383360512,
+        "align_wall_seconds": 96.53301926702261,
+        "baseline_rss_bytes": 296935424,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 13450743808,
+        "profiled": false,
+        "retained_rss_bytes": 13274324992,
+        "retained_rss_delta_bytes": 12977389568,
+        "rss_peak_bytes": 13450743808,
+        "rss_peak_delta_bytes": 13153808384,
+        "rss_peak_reset_error": null,
+        "seconds": 96.53301926702261
+      },
+      "outcome": {
+        "details": {
+          "distance": 115.625,
+          "histories_digest": "3ce50ef3da9b3a019f72c0ea4877ce0201486088af8129aa64d544a25962411a",
+          "matrix_shape": [
+            242,
+            185
+          ],
+          "operations_digest": "485d367032af8e50ebfebee780dbc1c29500675779b678f5bf8528066db89584",
+          "path_count": 972
+        },
+        "digest": "677c2423f8e2c901dca4fcc28f4ca13d4891e57c00f49cc9f1bd0830e05b86d4",
+        "error": null,
+        "parents_after_digest": "7eaa50575405b84c1ad085e1048b8c415dc02d6854869c19baa8cdf79c37df56",
+        "parents_before_digest": "ac7886e82b7a6bafefbd4ef46bef2b7fb1c3bb669982c137a943440d830d8380",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "c1218533035a3c3dade2be20ca1ea5dd51a882fc0d46ed215dd4904f4838f4c8",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "d56dc0c9bd2c71c8e95829d84d3cdef5c6cb6d99b13f1856f6e92b96c416475c",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "17f6fa48db36b3c6e103fd85d20a19e8b0c47069207bea5e6971724dd6bd520b"
+    },
+    {
+      "case": "resnet34-mixer12",
+      "release": "v0.5",
+      "repeat": 0,
+      "status": "complete",
+      "nodes": [
+        499,
+        392
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 13213319168,
+        "align_wall_seconds": 93.33831242995802,
+        "baseline_rss_bytes": 297242624,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 13451468800,
+        "native_execution": {
+          "alias_fallbacks": 0,
+          "host_polls": 0,
+          "jobs": 0,
+          "narrow_fallbacks": 0,
+          "parallel_capable": true,
+          "parallel_cells": 0,
+          "parallel_rounds": 0,
+          "peak_jobs": 0,
+          "pool_capacity": null,
+          "requested_workers": 1,
+          "scratch_fallbacks": 0,
+          "scratch_peak_bytes": 0,
+          "serial_cells": 166683,
+          "worker_limit": 1
+        },
+        "profiled": false,
+        "retained_rss_bytes": 13105410048,
+        "retained_rss_delta_bytes": 12808167424,
+        "rss_peak_bytes": 13451468800,
+        "rss_peak_delta_bytes": 13154226176,
+        "rss_peak_reset_error": null,
+        "seconds": 93.33831242995802
+      },
+      "outcome": {
+        "details": {
+          "distance": 115.625,
+          "histories_digest": "3ce50ef3da9b3a019f72c0ea4877ce0201486088af8129aa64d544a25962411a",
+          "matrix_shape": [
+            242,
+            185
+          ],
+          "operations_digest": "485d367032af8e50ebfebee780dbc1c29500675779b678f5bf8528066db89584",
+          "path_count": 972
+        },
+        "digest": "677c2423f8e2c901dca4fcc28f4ca13d4891e57c00f49cc9f1bd0830e05b86d4",
+        "error": null,
+        "parents_after_digest": "7eaa50575405b84c1ad085e1048b8c415dc02d6854869c19baa8cdf79c37df56",
+        "parents_before_digest": "ac7886e82b7a6bafefbd4ef46bef2b7fb1c3bb669982c137a943440d830d8380",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "c1218533035a3c3dade2be20ca1ea5dd51a882fc0d46ed215dd4904f4838f4c8",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "8b150033a24e98311531dbf028b5c20258a5892259facc761876e7d17813a95f",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "c4578dd439997780e3ef527979c04c09acdae3dccf295c81bf33b88c0e0e198f"
+    },
+    {
+      "case": "resnet34-mixer12",
+      "release": "v0.5",
+      "repeat": 1,
+      "status": "complete",
+      "nodes": [
+        499,
+        392
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 12160724992,
+        "align_wall_seconds": 93.25123777193949,
+        "baseline_rss_bytes": 297283584,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 13451444224,
+        "native_execution": {
+          "alias_fallbacks": 0,
+          "host_polls": 0,
+          "jobs": 0,
+          "narrow_fallbacks": 0,
+          "parallel_capable": true,
+          "parallel_cells": 0,
+          "parallel_rounds": 0,
+          "peak_jobs": 0,
+          "pool_capacity": null,
+          "requested_workers": 1,
+          "scratch_fallbacks": 0,
+          "scratch_peak_bytes": 0,
+          "serial_cells": 166683,
+          "worker_limit": 1
+        },
+        "profiled": false,
+        "retained_rss_bytes": 12049899520,
+        "retained_rss_delta_bytes": 11752615936,
+        "rss_peak_bytes": 13451444224,
+        "rss_peak_delta_bytes": 13154160640,
+        "rss_peak_reset_error": null,
+        "seconds": 93.25123777193949
+      },
+      "outcome": {
+        "details": {
+          "distance": 115.625,
+          "histories_digest": "3ce50ef3da9b3a019f72c0ea4877ce0201486088af8129aa64d544a25962411a",
+          "matrix_shape": [
+            242,
+            185
+          ],
+          "operations_digest": "485d367032af8e50ebfebee780dbc1c29500675779b678f5bf8528066db89584",
+          "path_count": 972
+        },
+        "digest": "677c2423f8e2c901dca4fcc28f4ca13d4891e57c00f49cc9f1bd0830e05b86d4",
+        "error": null,
+        "parents_after_digest": "7eaa50575405b84c1ad085e1048b8c415dc02d6854869c19baa8cdf79c37df56",
+        "parents_before_digest": "ac7886e82b7a6bafefbd4ef46bef2b7fb1c3bb669982c137a943440d830d8380",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "c1218533035a3c3dade2be20ca1ea5dd51a882fc0d46ed215dd4904f4838f4c8",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "8b150033a24e98311531dbf028b5c20258a5892259facc761876e7d17813a95f",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "c1ebe458867ab477dd93f60acd7dcb725c212875e8c53ff5df5dbc1adbf9d061"
+    },
+    {
+      "case": "resnet34-mixer12",
+      "release": "v0.5",
+      "repeat": 2,
+      "status": "complete",
+      "nodes": [
+        499,
+        392
+      ],
+      "affinity": [
+        24
+      ],
+      "measurement": {
+        "after_release_rss_bytes": 13208231936,
+        "align_wall_seconds": 93.08007396501489,
+        "baseline_rss_bytes": 297263104,
+        "internal_compute_time_seconds": null,
+        "lifetime_peak_rss_bytes": 13451157504,
+        "native_execution": {
+          "alias_fallbacks": 0,
+          "host_polls": 0,
+          "jobs": 0,
+          "narrow_fallbacks": 0,
+          "parallel_capable": true,
+          "parallel_cells": 0,
+          "parallel_rounds": 0,
+          "peak_jobs": 0,
+          "pool_capacity": null,
+          "requested_workers": 1,
+          "scratch_fallbacks": 0,
+          "scratch_peak_bytes": 0,
+          "serial_cells": 166683,
+          "worker_limit": 1
+        },
+        "profiled": false,
+        "retained_rss_bytes": 13099429888,
+        "retained_rss_delta_bytes": 12802166784,
+        "rss_peak_bytes": 13451157504,
+        "rss_peak_delta_bytes": 13153894400,
+        "rss_peak_reset_error": null,
+        "seconds": 93.08007396501489
+      },
+      "outcome": {
+        "details": {
+          "distance": 115.625,
+          "histories_digest": "3ce50ef3da9b3a019f72c0ea4877ce0201486088af8129aa64d544a25962411a",
+          "matrix_shape": [
+            242,
+            185
+          ],
+          "operations_digest": "485d367032af8e50ebfebee780dbc1c29500675779b678f5bf8528066db89584",
+          "path_count": 972
+        },
+        "digest": "677c2423f8e2c901dca4fcc28f4ca13d4891e57c00f49cc9f1bd0830e05b86d4",
+        "error": null,
+        "parents_after_digest": "7eaa50575405b84c1ad085e1048b8c415dc02d6854869c19baa8cdf79c37df56",
+        "parents_before_digest": "ac7886e82b7a6bafefbd4ef46bef2b7fb1c3bb669982c137a943440d830d8380",
+        "rng_after": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "rng_before": "b35cf54f1d818979a8edb2a2e4b1821b081d0c77ef74f024831a5f7593e77456",
+        "status": "returned"
+      },
+      "fixture_runtime_sha256": "c1218533035a3c3dade2be20ca1ea5dd51a882fc0d46ed215dd4904f4838f4c8",
+      "source_identity": {
+        "checkout_provenance": null,
+        "fixture_manifest_sha256": "b9aac86c3eb9d4edf28e05d234fbce53771e730ee01153990991ffac3e84b3ab",
+        "grammar_source_hashes": {
+          "native": "a4ef84a3e3fc75ba1a2ca0c4faada42dc0c6e6f4d36190fa4fce1847615f3183",
+          "reference": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b"
+        },
+        "loader_sha256": "2be67ff3ed968ccca2eab523fa2ac09951b2af8f848403b5893032cd224cbfdf",
+        "native_extension_sha256": "8b150033a24e98311531dbf028b5c20258a5892259facc761876e7d17813a95f",
+        "parser_sha256": "d08cf31c9e81ea701aafa31cf902ba3a9c75f726e571975654612052bd61ab47",
+        "reference_environment": {
+          "default_dtype": "torch.float32",
+          "device": "cpu",
+          "numpy": "1.26.4",
+          "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [GCC 15.3.0]",
+          "scipy": "1.13.0",
+          "source_commit": "3f44ddf086bee0c213404e240ee0adf99e3e1501",
+          "source_hashes": {
+            "grammars/einspace.py": "de96676e01c15197bfb39df481129a062141bb1789e0a5fa7cb5fb08977a929b",
+            "grammars/hnasbench201.py": "39cd185faaf14dc70ff233d17cbb3b45a66507d514d90cd5f197bc847b166a30",
+            "layers.py": "df3b69dbf0a5725578fb723d3aed196b92c5438d9a4c299fa5ea605b8464ec71",
+            "pcfg.py": "015f2a939c156c55a0228734eb41205bdb9412bda6106c27551890137156e988",
+            "search_state.py": "85d33ad71173c14dad3dedbfd7f847479b52fb4121e3e72ef4f09eb2a2a89ae1",
+            "search_strategies/evolution.py": "85e147e94fc9bfb996bee7308635ae1395505dcd0122ea50c78b25c4907747ba",
+            "search_strategies/random_search.py": "22ececd9a055f69de7c2645364c788544510c74bfd2b3bbbcc2e50f3b307586e",
+            "search_strategies/utils/recursive_constrained_smith_waterman.py": "bcb09ab6f115c78d14d2949eb9d3fa33dda0b2f239bcbbeadf992f93b86ad11e",
+            "utils.py": "c9afc742fa74f448d2a7bdafb66aac7ea472ed4eb426c4660048a837744981fb"
+          },
+          "threads": 1,
+          "torch": "2.3.1+cpu"
+        }
+      },
+      "worker_limits": {
+        "rss_limit_mib": 16384,
+        "timeout_seconds": 1800
+      },
+      "request_sha256": "6a35ac294334b7decb66233a635eb8bd435e396b3625ab85e50e0143cf0eebb0"
+    }
+  ]
+}
