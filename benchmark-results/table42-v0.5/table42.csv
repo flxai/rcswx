@@ -1,0 +1,5 @@
+case,architectures,nodes,original_published_time,distance,v0.1_wall_seconds_median,v0.3_wall_seconds_median,v0.5_wall_seconds_median
+resnet18-mixer8,"ResNet18, MLP-Mixer d8","267, 264",39.054 seconds,60.375,3.7993222009390593,0.728442893945612,0.8377241210546345
+resnet18-mixer12,"ResNet18, MLP-Mixer d12","267, 392",342.383 seconds,95.375,5.412245890009217,5.529132165946066,5.792337591992691
+resnet34-mixer8,"ResNet34, MLP-Mixer d8","499, 264",86.633 seconds,119.625,1.1697275229962543,1.1129410039866343,1.332365736947395
+resnet34-mixer12,"ResNet34, MLP-Mixer d12","499, 392",741.57 minutes,115.625,101.74086914898362,97.13550618290901,91.8977201229427

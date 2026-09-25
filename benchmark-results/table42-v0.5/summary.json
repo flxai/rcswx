@@ -1,0 +1,357 @@
+{
+  "schema": "rcswx-table42-four-columns-summary-v1",
+  "observations_sha256": "e40b3ee914f0572d89e7aad8eaff332c68349345716e61ce402da694869d128b",
+  "renderer_sha256": "0f64e602b3a6a1f7fc5129de156ce205b6318a05d909bc21a34d2f81345561f4",
+  "original_column": "historical published values, not matched measurements",
+  "native_metric": "median Alignment-return wall seconds, three repetitions",
+  "cases": [
+    {
+      "case": "resnet18-mixer8",
+      "distance": 60.375,
+      "outcome_digest": "e63c26f1c84a57ee7b665b197d6f05bc26b69a40e00658602f0946350ffdc744",
+      "versions": {
+        "v0.1": {
+          "seconds": [
+            3.763456408982165,
+            3.8435587220592424,
+            3.7993222009390593
+          ],
+          "median_seconds": 3.7993222009390593,
+          "min_seconds": 3.763456408982165,
+          "max_seconds": 3.8435587220592424
+        },
+        "v0.3": {
+          "seconds": [
+            0.7168007059954107,
+            0.7353960250038654,
+            0.728442893945612
+          ],
+          "median_seconds": 0.728442893945612,
+          "min_seconds": 0.7168007059954107,
+          "max_seconds": 0.7353960250038654
+        },
+        "v0.5": {
+          "seconds": [
+            0.8377241210546345,
+            0.8226904380135238,
+            0.8459200849756598
+          ],
+          "median_seconds": 0.8377241210546345,
+          "min_seconds": 0.8226904380135238,
+          "max_seconds": 0.8459200849756598,
+          "execution": [
+            {
+              "alias_fallbacks": 0,
+              "host_polls": 62,
+              "jobs": 14816,
+              "narrow_fallbacks": 12207,
+              "parallel_capable": true,
+              "parallel_cells": 16140,
+              "parallel_rounds": 2182,
+              "peak_jobs": 10,
+              "pool_capacity": 10,
+              "requested_workers": 10,
+              "scratch_fallbacks": 1,
+              "scratch_peak_bytes": 8375560,
+              "serial_cells": 43719,
+              "worker_limit": 10
+            },
+            {
+              "alias_fallbacks": 0,
+              "host_polls": 60,
+              "jobs": 14816,
+              "narrow_fallbacks": 12207,
+              "parallel_capable": true,
+              "parallel_cells": 16140,
+              "parallel_rounds": 2182,
+              "peak_jobs": 10,
+              "pool_capacity": 10,
+              "requested_workers": 10,
+              "scratch_fallbacks": 1,
+              "scratch_peak_bytes": 8375560,
+              "serial_cells": 43719,
+              "worker_limit": 10
+            },
+            {
+              "alias_fallbacks": 0,
+              "host_polls": 63,
+              "jobs": 14816,
+              "narrow_fallbacks": 12207,
+              "parallel_capable": true,
+              "parallel_cells": 16140,
+              "parallel_rounds": 2182,
+              "peak_jobs": 10,
+              "pool_capacity": 10,
+              "requested_workers": 10,
+              "scratch_fallbacks": 1,
+              "scratch_peak_bytes": 8375560,
+              "serial_cells": 43719,
+              "worker_limit": 10
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case": "resnet18-mixer12",
+      "distance": 95.375,
+      "outcome_digest": "00598987fdae2efe70aaed28f10182e72d18fb3c96ca92f44fb32466c9a7e50c",
+      "versions": {
+        "v0.1": {
+          "seconds": [
+            5.468898094026372,
+            5.412245890009217,
+            5.310186331043951
+          ],
+          "median_seconds": 5.412245890009217,
+          "min_seconds": 5.310186331043951,
+          "max_seconds": 5.468898094026372
+        },
+        "v0.3": {
+          "seconds": [
+            5.529132165946066,
+            5.5566127569181845,
+            5.451657113968395
+          ],
+          "median_seconds": 5.529132165946066,
+          "min_seconds": 5.451657113968395,
+          "max_seconds": 5.5566127569181845
+        },
+        "v0.5": {
+          "seconds": [
+            5.757540971972048,
+            6.563505630008876,
+            5.792337591992691
+          ],
+          "median_seconds": 5.792337591992691,
+          "min_seconds": 5.757540971972048,
+          "max_seconds": 6.563505630008876,
+          "execution": [
+            {
+              "alias_fallbacks": 0,
+              "host_polls": 327,
+              "jobs": 24191,
+              "narrow_fallbacks": 17937,
+              "parallel_capable": true,
+              "parallel_cells": 26040,
+              "parallel_rounds": 4025,
+              "peak_jobs": 10,
+              "pool_capacity": 10,
+              "requested_workers": 10,
+              "scratch_fallbacks": 1122,
+              "scratch_peak_bytes": 8382840,
+              "serial_cells": 62899,
+              "worker_limit": 10
+            },
+            {
+              "alias_fallbacks": 0,
+              "host_polls": 403,
+              "jobs": 24191,
+              "narrow_fallbacks": 17937,
+              "parallel_capable": true,
+              "parallel_cells": 26040,
+              "parallel_rounds": 4025,
+              "peak_jobs": 10,
+              "pool_capacity": 10,
+              "requested_workers": 10,
+              "scratch_fallbacks": 1122,
+              "scratch_peak_bytes": 8382840,
+              "serial_cells": 62899,
+              "worker_limit": 10
+            },
+            {
+              "alias_fallbacks": 0,
+              "host_polls": 331,
+              "jobs": 24191,
+              "narrow_fallbacks": 17937,
+              "parallel_capable": true,
+              "parallel_cells": 26040,
+              "parallel_rounds": 4025,
+              "peak_jobs": 10,
+              "pool_capacity": 10,
+              "requested_workers": 10,
+              "scratch_fallbacks": 1122,
+              "scratch_peak_bytes": 8382840,
+              "serial_cells": 62899,
+              "worker_limit": 10
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case": "resnet34-mixer8",
+      "distance": 119.625,
+      "outcome_digest": "a90f3475c136e04579d4aec1add35de9836700a1c8d6aa251d9053babf26033c",
+      "versions": {
+        "v0.1": {
+          "seconds": [
+            1.1985542109468952,
+            1.162520083016716,
+            1.1697275229962543
+          ],
+          "median_seconds": 1.1697275229962543,
+          "min_seconds": 1.162520083016716,
+          "max_seconds": 1.1985542109468952
+        },
+        "v0.3": {
+          "seconds": [
+            1.1071841940283775,
+            1.1129410039866343,
+            1.1246282960055396
+          ],
+          "median_seconds": 1.1129410039866343,
+          "min_seconds": 1.1071841940283775,
+          "max_seconds": 1.1246282960055396
+        },
+        "v0.5": {
+          "seconds": [
+            1.332365736947395,
+            1.3200585800223053,
+            1.3490715370280668
+          ],
+          "median_seconds": 1.332365736947395,
+          "min_seconds": 1.3200585800223053,
+          "max_seconds": 1.3490715370280668,
+          "execution": [
+            {
+              "alias_fallbacks": 0,
+              "host_polls": 117,
+              "jobs": 27480,
+              "narrow_fallbacks": 23470,
+              "parallel_capable": true,
+              "parallel_cells": 29367,
+              "parallel_rounds": 4193,
+              "peak_jobs": 10,
+              "pool_capacity": 10,
+              "requested_workers": 10,
+              "scratch_fallbacks": 39,
+              "scratch_peak_bytes": 8384528,
+              "serial_cells": 82828,
+              "worker_limit": 10
+            },
+            {
+              "alias_fallbacks": 0,
+              "host_polls": 116,
+              "jobs": 27480,
+              "narrow_fallbacks": 23470,
+              "parallel_capable": true,
+              "parallel_cells": 29367,
+              "parallel_rounds": 4193,
+              "peak_jobs": 10,
+              "pool_capacity": 10,
+              "requested_workers": 10,
+              "scratch_fallbacks": 39,
+              "scratch_peak_bytes": 8384528,
+              "serial_cells": 82828,
+              "worker_limit": 10
+            },
+            {
+              "alias_fallbacks": 0,
+              "host_polls": 116,
+              "jobs": 27480,
+              "narrow_fallbacks": 23470,
+              "parallel_capable": true,
+              "parallel_cells": 29367,
+              "parallel_rounds": 4193,
+              "peak_jobs": 10,
+              "pool_capacity": 10,
+              "requested_workers": 10,
+              "scratch_fallbacks": 39,
+              "scratch_peak_bytes": 8384528,
+              "serial_cells": 82828,
+              "worker_limit": 10
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case": "resnet34-mixer12",
+      "distance": 115.625,
+      "outcome_digest": "677c2423f8e2c901dca4fcc28f4ca13d4891e57c00f49cc9f1bd0830e05b86d4",
+      "versions": {
+        "v0.1": {
+          "seconds": [
+            101.74086914898362,
+            101.9676724789897,
+            101.71558973193169
+          ],
+          "median_seconds": 101.74086914898362,
+          "min_seconds": 101.71558973193169,
+          "max_seconds": 101.9676724789897
+        },
+        "v0.3": {
+          "seconds": [
+            96.90791945904493,
+            97.13550618290901,
+            97.17287824407686
+          ],
+          "median_seconds": 97.13550618290901,
+          "min_seconds": 96.90791945904493,
+          "max_seconds": 97.17287824407686
+        },
+        "v0.5": {
+          "seconds": [
+            92.34463054290973,
+            91.42134986596648,
+            91.8977201229427
+          ],
+          "median_seconds": 91.8977201229427,
+          "min_seconds": 91.42134986596648,
+          "max_seconds": 92.34463054290973,
+          "execution": [
+            {
+              "alias_fallbacks": 0,
+              "host_polls": 1193,
+              "jobs": 49037,
+              "narrow_fallbacks": 33890,
+              "parallel_capable": true,
+              "parallel_cells": 51707,
+              "parallel_rounds": 9094,
+              "peak_jobs": 10,
+              "pool_capacity": 10,
+              "requested_workers": 10,
+              "scratch_fallbacks": 10151,
+              "scratch_peak_bytes": 8384528,
+              "serial_cells": 114976,
+              "worker_limit": 10
+            },
+            {
+              "alias_fallbacks": 0,
+              "host_polls": 1167,
+              "jobs": 49037,
+              "narrow_fallbacks": 33890,
+              "parallel_capable": true,
+              "parallel_cells": 51707,
+              "parallel_rounds": 9094,
+              "peak_jobs": 10,
+              "pool_capacity": 10,
+              "requested_workers": 10,
+              "scratch_fallbacks": 10151,
+              "scratch_peak_bytes": 8384528,
+              "serial_cells": 114976,
+              "worker_limit": 10
+            },
+            {
+              "alias_fallbacks": 0,
+              "host_polls": 1096,
+              "jobs": 49037,
+              "narrow_fallbacks": 33890,
+              "parallel_capable": true,
+              "parallel_cells": 51707,
+              "parallel_rounds": 9094,
+              "peak_jobs": 10,
+              "pool_capacity": 10,
+              "requested_workers": 10,
+              "scratch_fallbacks": 10151,
+              "scratch_peak_bytes": 8384528,
+              "serial_cells": 114976,
+              "worker_limit": 10
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

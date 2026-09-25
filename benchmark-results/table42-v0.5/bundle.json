@@ -1,0 +1,63 @@
+{
+  "schema": "rcswx-table42-four-columns-bundle-v1",
+  "verified_request_count": 36,
+  "smoke_request_count": 3,
+  "native_outcomes_equal": true,
+  "published_original_remeasured": false,
+  "measurement_launch": [
+    "ssh",
+    "ono",
+    "systemd-run",
+    "--user",
+    "--scope",
+    "--quiet",
+    "-p",
+    "MemoryMax=20G",
+    "-p",
+    "MemorySwapMax=0",
+    "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+    "/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/run-campaign.py"
+  ],
+  "files": {
+    "campaign.json": {
+      "sha256": "798dc555cb481cdac0ab99031f9f5280b8b41ff5296c2585934f9f6480b3cbab",
+      "bytes": 4688
+    },
+    "run-campaign.py": {
+      "sha256": "6c9013846d206713eb77a62d36791fe0fd7804920f52e8f8870e15c530c40dcd",
+      "bytes": 6753
+    },
+    "collect-results.py": {
+      "sha256": "f7e15f6d0a1d4c512ecb673f19d8fe7b55ba73fb58d42bc40656885626d8c9f4",
+      "bytes": 3956
+    },
+    "render-table.py": {
+      "sha256": "0f64e602b3a6a1f7fc5129de156ce205b6318a05d909bc21a34d2f81345561f4",
+      "bytes": 7134
+    },
+    "raw-evidence.tar.gz": {
+      "sha256": "211d59582d36b0e990856d491728f9930c09b8a01716e37f870a3e323816a70f",
+      "bytes": 18188130
+    },
+    "observations.json": {
+      "sha256": "e40b3ee914f0572d89e7aad8eaff332c68349345716e61ce402da694869d128b",
+      "bytes": 221694
+    },
+    "summary.json": {
+      "sha256": "c94b75e9614e269f211453722454c2e7dfe25a6339c78ddb3248a6515a08aa07",
+      "bytes": 11406
+    },
+    "table42.csv": {
+      "sha256": "06af6fa8cee698d864d8a9f70f3a975008ec8105ef62b48df82400eb8ec2ff5e",
+      "bytes": 661
+    },
+    "table42.svg": {
+      "sha256": "f3c0aee6ba948fdb8f83bcdf38cd48e049e2db931d2eb0a2ef788cfb3b5e9728",
+      "bytes": 17920
+    },
+    "table42.png": {
+      "sha256": "c084897158864fea6857449a25917cfb489f666b44c310e501fe7660488d732c",
+      "bytes": 239617
+    }
+  }
+}

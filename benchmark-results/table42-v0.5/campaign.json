@@ -1,0 +1,125 @@
+{
+  "schema": "rcswx-table42-four-columns-v1",
+  "root": "/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0",
+  "harness": "/home/cfg/tmp/rcswx-table42-v0.5-e9eb4b0/harness",
+  "python": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/env/bin/python",
+  "serial_cpu": 24,
+  "controller_cpu": 31,
+  "parallel_cpus": [
+    16,
+    17,
+    18,
+    19,
+    20,
+    22,
+    23,
+    24,
+    25,
+    26
+  ],
+  "cpu_class": "E-core; ten distinct physical cores for v0.5",
+  "cases": [
+    "resnet18-mixer8",
+    "resnet18-mixer12",
+    "resnet34-mixer8",
+    "resnet34-mixer12"
+  ],
+  "collapse_corners": true,
+  "repeats": 3,
+  "worker_timeout_seconds": 1800,
+  "rss_limit_mib": 16384,
+  "outer_memory_gib": 20,
+  "original": "Published values from tests/fixtures/table42/targets.json; not a matched current reference run.",
+  "call_boundary": "Complete Alignment return; inputs and semantic fingerprinting outside timing; cold process/pool per call.",
+  "environment": {
+    "LD_LIBRARY_PATH": "/nix/store/604gsr59rj7dzd0nrhp143rpvf7gyiaz-gcc-15.3.0-lib/lib:/nix/store/lw86vj9kfwgvlivg3p8qg2nibpmhmsl9-zlib-1.3.2/lib",
+    "MKL_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "PYTHONHASHSEED": "42",
+    "RCSWX_REFERENCE_ROOT": "/home/cfg/tmp/rcswx-table42-9444dcf-20260922T161638Z/einsearch"
+  },
+  "releases": {
+    "v0.1": {
+      "site": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.1",
+      "workers": 1,
+      "cpus": [
+        24
+      ],
+      "artifact": {
+        "cargo_lock_sha256": "a4969f8a7a1136c7016f64574fba628a2c27ed6b6d9ef484e9ed94f1033c75fe",
+        "cargo_locked": true,
+        "compiler": "rustc 1.98.1 (48a229cea 2026-09-01)",
+        "distribution_version_note": "Git tag and hashes identify releases; wheel metadata remains 0.1.0.",
+        "extension_sha256": "d01f673946d2da811ea28e7637a50becda65f2b3b4cb762439017e9432edb350",
+        "features": [],
+        "packaged_source_files_verified": 15,
+        "profile": "release",
+        "python": "CPython 3.12.14",
+        "source_archive_sha256": "ee1849a9e08582f600868fde93e00fd22ffb678a5c69b24581aefb24cd913f39",
+        "tag_commit": "6d229bfb6c785d66b481b20d789579c47645d4ed",
+        "version": "v0.1",
+        "wheel": "rcswx-0.1.0-cp312-cp312-manylinux_2_34_x86_64.whl",
+        "wheel_sha256": "29015beb3c192d6ebf79df1e134614aaf8a395433de65105c70b3c6e1b31a1d4"
+      }
+    },
+    "v0.3": {
+      "site": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.3",
+      "workers": 1,
+      "cpus": [
+        24
+      ],
+      "artifact": {
+        "cargo_lock_sha256": "021055ac34de90128a5445e61e728ce5f9fd9c60950f05e9cf63c4688e9c0cd2",
+        "cargo_locked": true,
+        "compiler": "rustc 1.98.1 (48a229cea 2026-09-01)",
+        "distribution_version_note": "Git tag and hashes identify releases; wheel metadata remains 0.1.0.",
+        "extension_sha256": "d56dc0c9bd2c71c8e95829d84d3cdef5c6cb6d99b13f1856f6e92b96c416475c",
+        "features": [],
+        "packaged_source_files_verified": 25,
+        "profile": "release",
+        "python": "CPython 3.12.14",
+        "source_archive_sha256": "bc3aa4f4be4616a1cf814167255e8431ef12d29c736c99635995d90dcf0c04f2",
+        "tag_commit": "8d4ace02627ad97ed6293b5e6c598ce0ebd05eee",
+        "version": "v0.3",
+        "wheel": "rcswx-0.1.0-cp312-cp312-manylinux_2_34_x86_64.whl",
+        "wheel_sha256": "6d353b777098edaaacdcf52083bfcd0be169c1546e925e33c696ddacc0bf0eb4"
+      }
+    },
+    "v0.5": {
+      "site": "/home/cfg/tmp/rcswx-distance-v0.5-e9eb4b0/sites/v0.5",
+      "workers": 10,
+      "cpus": [
+        16,
+        17,
+        18,
+        19,
+        20,
+        22,
+        23,
+        24,
+        25,
+        26
+      ],
+      "artifact": {
+        "cargo_lock_sha256": "b0c85e74b0304a69f63028cc71e7558467b888bc3796f4f00d78fadc06adcf5b",
+        "cargo_locked": true,
+        "compiler": "rustc 1.98.1 (48a229cea 2026-09-01)",
+        "distribution_version_note": "Git tag and hashes identify releases; wheel metadata remains 0.1.0.",
+        "extension_sha256": "8b150033a24e98311531dbf028b5c20258a5892259facc761876e7d17813a95f",
+        "features": [
+          "parallel"
+        ],
+        "packaged_source_files_verified": 25,
+        "profile": "release",
+        "python": "CPython 3.12.14",
+        "source_archive_sha256": "5c36232efd7e5368e0fdf3c99f5d54ffa38422fa5b9ae191f367992f2ffb9635",
+        "tag_commit": "e9eb4b07707b6a4e7710e422a51884aa34b8b507",
+        "version": "v0.5",
+        "wheel": "rcswx-0.1.0-cp312-cp312-manylinux_2_34_x86_64.whl",
+        "wheel_sha256": "608eb1033abab0b67eae173a831860fdc3ca963005e7cc021f0da863fb12ac39"
+      }
+    }
+  }
+}

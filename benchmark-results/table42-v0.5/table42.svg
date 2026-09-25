@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="1152pt" height="374.4pt" viewBox="0 0 1152 374.4" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.9.4, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 374.4 
+L 1152 374.4 
+L 1152 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="table_1">
+    <g id="patch_2">
+     <path d="M 28.8 113.877504 
+L 324.288 113.877504 
+M 324.288 82.96704 
+L 28.8 82.96704 
+M 28.8 113.877504 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_1">
+     <text style="font: 700 11px 'DejaVu Serif'; text-anchor: middle" x="176.544" y="101.457584" transform="rotate(-0 176.544 101.457584)">Architectures</text>
+    </g>
+    <g id="patch_3">
+     <path d="M 324.288 113.877504 
+L 439.2 113.877504 
+M 439.2 82.96704 
+L 324.288 82.96704 
+M 324.288 113.877504 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_2">
+     <text style="font: 700 11px 'DejaVu Serif'" transform="translate(356.655406 95.298788)">Number</text>
+     <text style="font: 700 11px 'DejaVu Serif'" transform="translate(355.686031 107.616381)">of nodes</text>
+    </g>
+    <g id="patch_4">
+     <path d="M 439.2 113.877504 
+L 586.944 113.877504 
+M 586.944 82.96704 
+L 439.2 82.96704 
+M 439.2 113.877504 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_3">
+     <text style="font: 700 11px 'DejaVu Serif'" transform="translate(487.707547 95.220584)">Original</text>
+     <text style="font: 700 11px 'DejaVu Serif'" transform="translate(477.559188 107.694584)">(published)</text>
+    </g>
+    <g id="patch_5">
+     <path d="M 586.944 113.877504 
+L 723.744 113.877504 
+M 723.744 82.96704 
+L 586.944 82.96704 
+M 586.944 113.877504 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_4">
+     <text style="font: 700 11px 'DejaVu Serif'" transform="translate(626.458687 95.298788)">Rust v0.1</text>
+     <text style="font: 700 11px 'DejaVu Serif'" transform="translate(638.108375 107.616381)">serial</text>
+    </g>
+    <g id="patch_6">
+     <path d="M 723.744 113.877504 
+L 860.544 113.877504 
+M 860.544 82.96704 
+L 723.744 82.96704 
+M 723.744 113.877504 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_5">
+     <text style="font: 700 11px 'DejaVu Serif'" transform="translate(763.258687 95.298788)">Rust v0.3</text>
+     <text style="font: 700 11px 'DejaVu Serif'" transform="translate(774.908375 107.616381)">serial</text>
+    </g>
+    <g id="patch_7">
+     <path d="M 860.544 113.877504 
+L 1008.288 113.877504 
+M 1008.288 82.96704 
+L 860.544 82.96704 
+M 860.544 113.877504 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_6">
+     <text style="font: 700 11px 'DejaVu Serif'" transform="translate(905.530687 95.298788)">Rust v0.5</text>
+     <text style="font: 700 11px 'DejaVu Serif'" transform="translate(900.242953 107.616381)">10 workers</text>
+    </g>
+    <g id="patch_8">
+     <path d="M 1008.288 113.877504 
+L 1123.2 113.877504 
+M 1123.2 82.96704 
+L 1008.288 82.96704 
+M 1008.288 113.877504 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_7">
+     <text style="font: 700 11px 'DejaVu Serif'; text-anchor: middle" x="1065.744" y="101.457584" transform="rotate(-0 1065.744 101.457584)">Distance</text>
+    </g>
+    <g id="patch_9">
+     <path d="M 28.8 144.787968 
+M 324.288 144.787968 
+M 324.288 113.877504 
+M 28.8 113.877504 
+M 28.8 144.787968 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_8">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: start" x="58.3488" y="132.368049" transform="rotate(-0 58.3488 132.368049)">ResNet18, MLP-Mixer d8</text>
+    </g>
+    <g id="patch_10">
+     <path d="M 324.288 144.787968 
+M 439.2 144.787968 
+M 439.2 113.877504 
+M 324.288 113.877504 
+M 324.288 144.787968 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_9">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="381.744" y="132.368049" transform="rotate(-0 381.744 132.368049)">267, 264</text>
+    </g>
+    <g id="patch_11">
+     <path d="M 439.2 144.787968 
+M 586.944 144.787968 
+M 586.944 113.877504 
+M 439.2 113.877504 
+M 439.2 144.787968 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_10">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="513.072" y="132.368049" transform="rotate(-0 513.072 132.368049)">39.054 s</text>
+    </g>
+    <g id="patch_12">
+     <path d="M 586.944 144.787968 
+M 723.744 144.787968 
+M 723.744 113.877504 
+M 586.944 113.877504 
+M 586.944 144.787968 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_11">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="655.344" y="132.368049" transform="rotate(-0 655.344 132.368049)">3.799 s</text>
+    </g>
+    <g id="patch_13">
+     <path d="M 723.744 144.787968 
+M 860.544 144.787968 
+M 860.544 113.877504 
+M 723.744 113.877504 
+M 723.744 144.787968 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_12">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="792.144" y="132.368049" transform="rotate(-0 792.144 132.368049)">0.728 s</text>
+    </g>
+    <g id="patch_14">
+     <path d="M 860.544 144.787968 
+M 1008.288 144.787968 
+M 1008.288 113.877504 
+M 860.544 113.877504 
+M 860.544 144.787968 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_13">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="934.416" y="132.368049" transform="rotate(-0 934.416 132.368049)">0.838 s</text>
+    </g>
+    <g id="patch_15">
+     <path d="M 1008.288 144.787968 
+M 1123.2 144.787968 
+M 1123.2 113.877504 
+M 1008.288 113.877504 
+M 1008.288 144.787968 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_14">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="1065.744" y="132.368049" transform="rotate(-0 1065.744 132.368049)">60.375</text>
+    </g>
+    <g id="patch_16">
+     <path d="M 28.8 175.698432 
+M 324.288 175.698432 
+M 324.288 144.787968 
+M 28.8 144.787968 
+M 28.8 175.698432 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_15">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: start" x="58.3488" y="163.278513" transform="rotate(-0 58.3488 163.278513)">ResNet18, MLP-Mixer d12</text>
+    </g>
+    <g id="patch_17">
+     <path d="M 324.288 175.698432 
+M 439.2 175.698432 
+M 439.2 144.787968 
+M 324.288 144.787968 
+M 324.288 175.698432 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_16">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="381.744" y="163.278513" transform="rotate(-0 381.744 163.278513)">267, 392</text>
+    </g>
+    <g id="patch_18">
+     <path d="M 439.2 175.698432 
+M 586.944 175.698432 
+M 586.944 144.787968 
+M 439.2 144.787968 
+M 439.2 175.698432 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_17">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="513.072" y="163.278513" transform="rotate(-0 513.072 163.278513)">342.383 s</text>
+    </g>
+    <g id="patch_19">
+     <path d="M 586.944 175.698432 
+M 723.744 175.698432 
+M 723.744 144.787968 
+M 586.944 144.787968 
+M 586.944 175.698432 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_18">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="655.344" y="163.278513" transform="rotate(-0 655.344 163.278513)">5.412 s</text>
+    </g>
+    <g id="patch_20">
+     <path d="M 723.744 175.698432 
+M 860.544 175.698432 
+M 860.544 144.787968 
+M 723.744 144.787968 
+M 723.744 175.698432 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_19">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="792.144" y="163.278513" transform="rotate(-0 792.144 163.278513)">5.529 s</text>
+    </g>
+    <g id="patch_21">
+     <path d="M 860.544 175.698432 
+M 1008.288 175.698432 
+M 1008.288 144.787968 
+M 860.544 144.787968 
+M 860.544 175.698432 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_20">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="934.416" y="163.278513" transform="rotate(-0 934.416 163.278513)">5.792 s</text>
+    </g>
+    <g id="patch_22">
+     <path d="M 1008.288 175.698432 
+M 1123.2 175.698432 
+M 1123.2 144.787968 
+M 1008.288 144.787968 
+M 1008.288 175.698432 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_21">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="1065.744" y="163.278513" transform="rotate(-0 1065.744 163.278513)">95.375</text>
+    </g>
+    <g id="patch_23">
+     <path d="M 28.8 206.608896 
+M 324.288 206.608896 
+M 324.288 175.698432 
+M 28.8 175.698432 
+M 28.8 206.608896 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_22">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: start" x="58.3488" y="194.188977" transform="rotate(-0 58.3488 194.188977)">ResNet34, MLP-Mixer d8</text>
+    </g>
+    <g id="patch_24">
+     <path d="M 324.288 206.608896 
+M 439.2 206.608896 
+M 439.2 175.698432 
+M 324.288 175.698432 
+M 324.288 206.608896 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_23">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="381.744" y="194.188977" transform="rotate(-0 381.744 194.188977)">499, 264</text>
+    </g>
+    <g id="patch_25">
+     <path d="M 439.2 206.608896 
+M 586.944 206.608896 
+M 586.944 175.698432 
+M 439.2 175.698432 
+M 439.2 206.608896 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_24">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="513.072" y="194.188977" transform="rotate(-0 513.072 194.188977)">86.633 s</text>
+    </g>
+    <g id="patch_26">
+     <path d="M 586.944 206.608896 
+M 723.744 206.608896 
+M 723.744 175.698432 
+M 586.944 175.698432 
+M 586.944 206.608896 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_25">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="655.344" y="194.188977" transform="rotate(-0 655.344 194.188977)">1.170 s</text>
+    </g>
+    <g id="patch_27">
+     <path d="M 723.744 206.608896 
+M 860.544 206.608896 
+M 860.544 175.698432 
+M 723.744 175.698432 
+M 723.744 206.608896 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_26">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="792.144" y="194.188977" transform="rotate(-0 792.144 194.188977)">1.113 s</text>
+    </g>
+    <g id="patch_28">
+     <path d="M 860.544 206.608896 
+M 1008.288 206.608896 
+M 1008.288 175.698432 
+M 860.544 175.698432 
+M 860.544 206.608896 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_27">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="934.416" y="194.188977" transform="rotate(-0 934.416 194.188977)">1.332 s</text>
+    </g>
+    <g id="patch_29">
+     <path d="M 1008.288 206.608896 
+M 1123.2 206.608896 
+M 1123.2 175.698432 
+M 1008.288 175.698432 
+M 1008.288 206.608896 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_28">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="1065.744" y="194.188977" transform="rotate(-0 1065.744 194.188977)">119.625</text>
+    </g>
+    <g id="patch_30">
+     <path d="M 28.8 237.51936 
+L 324.288 237.51936 
+M 324.288 206.608896 
+M 28.8 206.608896 
+M 28.8 237.51936 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_29">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: start" x="58.3488" y="225.099441" transform="rotate(-0 58.3488 225.099441)">ResNet34, MLP-Mixer d12</text>
+    </g>
+    <g id="patch_31">
+     <path d="M 324.288 237.51936 
+L 439.2 237.51936 
+M 439.2 206.608896 
+M 324.288 206.608896 
+M 324.288 237.51936 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_30">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="381.744" y="225.099441" transform="rotate(-0 381.744 225.099441)">499, 392</text>
+    </g>
+    <g id="patch_32">
+     <path d="M 439.2 237.51936 
+L 586.944 237.51936 
+M 586.944 206.608896 
+M 439.2 206.608896 
+M 439.2 237.51936 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_31">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="513.072" y="225.099441" transform="rotate(-0 513.072 225.099441)">741.57 min</text>
+    </g>
+    <g id="patch_33">
+     <path d="M 586.944 237.51936 
+L 723.744 237.51936 
+M 723.744 206.608896 
+M 586.944 206.608896 
+M 586.944 237.51936 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_32">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="655.344" y="225.099441" transform="rotate(-0 655.344 225.099441)">101.741 s</text>
+    </g>
+    <g id="patch_34">
+     <path d="M 723.744 237.51936 
+L 860.544 237.51936 
+M 860.544 206.608896 
+M 723.744 206.608896 
+M 723.744 237.51936 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_33">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="792.144" y="225.099441" transform="rotate(-0 792.144 225.099441)">97.136 s</text>
+    </g>
+    <g id="patch_35">
+     <path d="M 860.544 237.51936 
+L 1008.288 237.51936 
+M 1008.288 206.608896 
+M 860.544 206.608896 
+M 860.544 237.51936 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_34">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="934.416" y="225.099441" transform="rotate(-0 934.416 225.099441)">91.898 s</text>
+    </g>
+    <g id="patch_36">
+     <path d="M 1008.288 237.51936 
+L 1123.2 237.51936 
+M 1123.2 206.608896 
+M 1008.288 206.608896 
+M 1008.288 237.51936 
+" style="fill: #ffffff; stroke: #777777; stroke-width: 0.65; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_35">
+     <text style="font: 11px 'DejaVu Serif'; text-anchor: middle" x="1065.744" y="225.099441" transform="rotate(-0 1065.744 225.099441)">115.625</text>
+    </g>
+   </g>
+  </g>
+  <g id="text_36">
+   <text style="font: 17px 'DejaVu Serif'; text-anchor: middle" x="576" y="29.952" transform="rotate(-0 576 29.952)">Table 4.2: RCSWX on the selected predesigned architectures</text>
+  </g>
+  <g id="text_37">
+   <text style="font: 12px 'DejaVu Serif'; text-anchor: middle" x="723.456" y="67.392" transform="rotate(-0 723.456 67.392)">Compute time</text>
+  </g>
+  <g id="text_38">
+   <text style="font: 10px 'DejaVu Serif'; text-anchor: start" x="28.8" y="265.824" transform="rotate(-0 28.8 265.824)">Rust: median wall time of 3 fresh-process calls per cell; corner collapse ON; cold pool startup included; 16 GiB RSS guard.</text>
+  </g>
+  <g id="text_39">
+   <text style="font: 10px 'DejaVu Serif'; text-anchor: start" x="28.8" y="284.544" transform="rotate(-0 28.8 284.544)">ono · serial: E-core CPU 24 · parallel: 10 E-cores · Rust 1.98.1 · Python 3.12.14 · seed 42 · float32 input (2, 3, 32, 32)</text>
+  </g>
+  <g id="text_40">
+   <text style="font: 10px 'DejaVu Serif'; text-anchor: start" x="28.8" y="303.264" transform="rotate(-0 28.8 303.264)">Timing ends at Alignment return; input construction and later history traversal are excluded. All native outcomes match exactly.</text>
+  </g>
+  <g id="text_41">
+   <text style="font: 10px 'DejaVu Serif'; text-anchor: start" x="28.8" y="321.984" transform="rotate(-0 28.8 321.984)">Original values are transcribed from the supplied table, not remeasured. Historical hardware and timing boundary are unknown.</text>
+  </g>
+  <g id="text_42">
+   <text style="font: 10px 'DejaVu Serif'; text-anchor: start" x="28.8" y="340.704" transform="rotate(-0 28.8 340.704)">741.57 minutes is preserved literally; a possible unit typo remains unverified. Native distances round to the published distances.</text>
+  </g>
+ </g>
+</svg>
