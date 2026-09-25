@@ -115,18 +115,15 @@ assert location.is_relative_to(prefix), (location, prefix)
 assert extension.is_relative_to(prefix), (extension, prefix)
 assert any(extension.name.endswith(suffix) for suffix in importlib.machinery.EXTENSION_SUFFIXES), extension
 assert _core.PARALLEL_CAPABLE is {parallel!r}
-def sequence(items):
-    if len(items) == 1:
-        return items[0]
-    middle = len(items) // 2
-    return ("sequential", sequence(items[:middle]), sequence(items[middle:]))
 def parent(changed):
-    return rcswx.Architecture.from_tree(sequence([
-        ("routing", ("identity",),
-         ("computation", (f"linear({{16 + 2 * index + int(changed and index == 16)}})",)),
-         ("identity",))
-        for index in range(32)
-    ]))
+    items = [
+        ("computation", (f"linear({{16 + 2 * index + int(changed and index == 24)}})",))
+        for index in range(48)
+    ]
+    tree = items[-1]
+    for leaf in reversed(items[:-1]):
+        tree = ("routing", ("identity",), ("sequential", leaf, tree), ("identity",))
+    return rcswx.Architecture.from_tree(tree)
 pair = parent(False), parent(True)
 serial = rcswx.edit_path(*pair, workers=1)
 assert serial.execution["pool_capacity"] is None
