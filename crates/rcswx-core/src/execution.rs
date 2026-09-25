@@ -155,16 +155,18 @@ impl Execution {
     #[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
     pub(crate) fn run<T: Send>(
         &mut self,
-        count: usize,
+        slots: &mut [T],
+        weights: &[usize],
         poll: &mut dyn FnMut() -> Result<()>,
-        evaluate: impl Fn(usize, &std::sync::atomic::AtomicBool) -> T + Sync,
-    ) -> Result<Vec<Option<T>>> {
+        evaluate: impl Fn(usize, &mut T, &std::sync::atomic::AtomicBool) + Sync,
+    ) -> Result<()> {
         let state = self
             .native
             .as_mut()
             .ok_or_else(|| Error::Execution("parallel round has no native executor".into()))?;
         state.run(
-            count,
+            slots,
+            weights,
             self.report.worker_limit,
             poll,
             evaluate,
@@ -190,9 +192,10 @@ pub fn callback<T>(operation: impl FnOnce() -> T) -> T {
 mod native {
     use super::*;
     use std::cell::Cell;
+    use std::collections::VecDeque;
     use std::panic::{AssertUnwindSafe, catch_unwind};
     use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
-    use std::sync::{LazyLock, mpsc};
+    use std::sync::{LazyLock, Mutex, mpsc};
     use std::time::{Duration, Instant};
 
     static OWNER_PID: AtomicU32 = AtomicU32::new(0);
@@ -270,14 +273,16 @@ mod native {
 
         pub(super) fn run<T: Send>(
             &mut self,
-            count: usize,
+            slots: &mut [T],
+            weights: &[usize],
             limit: usize,
             poll: &mut dyn FnMut() -> Result<()>,
-            evaluate: impl Fn(usize, &AtomicBool) -> T + Sync,
+            evaluate: impl Fn(usize, &mut T, &AtomicBool) + Sync,
             report: &mut Report,
-        ) -> Result<Vec<Option<T>>> {
+        ) -> Result<()> {
             validate()?;
-            if count == 0 || limit < 2 {
+            let count = slots.len();
+            if count == 0 || limit < 2 || weights.len() != count {
                 return Err(Error::Execution("invalid parallel round".into()));
             }
             if self
@@ -287,28 +292,54 @@ mod native {
                 self.poll(poll, report)?;
             }
             let jobs = count.min(limit);
-            let mut results = Vec::new();
-            results
-                .try_reserve_exact(count)
-                .map_err(|_| Error::Memory)?;
-            results.resize_with(count, || None);
             let cancelled = AtomicBool::new(false);
             let panicked = AtomicBool::new(false);
             let active = AtomicUsize::new(0);
             let peak = AtomicUsize::new(0);
+            // More chunks than compute jobs lets faster workers take more work,
+            // while the job count still enforces the caller's hard ceiling.
+            let chunks = count.min(jobs.saturating_mul(8));
+            let mut queue = VecDeque::new();
+            queue.try_reserve_exact(chunks).map_err(|_| Error::Memory)?;
+            let mut remaining = slots;
+            let mut first = 0;
+            let mut remaining_weight = weights
+                .iter()
+                .fold(0_usize, |sum, &weight| sum.saturating_add(weight));
+            for chunk in 0..chunks {
+                let left = chunks - chunk;
+                let (length, weight) = if left == 1 {
+                    (remaining.len(), remaining_weight)
+                } else {
+                    let target = remaining_weight.div_ceil(left);
+                    let max_length = remaining.len() - (left - 1);
+                    let mut length = 1;
+                    let mut weight = weights[first];
+                    while length < max_length {
+                        let next = weight.saturating_add(weights[first + length]);
+                        if weight.abs_diff(target) <= next.abs_diff(target) {
+                            break;
+                        }
+                        weight = next;
+                        length += 1;
+                    }
+                    (length, weight)
+                };
+                remaining_weight = remaining_weight.saturating_sub(weight);
+                let (chunk, rest) = remaining.split_at_mut(length);
+                remaining = rest;
+                queue.push_back((first, chunk));
+                first += length;
+            }
+            let queue = Mutex::new(queue);
             let (notify, completed) = mpsc::sync_channel(jobs);
             let pool = self.pool;
             let mut interrupted = None;
             pool.in_place_scope(|scope| {
-                let mut remaining = results.as_mut_slice();
-                let mut first = 0;
-                for job in 0..jobs {
-                    let length = count / jobs + usize::from(job < count % jobs);
-                    let (slots, rest) = remaining.split_at_mut(length);
-                    remaining = rest;
+                for _ in 0..jobs {
                     let notify = notify.clone();
-                    let (cancelled, panicked, active, peak, evaluate) =
-                        (&cancelled, &panicked, &active, &peak, &evaluate);
+                    let (cancelled, panicked, active, peak, evaluate, queue) =
+                        (&cancelled, &panicked, &active, &peak, &evaluate, &queue);
                     scope.spawn(move |_| {
                         struct Active<'a>(&'a AtomicUsize);
                         impl Drop for Active<'_> {
@@ -317,14 +348,31 @@ mod native {
                             }
                         }
                         let outcome = catch_unwind(AssertUnwindSafe(|| {
-                            let now = active.fetch_add(1, Ordering::Relaxed) + 1;
-                            let _active = Active(active);
-                            peak.fetch_max(now, Ordering::Relaxed);
-                            for (offset, slot) in slots.iter_mut().enumerate() {
+                            let mut executing = None;
+                            loop {
                                 if cancelled.load(Ordering::Relaxed) {
                                     break;
                                 }
-                                *slot = Some(evaluate(first + offset, cancelled));
+                                // Release the queue guard before evaluating any cell.
+                                // No cell/storage lock is acquired by a compute job.
+                                let next = queue
+                                    .lock()
+                                    .expect("native chunk queue poisoned")
+                                    .pop_front();
+                                let Some((first, slots)) = next else {
+                                    break;
+                                };
+                                if executing.is_none() {
+                                    let now = active.fetch_add(1, Ordering::Relaxed) + 1;
+                                    executing = Some(Active(active));
+                                    peak.fetch_max(now, Ordering::Relaxed);
+                                }
+                                for (offset, slot) in slots.iter_mut().enumerate() {
+                                    if cancelled.load(Ordering::Relaxed) {
+                                        break;
+                                    }
+                                    evaluate(first + offset, slot, cancelled);
+                                }
                             }
                         }));
                         if outcome.is_err() {
@@ -335,7 +383,6 @@ mod native {
                         // cannot block a worker while the coordinator is in Python.
                         let _ = notify.send(());
                     });
-                    first += length;
                 }
                 drop(notify);
                 let mut joined = 0;
@@ -381,12 +428,7 @@ mod native {
             if panicked.load(Ordering::Acquire) {
                 return Err(Error::Execution("native compute worker panicked".into()));
             }
-            if results.iter().any(Option::is_none) {
-                return Err(Error::Execution(
-                    "native round returned incomplete output".into(),
-                ));
-            }
-            Ok(results)
+            Ok(())
         }
     }
 }
@@ -415,16 +457,17 @@ mod tests {
         }
         assert_eq!(execution.report.worker_limit, 2);
         let barrier = Barrier::new(2);
-        let results = execution
-            .run(2, &mut poll, |index, _| {
+        let mut results = vec![None; 2];
+        execution
+            .run(&mut results, &[1; 2], &mut poll, |index, slot, _| {
                 assert_ne!(std::thread::current().id(), coordinator);
                 barrier.wait();
-                if index == 0 {
+                *slot = Some(if index == 0 {
                     std::thread::sleep(Duration::from_millis(35));
                     Err::<usize, _>(Error::Index)
                 } else {
                     Err(Error::EmptyMinimum)
-                }
+                });
             })
             .unwrap();
         assert_eq!(execution.report.peak_jobs, 2);
@@ -452,7 +495,7 @@ mod tests {
         }
         let active = AtomicUsize::new(0);
         let timed_out = AtomicBool::new(false);
-        let outcome = execution.run(2, &mut poll, |_, cancelled| {
+        let outcome = execution.run(&mut [(); 2], &[1; 2], &mut poll, |_, _, cancelled| {
             active.fetch_add(1, Ordering::SeqCst);
             let deadline = Instant::now() + Duration::from_secs(2);
             while !cancelled.load(Ordering::Relaxed) {
@@ -484,21 +527,24 @@ mod tests {
                 self.0.fetch_add(1, Ordering::SeqCst);
             }
         }
-        let failed = execution.run(31, &mut poll, |index, _| {
+        let failed = execution.run(&mut [0; 31], &[1; 31], &mut poll, |index, slot, _| {
             started.fetch_add(1, Ordering::SeqCst);
             let _guard = Guard(&dropped);
             if index == 0 {
                 panic!("intentional worker failure");
             }
-            (0..=index).sum::<usize>()
+            *slot = (0..=index).sum::<usize>();
         });
         assert!(matches!(failed, Err(Error::Execution(_))));
         assert_eq!(
             started.load(Ordering::SeqCst),
             dropped.load(Ordering::SeqCst)
         );
-        let values = execution
-            .run(31, &mut poll, |index, _| (0..=index).sum::<usize>())
+        let mut values = vec![None; 31];
+        execution
+            .run(&mut values, &[1; 31], &mut poll, |index, slot, _| {
+                *slot = Some((0..=index).sum::<usize>())
+            })
             .unwrap();
         assert_eq!(
             values,
@@ -523,14 +569,15 @@ mod tests {
                 let mut poll = || Ok(());
                 let mut execution = Execution::new(Workers::new(isize::MAX).unwrap()).unwrap();
                 start.wait();
-                let values = execution
-                    .run(97, &mut poll, |index, _| {
+                let mut values = vec![None; 97];
+                execution
+                    .run(&mut values, &[1; 97], &mut poll, |index, slot, _| {
                         let now = active.fetch_add(1, Ordering::SeqCst) + 1;
                         peak.fetch_max(now, Ordering::SeqCst);
                         std::thread::sleep(Duration::from_millis(2));
                         let value = (0..=index + offset).sum::<usize>();
                         active.fetch_sub(1, Ordering::SeqCst);
-                        value
+                        *slot = Some(value);
                     })
                     .unwrap();
                 assert!(execution.report.peak_jobs <= capacity);
@@ -551,6 +598,39 @@ mod tests {
         });
         assert!(peak.load(Ordering::SeqCst) <= capacity);
         assert_eq!(active.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn concentrated_work_overlaps_without_reordering_results() {
+        let mut execution = Execution::new(Workers::new(2).unwrap()).unwrap();
+        if execution.report.worker_limit < 2 {
+            return;
+        }
+        let entered = AtomicUsize::new(0);
+        let mut slots = [0; 8];
+        execution
+            .run(
+                &mut slots,
+                &[1000, 1000, 1, 1, 1, 1, 1, 1],
+                &mut || Ok(()),
+                |index, slot, _| {
+                    if index < 2 {
+                        entered.fetch_add(1, Ordering::SeqCst);
+                        let deadline = Instant::now() + Duration::from_secs(2);
+                        while entered.load(Ordering::SeqCst) < 2 {
+                            assert!(
+                                Instant::now() < deadline,
+                                "heavy cells were serialized in one job"
+                            );
+                            std::thread::sleep(Duration::from_millis(1));
+                        }
+                    }
+                    *slot = index * index;
+                },
+            )
+            .unwrap();
+        assert_eq!(slots, [0, 1, 4, 9, 16, 25, 36, 49]);
+        assert_eq!(execution.report.peak_jobs, 2);
     }
 
     #[test]

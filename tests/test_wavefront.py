@@ -14,29 +14,30 @@ from rcswx import Alignment, Architecture, NativeRng, _core, apply_edits, edit_p
 PARALLEL = pytest.mark.skipif(not _core.PARALLEL_CAPABLE, reason="serial-only native build")
 
 
-def parents(size=64):
+def parents(size=48, *, nested=False):
     def build(changed):
         items = [
-            (
-                "routing",
-                ("identity",),
-                (
-                    "computation",
-                    (f"linear({16 + 2 * index + int(changed and index == size // 2)})",),
-                ),
-                ("identity",),
-            )
+            ("computation", (f"linear({16 + 2 * index + int(changed and index == size // 2)})",))
             for index in range(size)
         ]
-        while len(items) > 1:
-            items = [("sequential", *items[index : index + 2]) for index in range(0, len(items), 2)]
-        return Architecture.from_tree(items[0])
+        if nested:
+            tree = items[-1]
+            for leaf in reversed(items[:-1]):
+                tree = ("routing", ("identity",), ("sequential", leaf, tree), ("identity",))
+        else:
+            items = [("routing", ("identity",), leaf, ("identity",)) for leaf in items]
+            while len(items) > 1:
+                items = [
+                    ("sequential", *items[index : index + 2]) for index in range(0, len(items), 2)
+                ]
+            tree = items[0]
+        return Architecture.from_tree(tree)
 
     return build(False), build(True)
 
 
-def prepared(size=64):
-    first, second = parents(size)
+def prepared(size=48):
+    first, second = parents(size, nested=True)
     return _core.prepare_architectures(first.to_json(), second.to_json())
 
 
@@ -101,8 +102,9 @@ def test_serial_only_build_rejects_parallel_before_mutation():
 @PARALLEL
 @pytest.mark.parametrize("collapse", [False, True])
 @pytest.mark.parametrize("workers", [2, 4, -1])
-def test_parallel_preserves_complete_ordered_plans_and_consumers(collapse, workers):
-    pair = parents()
+@pytest.mark.parametrize("nested", [False, True])
+def test_parallel_preserves_complete_ordered_plans_and_consumers(collapse, workers, nested):
+    pair = parents(nested=nested)
     serial = edit_path(*pair, collapse_corners=collapse, workers=1)
     parallel = edit_path(*pair, collapse_corners=collapse, workers=workers)
     assert parallel.distance == serial.distance == 0.25
@@ -121,7 +123,7 @@ def test_parallel_preserves_complete_ordered_plans_and_consumers(collapse, worke
     capacity = report["pool_capacity"]
     assert report["worker_limit"] == (capacity if workers == -1 else min(workers, capacity))
     assert report["peak_jobs"] <= report["worker_limit"]
-    if capacity > 1:
+    if capacity > 1 and nested:
         assert report["parallel_cells"] > 0
         assert report["parallel_rounds"] > 0
 
@@ -179,7 +181,7 @@ def test_callback_reentry_allows_serial_but_rejects_parallel_before_preparation(
 
 @PARALLEL
 def test_concurrent_cancellation_does_not_cancel_another_call(two_workers):
-    snapshots = [prepared(64), prepared(80)]
+    snapshots = [prepared(48), prepared(56)]
     expected = snapshots[1].analyze("serial", workers=1).paths_json()
     entered = threading.Barrier(2)
 
@@ -268,7 +270,7 @@ import sys
 import threading
 import time
 from rcswx import _core
-first, second = json.loads(sys.stdin.read())
+first, second, recovery_first, recovery_second = json.loads(sys.stdin.read())
 snapshot = _core.prepare_architectures(first, second)
 with_callback = sys.argv[1] == 'True'
 started = threading.Event()
@@ -294,9 +296,10 @@ except KeyboardInterrupt:
     assert not thread.is_alive()
 else:
     raise AssertionError('alignment returned a plan after SIGINT')
-assert snapshot.analyze('recovered', workers=2).distance == 0.25
+recovery = _core.prepare_architectures(recovery_first, recovery_second)
+assert recovery.analyze('recovered', workers=2).distance == 0.25
 """
-    pair = parents(128)
+    pair = (*parents(64, nested=True), *parents(2))
     subprocess.run(
         [sys.executable, "-I", "-c", script, str(with_callback)],
         input=json.dumps([value.to_json() for value in pair]),

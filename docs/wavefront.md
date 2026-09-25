@@ -109,6 +109,67 @@ algorithm error before an earlier position is published.
   rejected. A PID guard is checked before pool synchronization after `fork`;
   a forked child may still execute serial work, or start a fresh interpreter.
 
+## Native scheduler and safety gates
+
+The optional `parallel` Cargo feature is forwarded by the Python binding, not
+enabled by default. Rayon is a native-target-only dependency. The private pool
+uses the process's available parallelism when first initialized; `workers=1`
+does not inspect or initialize it. A call's resolved ceiling is
+`min(requested, capacity)`, or the full capacity for `workers=-1`.
+
+Ordinary diagonals are visited in the original alternating order. A read-only
+work estimate rejects low-density frontiers before allocating lane buffers.
+Admitted rounds contain at most 1,024 positions. Their reserved payload is
+bounded by 8 MiB and the remaining allocation quota; oversized rounds are
+split, and an inadmissible remainder runs serially. The payload estimate includes
+candidate arrays, result containers, compact predecessor proposals and the
+eventual histories. It is not a process-RSS limit: allocator overhead, thread
+stacks and bounded executor bookkeeping are separate.
+
+The coordinator allocates the lane buffers. Compute jobs only fill candidates
+and ordered `(direction, predecessor index)` proposals through disjoint mutable
+slices. They do not create canonical histories, mutate matrices, assign public
+trace IDs, call Python, or hold matrix/storage locks. The coordinator resolves
+proposals and creates histories in canonical order after join. Resource failure
+and algorithm error precedence therefore do not depend on completion order.
+
+Chunks are sized by estimated candidate/history work rather than cell count.
+At most eight chunks per allowed compute job enter a call-local queue; at most
+the resolved worker ceiling drains that queue concurrently. A queue mutex
+protects only chunk transfer and is released before evaluation. Faster workers
+can take additional chunks without increasing the job ceiling or requiring
+per-cell locks. This matters on heterogeneous CPUs and highly uneven histories.
+
+`plan.execution` is separate from algorithm statistics and trace recording:
+`pool_capacity=None` means this serial call did not touch the pool, even if
+another call initialized it. `jobs` counts submitted compute jobs and
+`peak_jobs` counts their maximum overlapping active lifetimes.
+`scratch_peak_bytes` is the conservative reserved payload, not sampled RSS.
+Fallback counters count failed admission attempts; scratch failures can lead to
+a smaller successful round rather than a wholly serial diagonal.
+
+The forced-scheduling Rust gate runs all 32 original frozen cases with worker
+ceilings 2/4 and round shapes 2/3/17/1,024. It also compares limited-work/output
+errors and their partial traces against serial execution. Additional regressions
+cover destination and cleanup aliases, scratch exhaustion, concentrated-work
+overlap, concurrent pool ceilings, callback cancellation and worker panic
+recovery. Python exercises complete plans, selection/application, seeded
+sampling, callback exception identity, re-entry, concurrent cancellation,
+SIGINT, fork rejection and serial calls that create no pool threads.
+
+```sh
+make develop-parallel
+make check parallel-check parallel-test
+make wasm-parallel-check
+make wheel-parallel
+RCSWX_WHEEL=dist/parallel/rcswx-0.1.0-cp314-cp314-linux_x86_64.whl \
+  make wheel-parallel-test
+```
+
+Use the exact filename produced by the build, not a wildcard or the example
+Python tag above. The serial wheel has its own `make wheel` / `make wheel-test`
+gate. Both gates use fresh minimal, Torch, reference and combined installations.
+
 ## Serial ownership gate
 
 The common evaluator and deterministic publisher pass all 32 frozen cases on

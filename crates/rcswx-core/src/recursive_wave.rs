@@ -4,8 +4,8 @@ use std::cell::Ref;
 use std::mem::size_of;
 
 pub(super) const ROUND_CELLS: usize = 1024;
-const MIN_CELLS: usize = 32;
 const MIN_WORK: usize = 512;
+const MIN_CELL_WORK: usize = 32;
 
 type Access = (usize, usize, bool);
 
@@ -22,10 +22,70 @@ pub(super) struct Round<'a> {
 
 pub(super) struct Evaluated {
     pub ranks: Vec<usize>,
-    pub drafts: Vec<Option<cell_eval::Draft>>,
+    pub drafts: Vec<Option<cell_eval::Draft<Proposed>>>,
+}
+
+pub(super) struct Proposed {
+    direction: usize,
+    index: usize,
+}
+
+pub(super) fn materialize(
+    kernel: &mut Kernel<'_>,
+    matrix: &Matrix,
+    tokens: (&[Token], &[Token]),
+    (i, j): (usize, usize),
+    start: (usize, usize),
+    draft: cell_eval::Draft<Proposed>,
+) -> Result<cell_eval::Draft> {
+    // Preserve canonical accounting/error order before publishing any cell data.
+    for _ in &draft.paths {
+        kernel.account_history()?;
+    }
+    let previous = [
+        cell(matrix, i as isize - 1, j as isize)?,
+        cell(matrix, i as isize, j as isize - 1)?,
+        cell(matrix, i as isize - 1, j as isize - 1)?,
+    ];
+    let destination = cell(matrix, i as isize, j as isize)?;
+    let input = cell_eval::Input {
+        destination: &destination.borrow(),
+        predecessors: [
+            &previous[0].borrow(),
+            &previous[1].borrow(),
+            &previous[2].borrow(),
+        ],
+        first: at(tokens.0, i as isize)?,
+        second: at(tokens.1, j as isize)?,
+        position: (i + start.0, j + start.1),
+    };
+    let mut paths = Vec::new();
+    paths
+        .try_reserve_exact(draft.paths.len())
+        .map_err(|_| Failure::Memory)?;
+    for proposed in draft.paths {
+        let source = input.predecessors[proposed.direction];
+        let parent = source.paths.get(proposed.index).ok_or(Failure::Index)?;
+        paths.push(History::new(
+            input.step(
+                proposed.direction,
+                parent,
+                draft.value.ok_or(Failure::EmptyMinimum)?,
+            ),
+            Some(parent.clone()),
+            parent.len + 1,
+        ));
+    }
+    Ok(cell_eval::Draft {
+        candidates: draft.candidates,
+        value: draft.value,
+        paths,
+        failure: draft.failure,
+    })
 }
 
 struct Prepared<'a> {
+    weights: Vec<usize>,
     ranks: Vec<usize>,
     guards: Vec<Ref<'a, Cell>>,
     tokens: Vec<(&'a Token, &'a Token)>,
@@ -60,8 +120,60 @@ fn reserve(total: &mut usize, count: usize, bytes: usize, limit: usize) -> Prepa
     Ok(())
 }
 
+fn candidate_work(
+    source: &Cell,
+    preset: &[f64],
+    one: &Token,
+    two: &Token,
+    direction: usize,
+) -> (usize, usize) {
+    let candidates = if preset.is_empty() {
+        source.paths.len()
+    } else {
+        preset.len()
+    };
+    let closing = match direction {
+        0 => one.boundary(),
+        1 => two.boundary(),
+        _ => one.boundary() && one.name == two.name,
+    };
+    let depth = if closing {
+        source
+            .paths
+            .first()
+            .map_or(0, |path| path.len.min(128) / 16)
+    } else {
+        0
+    };
+    (candidates, candidates.saturating_mul(1 + depth))
+}
+
+fn economical(round: &Round<'_>) -> Preparation<bool> {
+    // A cheap read-only pass avoids allocating lane buffers for memory-bound
+    // frontiers. High candidate density amortizes preparation and publication.
+    let mut lanes = 0_usize;
+    let mut work = 0_usize;
+    for rank in 0..round.count {
+        let (i, j) = round.diagonal.position(round.offset + rank);
+        let destination = cell_ref(round.matrix, i as isize, j as isize)?.borrow();
+        if !destination.value.is_nan() {
+            continue;
+        }
+        let one = round.tokens.0.get(i).ok_or(Fallback::Alias)?;
+        let two = round.tokens.1.get(j).ok_or(Fallback::Alias)?;
+        let presets = [&destination.top, &destination.left, &destination.corner];
+        for (direction, (di, dj)) in [(-1, 0), (0, -1), (-1, -1)].into_iter().enumerate() {
+            let source = cell_ref(round.matrix, i as isize + di, j as isize + dj)?.borrow();
+            work = work
+                .saturating_add(candidate_work(&source, presets[direction], one, two, direction).1);
+        }
+        lanes += 1;
+    }
+    Ok(lanes >= 2 && work >= MIN_WORK && work >= lanes.saturating_mul(MIN_CELL_WORK))
+}
+
 fn prepare<'a>(round: &Round<'a>, limit: usize, forced: bool) -> Preparation<Prepared<'a>> {
-    if round.count < 2 || (!forced && round.count < MIN_CELLS) {
+    if round.count < 2 || (!forced && !economical(round)?) {
         return Err(Fallback::Narrow);
     }
     // Reserve all owned payload containers, even those allocated after join.
@@ -70,17 +182,18 @@ fn prepare<'a>(round: &Round<'a>, limit: usize, forced: bool) -> Preparation<Pre
     reserve(
         &mut scratch,
         round.count,
-        size_of::<usize>()
+        2 * size_of::<usize>()
             + 4 * size_of::<Ref<'_, Cell>>()
             + size_of::<(&Token, &Token)>()
             + size_of::<cell_eval::Input<'_>>()
-            + size_of::<Option<cell_eval::Draft>>(),
+            + size_of::<Option<cell_eval::Draft<Proposed>>>(),
         limit,
     )?;
     if !round.fresh {
         reserve(&mut scratch, round.count, 9 * size_of::<Access>(), limit)?;
     }
     let mut ranks = buffer(round.count)?;
+    let mut weights = buffer(round.count)?;
     let mut guards = buffer(round.count * 4)?;
     let mut tokens = buffer(round.count)?;
     let mut accesses = if round.fresh {
@@ -88,7 +201,6 @@ fn prepare<'a>(round: &Round<'a>, limit: usize, forced: bool) -> Preparation<Pre
     } else {
         buffer(round.count * 9)?
     };
-    let mut work = 0_usize;
     for rank in 0..round.count {
         let (i, j) = round.diagonal.position(round.offset + rank);
         let destination = cell_ref(round.matrix, i as isize, j as isize)?;
@@ -131,31 +243,15 @@ fn prepare<'a>(round: &Round<'a>, limit: usize, forced: bool) -> Preparation<Pre
         let destination = &guards[base];
         let presets = [&destination.top, &destination.left, &destination.corner];
         let mut histories = 0_usize;
+        let mut lane_work = 0_usize;
         for (direction, preset) in presets.iter().enumerate() {
             let source = &guards[base + direction + 1];
-            let candidates = if preset.is_empty() {
-                source.paths.len()
-            } else {
-                preset.len()
-            };
+            let (candidates, contribution) = candidate_work(source, preset, one, two, direction);
             if preset.is_empty() {
                 reserve(&mut scratch, candidates, size_of::<f64>(), limit)?;
             }
             histories = histories.checked_add(candidates).ok_or(Fallback::Scratch)?;
-            let closing = match direction {
-                0 => one.boundary(),
-                1 => two.boundary(),
-                _ => one.boundary() && one.name == two.name,
-            };
-            let depth = if closing {
-                source
-                    .paths
-                    .first()
-                    .map_or(0, |path| path.len.min(128) / 16)
-            } else {
-                0
-            };
-            work = work.saturating_add(candidates.saturating_mul(1 + depth));
+            lane_work = lane_work.saturating_add(contribution);
         }
         reserve(
             &mut scratch,
@@ -171,11 +267,17 @@ fn prepare<'a>(round: &Round<'a>, limit: usize, forced: bool) -> Preparation<Pre
                 .checked_next_power_of_two()
                 .ok_or(Fallback::Scratch)?
         };
-        reserve(&mut scratch, capacity, size_of::<Path>(), limit)?;
+        reserve(
+            &mut scratch,
+            capacity,
+            size_of::<Path>() + size_of::<Proposed>(),
+            limit,
+        )?;
+        weights.push(lane_work.max(1));
         ranks.push(rank);
         tokens.push((one, two));
     }
-    if ranks.len() < 2 || (!forced && work < MIN_WORK) {
+    if ranks.len() < 2 {
         return Err(Fallback::Narrow);
     }
     // Ordinary root blocks before any branch swap are freshly initialized,
@@ -188,6 +290,7 @@ fn prepare<'a>(round: &Round<'a>, limit: usize, forced: bool) -> Preparation<Pre
         }
     }
     Ok(Prepared {
+        weights,
         ranks,
         guards,
         tokens,
@@ -195,7 +298,10 @@ fn prepare<'a>(round: &Round<'a>, limit: usize, forced: bool) -> Preparation<Pre
     })
 }
 
-pub(super) fn evaluate(kernel: &mut Kernel<'_>, round: Round<'_>) -> Result<Option<Evaluated>> {
+pub(super) fn evaluate(
+    kernel: &mut Kernel<'_>,
+    mut round: Round<'_>,
+) -> Result<(usize, Option<Evaluated>)> {
     #[cfg(test)]
     let forced = kernel.execution.force_parallel;
     #[cfg(not(test))]
@@ -203,22 +309,28 @@ pub(super) fn evaluate(kernel: &mut Kernel<'_>, round: Round<'_>) -> Result<Opti
     let limit = kernel
         .execution
         .scratch_limit(kernel.stats.allocation_bytes);
-    let prepared = match prepare(&round, limit, forced) {
-        Ok(prepared) => prepared,
-        Err(reason) => {
-            match reason {
-                Fallback::Narrow => kernel.execution.report.narrow_fallbacks += 1,
-                Fallback::Alias => kernel.execution.report.alias_fallbacks += 1,
-                Fallback::Scratch => kernel.execution.report.scratch_fallbacks += 1,
+    let prepared = loop {
+        match prepare(&round, limit, forced) {
+            Ok(prepared) => break prepared,
+            Err(Fallback::Scratch) if round.count > 2 => {
+                kernel.execution.report.scratch_fallbacks += 1;
+                round.count = round.count.div_ceil(2);
             }
-            return Ok(None);
+            Err(reason) => {
+                match reason {
+                    Fallback::Narrow => kernel.execution.report.narrow_fallbacks += 1,
+                    Fallback::Alias => kernel.execution.report.alias_fallbacks += 1,
+                    Fallback::Scratch => kernel.execution.report.scratch_fallbacks += 1,
+                }
+                return Ok((round.count, None));
+            }
         }
     };
     let mut inputs = match buffer(prepared.ranks.len()) {
         Ok(inputs) => inputs,
         Err(_) => {
             kernel.execution.report.scratch_fallbacks += 1;
-            return Ok(None);
+            return Ok((round.count, None));
         }
     };
     for (index, (&rank, &(one, two))) in prepared.ranks.iter().zip(&prepared.tokens).enumerate() {
@@ -232,6 +344,20 @@ pub(super) fn evaluate(kernel: &mut Kernel<'_>, round: Round<'_>) -> Result<Opti
             position: (i + round.start.0, j + round.start.1),
         });
     }
+    let mut drafts = match buffer(inputs.len()).and_then(|mut drafts| {
+        for input in &inputs {
+            drafts.push(Some(
+                cell_eval::Draft::<Proposed>::prepared(input).map_err(|_| Fallback::Scratch)?,
+            ));
+        }
+        Ok(drafts)
+    }) {
+        Ok(drafts) => drafts,
+        Err(_) => {
+            kernel.execution.report.scratch_fallbacks += 1;
+            return Ok((round.count, None));
+        }
+    };
     kernel.execution.report.scratch_peak_bytes = kernel
         .execution
         .report
@@ -239,13 +365,22 @@ pub(super) fn evaluate(kernel: &mut Kernel<'_>, round: Round<'_>) -> Result<Opti
         .max(prepared.scratch);
     let check = &mut kernel.check;
     let stats = &kernel.stats;
-    let drafts = kernel
+    kernel
         .execution
         .run(
-            inputs.len(),
+            &mut drafts,
+            &prepared.weights,
             &mut || check(stats, true).map_err(crate::error::Error::from),
-            |index, cancelled| {
-                cell_eval::Draft::evaluate(&inputs[index], || Ok(()), Some(cancelled))
+            |index, draft, cancelled| {
+                let draft = draft.as_mut().expect("coordinator prepared this lane");
+                draft.failure = draft
+                    .compute::<true>(
+                        &inputs[index],
+                        &mut || Ok(()),
+                        &mut |direction, index, _, _| Proposed { direction, index },
+                        Some(cancelled),
+                    )
+                    .err();
             },
         )
         .map_err(Failure::Operational)?;
@@ -253,10 +388,13 @@ pub(super) fn evaluate(kernel: &mut Kernel<'_>, round: Round<'_>) -> Result<Opti
     // Guards remain coordinator-owned, then end before any logical publication.
     drop(inputs);
     drop(prepared.guards);
-    Ok(Some(Evaluated {
-        ranks: prepared.ranks,
-        drafts,
-    }))
+    Ok((
+        round.count,
+        Some(Evaluated {
+            ranks: prepared.ranks,
+            drafts,
+        }),
+    ))
 }
 
 #[cfg(test)]
