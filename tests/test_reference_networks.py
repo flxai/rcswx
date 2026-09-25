@@ -71,7 +71,9 @@ def test_compound_alignment_and_raw_crossover_preserve_source_outcomes(name, rev
                 result = (
                     alignment.distance,
                     tuple(tuple(map(operation_record, path)) for path in paths),
-                    tuple(map(operation_record, alignment.operations)),
+                    # The reference applies only nontrivial edits. Corrected
+                    # source coordinates can reorder unselected zero-cost entries.
+                    tuple(map(operation_record, alignment.nontrivial_ops)),
                 )
             else:
                 crossover = (

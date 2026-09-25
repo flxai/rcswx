@@ -126,6 +126,8 @@ pub struct Step {
     pub node2_id: Option<i64>,
     pub i: usize,
     pub j: usize,
+    pub(crate) source_i: usize,
+    pub(crate) source_j: usize,
     pub value: f64,
     pub i_swapped: bool,
     pub j_swapped: bool,
@@ -518,6 +520,8 @@ impl Kernel<'_> {
                     node2_id: Some(at(second, 0)?.id),
                     i: 0,
                     j: 0,
+                    source_i: 0,
+                    source_j: 0,
                     value: 0.0,
                     i_swapped: false,
                     j_swapped: false,
@@ -773,6 +777,7 @@ impl Kernel<'_> {
         second: &[Token],
         (i, j): (usize, usize),
         (start_i, start_j): (usize, usize),
+        (source_i, source_j): (usize, usize),
     ) -> Result<bool> {
         let destination = cell(matrix, i as isize, j as isize)?;
         if !destination.borrow().value.is_nan() {
@@ -801,7 +806,7 @@ impl Kernel<'_> {
                 || self.account_history(),
                 |direction, _, value, parent| {
                     History::new(
-                        input.step(direction, parent, value),
+                        input.step(direction, parent, value, (source_i, source_j)),
                         Some(parent.clone()),
                         parent.len + 1,
                     )
@@ -860,7 +865,7 @@ impl Kernel<'_> {
         second: &[Token],
         start_i: usize,
         start_j: usize,
-        #[cfg(feature = "trace")] positions: Option<(Vec<usize>, Vec<usize>)>,
+        positions: (Vec<usize>, Vec<usize>),
     ) -> Result<Matrix> {
         #[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
         let fresh_root =
@@ -868,8 +873,8 @@ impl Kernel<'_> {
         #[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
         let parallel = self.execution.report.worker_limit > 1;
         #[cfg(feature = "trace")]
-        if let (Some(trace), Some(positions)) = (&mut self.trace, &positions) {
-            trace.begin(&matrix, positions, start_i, start_j);
+        if let Some(trace) = &mut self.trace {
+            trace.begin(&matrix, &positions, start_i, start_j);
         }
         let mut iswap: Option<Matrix> = None;
         let mut jswap: Option<Matrix> = None;
@@ -964,14 +969,11 @@ impl Kernel<'_> {
                         Ok(tokens[prev..end.min(tokens.len())].to_vec())
                     }
                 };
-                #[cfg(feature = "trace")]
                 let coordinates = |first_swapped, second_swapped| {
-                    positions.as_ref().map(|(first, second)| {
-                        (
-                            recording::positions(first, prev_i, max_i, mid_i, first_swapped),
-                            recording::positions(second, prev_j, max_j, mid_j, second_swapped),
-                        )
-                    })
+                    (
+                        self::positions(&positions.0, prev_i, max_i, mid_i, first_swapped),
+                        self::positions(&positions.1, prev_j, max_j, mid_j, second_swapped),
+                    )
                 };
                 let a_swap = swapped(first, prev_i, mid_i, max_i)?;
                 let b_swap = swapped(second, prev_j, mid_j, max_j)?;
@@ -981,7 +983,6 @@ impl Kernel<'_> {
                     b,
                     start_i + prev_i,
                     start_j + prev_j,
-                    #[cfg(feature = "trace")]
                     coordinates(false, false),
                 )?;
                 put_submatrix(&mut matrix, &aux, prev_i, max_i, prev_j, max_j)?;
@@ -1006,7 +1007,6 @@ impl Kernel<'_> {
                         b,
                         start_i + prev_i,
                         start_j + prev_j,
-                        #[cfg(feature = "trace")]
                         coordinates(true, false),
                     )?;
                     for j in prev_j..max_j {
@@ -1034,7 +1034,6 @@ impl Kernel<'_> {
                             &b_swap,
                             start_i + prev_i,
                             start_j + prev_j,
-                            #[cfg(feature = "trace")]
                             coordinates(true, true),
                         )?;
                         put_submatrix(ijm, &both, prev_i, max_i, prev_j, max_j)?;
@@ -1067,7 +1066,6 @@ impl Kernel<'_> {
                         &b_swap,
                         start_i + prev_i,
                         start_j + prev_j,
-                        #[cfg(feature = "trace")]
                         coordinates(false, true),
                     )?;
                     for i in prev_i..max_i {
@@ -1095,7 +1093,6 @@ impl Kernel<'_> {
                             &b_swap,
                             start_i + prev_i,
                             start_j + prev_j,
-                            #[cfg(feature = "trace")]
                             coordinates(true, true),
                         )?;
                         put_submatrix(ijm, &both, prev_i, max_i, prev_j, max_j)?;
@@ -1141,7 +1138,6 @@ impl Kernel<'_> {
                         &b_swap,
                         start_i + prev_i,
                         start_j + prev_j,
-                        #[cfg(feature = "trace")]
                         coordinates(true, true),
                     )?;
                     let ai = aux_i.as_ref().ok_or(Failure::Unbound("aux_matrix_iswap"))?;
@@ -1237,6 +1233,7 @@ impl Kernel<'_> {
                                         (first, second),
                                         (i, j),
                                         (start_i, start_j),
+                                        (positions.0[i], positions.1[j]),
                                         draft,
                                     )?;
                                     self.publish_cell(&matrix, i, j, draft)?;
@@ -1246,11 +1243,24 @@ impl Kernel<'_> {
                                     false
                                 }
                             } else {
-                                self.fill_cell(&matrix, first, second, (i, j), (start_i, start_j))?
+                                self.fill_cell(
+                                    &matrix,
+                                    first,
+                                    second,
+                                    (i, j),
+                                    (start_i, start_j),
+                                    (positions.0[i], positions.1[j]),
+                                )?
                             };
                             #[cfg(not(all(feature = "parallel", not(target_arch = "wasm32"))))]
-                            let computed =
-                                self.fill_cell(&matrix, first, second, (i, j), (start_i, start_j))?;
+                            let computed = self.fill_cell(
+                                &matrix,
+                                first,
+                                second,
+                                (i, j),
+                                (start_i, start_j),
+                                (positions.0[i], positions.1[j]),
+                            )?;
                             if computed {
                                 for auxiliary in
                                     [&mut iswap, &mut jswap, &mut ijswap].into_iter().flatten()
@@ -1462,11 +1472,7 @@ fn align_internal(
         second,
         0,
         0,
-        #[cfg(feature = "trace")]
-        kernel
-            .trace
-            .as_ref()
-            .map(|_| ((0..first.len()).collect(), (0..second.len()).collect())),
+        ((0..first.len()).collect(), (0..second.len()).collect()),
     )?;
     let end = cell(&matrix, -1, -1)?;
     let end = end.borrow();
@@ -1510,4 +1516,26 @@ fn align_internal(
         paths,
         stats: kernel.stats,
     })
+}
+/// Apply the exact same slice permutation as the token branch-order search.
+pub(super) fn positions(
+    source: &[usize],
+    start: usize,
+    end: usize,
+    mid: Option<usize>,
+    swapped: bool,
+) -> Vec<usize> {
+    if swapped {
+        if let Some(mid) = mid {
+            let mut out = vec![source[start]];
+            out.extend_from_slice(
+                &source[(mid + 1).min(source.len())..(end - 1).min(source.len())],
+            );
+            out.push(source[mid]);
+            out.extend_from_slice(&source[(start + 1).min(source.len())..mid.min(source.len())]);
+            out.push(source[end - 1]);
+            return out;
+        }
+    }
+    source[start..end.min(source.len())].to_vec()
 }

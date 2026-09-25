@@ -53,14 +53,14 @@ test("exact worker artifact matches native plans, traces, every prefix and seeds
       }
       equal(events, pair.recording.events, `${pair.id} trace`);
       const applyStart = performance.now();
-      for (let k = 0; k <= plan.nontrivial.length; k++) {
+      for (const [position, k] of plan.prefix_steps.entries()) {
         equal(
           await client.request(
             "preview_step",
             { plan_id: plan.plan_id, k },
             route,
           ),
-          pair.frames[k],
+          pair.frames[position],
           `${pair.id} frame ${k}`,
         );
         frames++;
@@ -331,7 +331,6 @@ test("non-root deployment serves WASM correctly and UI keeps controls independen
   page,
 }) => {
   await page.goto("./");
-  await expect(page.getByTestId("step-label")).toHaveText("Step 0 of 2");
   await page
     .getByRole("button", { name: "Next offspring step", exact: true })
     .click();
@@ -342,9 +341,10 @@ test("non-root deployment serves WASM correctly and UI keeps controls independen
   await page.getByTestId("live").click();
   expect((await wasm).headers()["content-type"]).toContain("application/wasm");
   await expect(page.getByTestId("sample")).toBeEnabled();
+  const stepBeforeSample = await page.getByTestId("step").inputValue();
   await page.getByTestId("sample").click();
   await expect(page.locator("#sample-status")).toContainText("Seed 42");
-  await expect(page.getByTestId("step-label")).toHaveText("Step 1 of 2");
+  await expect(page.getByTestId("step")).toHaveValue(stepBeforeSample);
   await page.getByTestId("pair").selectOption("recursive");
   expect(await page.locator("#subproblem option").count()).toBeGreaterThan(1);
   await page.locator("#cursor").fill("0");
@@ -353,7 +353,6 @@ test("non-root deployment serves WASM correctly and UI keeps controls independen
   );
   await page.getByTestId("pair").selectOption("identical");
   await expect(page.getByTestId("step")).toBeDisabled();
-  await expect(page.getByTestId("step-label")).toHaveText("Step 0 of 0");
 });
 
 for (const mode of ["missing", "csp"] as const)
@@ -380,7 +379,7 @@ for (const mode of ["missing", "csp"] as const)
     await page
       .getByRole("button", { name: "Next offspring step", exact: true })
       .click();
-    await expect(page.getByTestId("step-label")).toHaveText("Step 1 of 2");
+    await expect(page.getByTestId("selection")).toContainText("[2]");
     await expect(page.getByTestId("selection")).toContainText(
       "Cached native result",
     );

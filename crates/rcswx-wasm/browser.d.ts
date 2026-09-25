@@ -207,6 +207,8 @@ export interface Analysis {
   operations: number[];
   operations_unordered: number[];
   nontrivial: number[];
+  /** Dependency-compatible prefix lengths, not raw path indices. */
+  prefix_steps: number[];
   parents: Parents<DisplaySnapshot>;
   tokens: Parents<TokenView[]>;
   trace: TraceSummary;

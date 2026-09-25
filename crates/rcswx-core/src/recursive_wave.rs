@@ -36,6 +36,7 @@ pub(super) fn materialize(
     tokens: (&[Token], &[Token]),
     (i, j): (usize, usize),
     start: (usize, usize),
+    source_position: (usize, usize),
     draft: cell_eval::Draft<Proposed>,
 ) -> Result<cell_eval::Draft> {
     // Preserve canonical accounting/error order before publishing any cell data.
@@ -71,6 +72,7 @@ pub(super) fn materialize(
                 proposed.direction,
                 parent,
                 draft.value.ok_or(Failure::EmptyMinimum)?,
+                source_position,
             ),
             Some(parent.clone()),
             parent.len + 1,
@@ -443,7 +445,7 @@ mod tests {
             for i in 0..tokens.len() {
                 if let Some(j) = diagonal.checked_sub(i).filter(|&j| j < tokens.len()) {
                     kernel
-                        .fill_cell(&matrix, tokens, tokens, (i, j), (0, 0))
+                        .fill_cell(&matrix, tokens, tokens, (i, j), (0, 0), (i, j))
                         .unwrap();
                 }
             }

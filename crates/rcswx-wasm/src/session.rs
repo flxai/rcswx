@@ -268,6 +268,15 @@ impl Session {
             ));
         }
         let recording = recorder.finish();
+        let mut prefix_steps = Vec::with_capacity(plan.nontrivial.len() + 1);
+        for k in 0..=plan.nontrivial.len() {
+            match plan.validate_selection(&plan.nontrivial[..k]) {
+                Ok(()) => prefix_steps.push(k),
+                Err(Error::InvalidInput(message))
+                    if message == "selection violates edit dependencies" => {}
+                Err(error) => return Err(core_error(error, "selection")),
+            }
+        }
         let summary = Analysis {
             api: API_VERSION,
             plan_id: id.clone(),
@@ -278,6 +287,7 @@ impl Session {
             operations: plan.operations.clone(),
             operations_unordered: plan.operations_unordered.clone(),
             nontrivial: plan.nontrivial.clone(),
+            prefix_steps,
             parents: Parents {
                 first: DisplaySnapshot::new("parent1", &plan.prepared.first),
                 second: DisplaySnapshot::new("parent2", &plan.prepared.second),

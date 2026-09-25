@@ -189,13 +189,11 @@ impl<'a> Application<'a> {
             };
             let rem = (op.op_type.contains("rem_wrap") || op.op_type.contains("mut_wrap"))
                 && rem_present
-                && self.depth_arity(Parent::Second, op.node2_id.as_deref().ok_or(Error::Index)?)?
-                    == 4;
+                && self.source_arity(Parent::Second, op.source_j)? == 4;
             let add = !rem
                 && (op.op_type.contains("add_wrap") || op.op_type.contains("mut_wrap"))
                 && add_present
-                && self.depth_arity(Parent::First, op.node1_id.as_deref().ok_or(Error::Index)?)?
-                    == 4;
+                && self.source_arity(Parent::First, op.source_i)? == 4;
             if rem || add {
                 if op.op_type.contains("end") {
                     stack.pop().ok_or(Error::Index)?;
@@ -210,7 +208,15 @@ impl<'a> Application<'a> {
     }
     fn same_depth(&self, operation: &Edit, position: usize, depths: &[usize]) -> Result<bool> {
         let current = self.unordered_position(operation)?;
-        Ok(position != current && depths.get(position) == depths.get(current))
+        // An earlier boundary anchors insertion on its outgoing side; a later
+        // boundary anchors its incoming side. In particular, after an end
+        // marker is outside the wrapper, not inside its final branch.
+        let anchor = if position < current {
+            position + 1
+        } else {
+            position
+        };
+        Ok(position != current && depths.get(anchor) == depths.get(current))
     }
     fn active_token(&self, parent: Parent, token: usize) -> Result<bool> {
         self.present(self.source_id(parent, token)?)
@@ -225,15 +231,15 @@ impl<'a> Application<'a> {
             let candidates = [
                 (
                     Parent::Second,
-                    candidate.j,
+                    candidate.source_j,
                     candidate.op_type.contains("rem") || candidate.op_type.contains("mut"),
-                    candidate.j_swapped,
+                    candidate.source_j_swapped,
                 ),
                 (
                     Parent::First,
-                    candidate.i,
+                    candidate.source_i,
                     candidate.op_type.contains("add") || candidate.op_type.contains("mut"),
-                    candidate.i_swapped,
+                    candidate.source_i_swapped,
                 ),
             ];
             for (parent, token, relevant, swapped) in candidates {
@@ -283,14 +289,14 @@ impl<'a> Application<'a> {
             {
                 for (position, &index) in self.plan.operations_unordered.iter().enumerate() {
                     let candidate = self.op(index)?;
-                    if candidate.j == second {
+                    if candidate.source_j == second {
                         best = Some(Anchor {
                             parent: Parent::Second,
                             token: second,
                             distance: (position as isize - closing as isize).unsigned_abs()
                                 as isize,
                             after: true,
-                            swapped: candidate.j_swapped,
+                            swapped: candidate.source_j_swapped,
                         });
                         break;
                     }
@@ -303,15 +309,15 @@ impl<'a> Application<'a> {
             for (parent, token, relevant, swapped) in [
                 (
                     Parent::Second,
-                    candidate.j,
+                    candidate.source_j,
                     candidate.op_type.contains("rem") || candidate.op_type.contains("mut"),
-                    candidate.j_swapped,
+                    candidate.source_j_swapped,
                 ),
                 (
                     Parent::First,
-                    candidate.i,
+                    candidate.source_i,
                     candidate.op_type.contains("add") || candidate.op_type.contains("mut"),
-                    candidate.i_swapped,
+                    candidate.source_i_swapped,
                 ),
             ] {
                 if special_second && matches!(parent, Parent::Second) {
@@ -414,33 +420,34 @@ impl<'a> Application<'a> {
         arity: usize,
         budget: &mut Budget<'_>,
     ) -> Result<usize> {
-        let mut starts = Vec::new();
-        for (parent, begin) in [
-            (Parent::Second, operation.j.saturating_add(1)),
-            (Parent::First, operation.i),
-        ] {
-            for token in begin..self.tokens(parent).len() {
-                if self.source_name(parent, token)?.contains("wrap_")
-                    || !self.active_token(parent, token)?
-                {
-                    continue;
+        let mut start = None;
+        let start_position = self.unordered_position(operation)? + 1;
+        // Branch permutations change alignment order, not physical source
+        // order. Stop at the first surviving aligned occurrence: scanning each
+        // parent independently can cross into the following branch.
+        'aligned: for &index in &self.plan.operations_unordered[start_position..] {
+            let candidate = self.op(index)?;
+            for (parent, token, relevant) in [
+                (
+                    Parent::Second,
+                    candidate.source_j,
+                    candidate.op_type.contains("rem") || candidate.op_type.contains("mut"),
+                ),
+                (
+                    Parent::First,
+                    candidate.source_i,
+                    candidate.op_type.contains("add") || candidate.op_type.contains("mut"),
+                ),
+            ] {
+                if relevant && !self.source_name(parent, token)?.contains("wrap_") {
+                    if let Some(node) = self.first(self.source_id(parent, token)?)? {
+                        start = Some(node);
+                        break 'aligned;
+                    }
                 }
-                if let Some(node) = self.first(self.source_id(parent, token)?)? {
-                    starts.push((
-                        self.preorder()?
-                            .iter()
-                            .position(|&item| item == node)
-                            .ok_or(Error::Index)?,
-                        node,
-                    ));
-                }
-                break;
             }
         }
-        let (_, start) = starts
-            .into_iter()
-            .min_by_key(|(position, _)| *position)
-            .ok_or(Error::Index)?;
+        let start = start.ok_or(Error::Index)?;
         let depths = self.depth()?;
         let (end_position, end_second) = self
             .plan
@@ -450,7 +457,7 @@ impl<'a> Application<'a> {
             .find_map(|(position, &index)| {
                 let candidate = self.op(index).ok()?;
                 (candidate.node1_id == operation.node1_id && candidate.op_type.contains("_end"))
-                    .then_some((position, candidate.j))
+                    .then_some((position, candidate.source_j))
             })
             .ok_or(Error::Index)?;
         let endpoint =
@@ -522,12 +529,44 @@ impl<'a> Application<'a> {
         Ok(target)
     }
 
+    fn reorient_match(&mut self, operation: &Edit) -> Result<()> {
+        let second_id = self.source_id(Parent::Second, operation.source_j)?;
+        let first_id = self.source_id(Parent::First, operation.source_i)?;
+        let target = self
+            .preorder()?
+            .into_iter()
+            .find(|&node| {
+                self.id(node)
+                    .is_ok_and(|id| id == second_id || id == first_id)
+            })
+            .ok_or(Error::MissingMutationTarget)?;
+        let first_id = first_id.to_owned();
+        let children = self.children(target)?;
+        if self.name(target)? != "branching(2)" || children.len() != 4 {
+            return Err(Error::Index);
+        }
+        self.replace_child(target, 1, children[2])?;
+        self.replace_child(target, 2, children[1])?;
+        // Subsequent anchors use parent one's orientation. Rebind the identity
+        // without replacing this matched wrapper's data or its routing functions.
+        self.get_mut(target)?.node.id = first_id.clone();
+        self.recipe.push(Materialization::SetId {
+            node: target,
+            id: first_id,
+        });
+        Ok(())
+    }
+
     fn mutation(&mut self, operation: &Edit, budget: &mut Budget<'_>) -> Result<()> {
-        let occurrence = self.occurrence(Parent::First, operation.i)?;
+        let occurrence = self.occurrence(Parent::First, operation.source_i)?;
         let copied = self.copy_parent(Parent::First, occurrence, budget)?;
         let replacement = copied[occurrence];
-        let second_id = self.source_id(Parent::Second, operation.j)?.to_owned();
-        let first_id = self.source_id(Parent::First, operation.i)?.to_owned();
+        let second_id = self
+            .source_id(Parent::Second, operation.source_j)?
+            .to_owned();
+        let first_id = self
+            .source_id(Parent::First, operation.source_i)?
+            .to_owned();
         let target = self
             .preorder()?
             .into_iter()
@@ -544,12 +583,12 @@ impl<'a> Application<'a> {
             if old_children.len() < 3 {
                 return Err(Error::Index);
             }
-            let (one, two) = if operation.i_swapped ^ operation.j_swapped {
+            let (one, two) = if operation.source_i_swapped ^ operation.source_j_swapped {
                 (old_children[2], old_children[1])
             } else {
                 (old_children[1], old_children[2])
             };
-            if operation.i_swapped ^ operation.j_swapped {
+            if operation.source_i_swapped ^ operation.source_j_swapped {
                 self.replace_child(replacement, 2, two)?;
                 self.replace_child(replacement, 1, one)?;
             } else {
@@ -568,7 +607,9 @@ impl<'a> Application<'a> {
     }
 
     fn removal(&mut self, operation: &Edit, budget: &mut Budget<'_>) -> Result<()> {
-        let id = self.source_id(Parent::Second, operation.j)?.to_owned();
+        let id = self
+            .source_id(Parent::Second, operation.source_j)?
+            .to_owned();
         let Some(target) = self.first(&id)? else {
             return Ok(());
         }; // reference prints and continues
@@ -619,11 +660,11 @@ impl<'a> Application<'a> {
     }
 
     fn add_wrapper(&mut self, operation: &Edit, budget: &mut Budget<'_>) -> Result<()> {
-        let arity = self.source_arity(Parent::First, operation.i)?;
+        let arity = self.source_arity(Parent::First, operation.source_i)?;
         if arity != 3 && arity != 4 {
             return Ok(());
         }
-        let occurrence = self.occurrence(Parent::First, operation.i)?;
+        let occurrence = self.occurrence(Parent::First, operation.source_i)?;
         let copied = self.copy_parent(Parent::First, occurrence, budget)?;
         let wrapper = copied[occurrence];
         let target = self.wrapper_target(operation, arity, budget)?;
@@ -637,8 +678,16 @@ impl<'a> Application<'a> {
                 return Err(Error::Index);
             }
             self.replace(target, wrapper)?;
-            self.replace_child(wrapper, 1, target_children[0])?;
-            self.replace_child(wrapper, 2, target_children[1])?;
+            self.replace_child(
+                wrapper,
+                1 + usize::from(operation.source_i_swapped),
+                target_children[0],
+            )?;
+            self.replace_child(
+                wrapper,
+                2 - usize::from(operation.source_i_swapped),
+                target_children[1],
+            )?;
             self.set_parent(target_children[0], Some(wrapper))?;
             self.set_parent(target_children[1], Some(wrapper))?;
         }
@@ -647,10 +696,12 @@ impl<'a> Application<'a> {
     }
 
     fn addition(&mut self, operation: &Edit, budget: &mut Budget<'_>) -> Result<()> {
-        let occurrence = self.occurrence(Parent::First, operation.i)?;
+        let occurrence = self.occurrence(Parent::First, operation.source_i)?;
         let copied = self.copy_parent(Parent::First, occurrence, budget)?;
         let added = copied[occurrence];
-        let second_id = self.source_id(Parent::Second, operation.j)?.to_owned();
+        let second_id = self
+            .source_id(Parent::Second, operation.source_j)?
+            .to_owned();
         let (before, target) = if second_id == "-1" {
             (true, self.root)
         } else {
@@ -706,13 +757,16 @@ impl<'a> Application<'a> {
     fn apply_op(
         &mut self,
         operation: &Edit,
+        implicit_match: bool,
         performed: &mut HashSet<usize>,
         budget: &mut Budget<'_>,
     ) -> Result<()> {
         if !performed.insert(operation.id) {
             return Ok(());
         }
-        if operation.op_type.contains("mut") {
+        if implicit_match {
+            self.reorient_match(operation)
+        } else if operation.op_type.contains("mut") {
             self.mutation(operation, budget)
         } else if operation.op_type.contains("rem") {
             self.removal(operation, budget)
@@ -733,20 +787,10 @@ impl<'a> Application<'a> {
         budget: &mut Budget<'_>,
     ) -> Result<()> {
         for &index in selected {
-            let reverse = {
-                let op = self.op(index)?;
-                !op.enabler_ops.is_empty() && (op.i_swapped || op.j_swapped)
-            };
-            if reverse {
-                self.plan
-                    .paths
-                    .get_mut(self.plan.path_index)
-                    .and_then(|path| path.get_mut(index))
-                    .ok_or(Error::Index)?
-                    .enabler_ops
-                    .reverse();
+            let mut operation = self.op(index)?.clone();
+            if operation.source_i_swapped || operation.source_j_swapped {
+                operation.enabler_ops.reverse();
             }
-            let operation = self.op(index)?.clone();
             for dependency in &operation.enabler_ops {
                 let branch = match dependency {
                     Dependency::One(index) => vec![*index],
@@ -772,7 +816,12 @@ impl<'a> Application<'a> {
                 recorder.emit("execute", || serde_json::json!({"path_index":index,"operation_id":operation.id,
                     "operation":operation.op_type,"already_performed":performed.contains(&operation.id)}));
             }
-            let outcome = self.apply_op(&operation, performed, budget);
+            let outcome = self.apply_op(
+                &operation,
+                !selected_ids.contains(&operation.id),
+                performed,
+                budget,
+            );
             #[cfg(feature = "trace")]
             if let Some(recorder) = &mut self.recorder {
                 recorder.emit("actions", || serde_json::json!({"path_index":index,"recipe_offset":recipe_start,
@@ -781,16 +830,6 @@ impl<'a> Application<'a> {
             outcome?;
         }
         Ok(())
-    }
-
-    fn depth_arity(&self, parent: Parent, id: &str) -> Result<usize> {
-        // Swapped histories remap matrix coordinates, not the wrapper identity.
-        for candidate in 0..self.tokens(parent).len() {
-            if self.source_id(parent, candidate)? == id {
-                return self.source_arity(parent, candidate);
-            }
-        }
-        Err(Error::Index)
     }
 
     fn copy_parent(
@@ -953,12 +992,11 @@ impl<'a> Application<'a> {
         Ok(())
     }
     fn child_position(&self, parent: usize, child: usize) -> Result<usize> {
-        let id = self.id(child)?;
         self.get(parent)?
             .node
             .children
             .iter()
-            .position(|&child| self.id(child).is_ok_and(|child_id| child_id == id))
+            .position(|&candidate| candidate == child)
             .ok_or_else(|| Error::Reference("node is not in its parent's children".into()))
     }
 
@@ -1260,6 +1298,29 @@ fn apply_selection<'a>(
                 .ok_or(Error::Index)
         })
         .collect::<Result<HashSet<_>>>()?;
+    // Only branch-order changes need implicit replay. Equal modules and
+    // unchanged wrappers retain parent two's data, callbacks, and identities.
+    // Empty selection stays untouched.
+    let path = plan.paths.get(plan.path_index).ok_or(Error::Index)?;
+    let mut execution = Vec::with_capacity(plan.operations.len());
+    let mut carry = false;
+    for &index in &plan.operations {
+        let operation = path.get(index).ok_or(Error::Index)?;
+        if operation.value != 0.0 {
+            carry = ids.contains(&operation.id);
+        }
+        let reorientation = operation.value == 0.0
+            && operation.op_type == "mut_wrap"
+            && (operation.source_i_swapped ^ operation.source_j_swapped)
+            && plan
+                .prepared
+                .first_tokens
+                .get(operation.source_i)
+                .is_some_and(|token| token.token.name == "branching(2)");
+        if ids.contains(&operation.id) || (carry && reorientation) {
+            execution.push(index);
+        }
+    }
     let mut application = Application::new(plan, budget)?;
     #[cfg(feature = "trace")]
     {
@@ -1273,7 +1334,7 @@ fn apply_selection<'a>(
         }
     }
     let mut performed = HashSet::new();
-    application.apply_all(selected, &ids, &mut performed, budget)?;
+    application.apply_all(&execution, &ids, &mut performed, budget)?;
     Ok(application)
 }
 
@@ -1413,6 +1474,10 @@ mod tests {
             node2_id,
             i,
             j,
+            source_i: i,
+            source_j: j,
+            source_i_swapped: false,
+            source_j_swapped: false,
             ii: None,
             jj: None,
             value: 1.0,
@@ -1534,7 +1599,7 @@ mod tests {
             1,
             1,
         );
-        mutation.i_swapped = true;
+        mutation.source_i_swapped = true;
         let mut plan = plan(prepared, vec![mutation]);
         let child = apply_fixture(&mut plan, &[0]);
         assert_eq!(child.architecture.nodes[0].name, "branching(2)");

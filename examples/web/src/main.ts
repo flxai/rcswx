@@ -105,30 +105,34 @@ function showResult(result: Omit<Applied, "plan_id">, source: string) {
 }
 async function setStep(k: number) {
   const generation = ++stepRevision;
-  k = Math.max(0, Math.min(k, analysis.nontrivial.length));
+  k = Math.max(0, Math.min(k, analysis.prefix_steps.length - 1));
+  const rawStep = analysis.prefix_steps[k];
   stepInput.value = String(k);
-  byId("step-label").textContent = `Step ${k} of ${analysis.nontrivial.length}`;
+  byId("step-label").textContent =
+    `Step ${k} of ${analysis.prefix_steps.length - 1} · ${rawStep} edits`;
   byId<HTMLButtonElement>("previous").disabled = k === 0;
-  byId<HTMLButtonElement>("next").disabled = k === analysis.nontrivial.length;
+  byId<HTMLButtonElement>("next").disabled =
+    k === analysis.prefix_steps.length - 1;
   const started = performance.now();
   try {
     if (!livePlan) showResult(pair.frames[k], "Cached native result");
     else {
-      const cached = liveFrames.get(k);
+      const cached = liveFrames.get(rawStep);
       if (cached) showResult(cached, "Cached live result");
       else {
-        byId("selection").textContent = `Computing requested step ${k}…`;
+        byId("selection").textContent =
+          `Computing requested prefix ${rawStep}…`;
         byId("child").replaceChildren(
           element("p", "No child is displayed until this request completes."),
         );
         const plan = livePlan;
         const result = await client.request(
           "preview_step",
-          { plan_id: plan, k },
+          { plan_id: plan, k: rawStep },
           { figure_id: "explorer", revision },
         );
         if (generation !== stepRevision || plan !== livePlan) return;
-        liveFrames.set(k, result);
+        liveFrames.set(rawStep, result);
         showResult(result, "Live WASM result");
       }
     }
@@ -140,7 +144,10 @@ async function setStep(k: number) {
     if (["superseded", "stale_result", "cancelled"].includes(failure.code))
       return;
     byId("child").replaceChildren(
-      element("p", `No valid child was produced for requested step ${k}.`),
+      element(
+        "p",
+        `No valid child was produced for requested prefix ${rawStep}.`,
+      ),
     );
     byId("selection").textContent = `${failure.code}: ${failure.message}`;
   }
@@ -166,8 +173,8 @@ function choosePair() {
   renderTree(byId("parent2"), analysis.parents.second);
   renderTokens(byId("tokens1"), analysis.tokens.first, 1);
   renderTokens(byId("tokens2"), analysis.tokens.second, 2);
-  stepInput.max = String(analysis.nontrivial.length);
-  stepInput.disabled = analysis.nontrivial.length === 0;
+  stepInput.max = String(analysis.prefix_steps.length - 1);
+  stepInput.disabled = analysis.prefix_steps.length === 1;
   setRecording(pair.recording);
   void setStep(0);
   status(
@@ -210,6 +217,8 @@ async function enableLive() {
     analysis = result;
     livePlan = result.plan_id;
     liveFrames.clear();
+    stepInput.max = String(analysis.prefix_steps.length - 1);
+    stepInput.disabled = analysis.prefix_steps.length === 1;
     const events: Recording["events"] = [];
     let offset: number | null = 0;
     while (offset !== null) {
@@ -240,6 +249,9 @@ async function enableLive() {
   } catch (error) {
     if (requestedRevision !== revision) return;
     livePlan = null;
+    analysis = pair.analysis;
+    stepInput.max = String(analysis.prefix_steps.length - 1);
+    stepInput.disabled = analysis.prefix_steps.length === 1;
     sampleButton.disabled = true;
     liveButton.disabled = false;
     status(

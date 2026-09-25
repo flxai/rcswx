@@ -226,25 +226,3 @@ impl<'a> Observer<'a> {
             .emit("cell_clone", || json!({"source":source,"target":target}));
     }
 }
-/// Apply the exact same slice permutation as the token branch-order search.
-pub(super) fn positions(
-    source: &[usize],
-    start: usize,
-    end: usize,
-    mid: Option<usize>,
-    swapped: bool,
-) -> Vec<usize> {
-    if swapped {
-        if let Some(mid) = mid {
-            let mut out = vec![source[start]];
-            out.extend_from_slice(
-                &source[(mid + 1).min(source.len())..(end - 1).min(source.len())],
-            );
-            out.push(source[mid]);
-            out.extend_from_slice(&source[(start + 1).min(source.len())..mid.min(source.len())]);
-            out.push(source[end - 1]);
-            return out;
-        }
-    }
-    source[start..end.min(source.len())].to_vec()
-}
