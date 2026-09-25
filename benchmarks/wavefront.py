@@ -16,9 +16,18 @@ import statistics
 import subprocess
 import sys
 import time
+from importlib.metadata import distributions
 from pathlib import Path
 
 from benchmarks.memory import resident
+
+
+def installed_artifact(module):
+    for distribution in distributions(path=[str(Path(module.__file__).parent.parent)]):
+        if distribution.metadata["Name"] == "rcswx":
+            source = distribution.read_text("direct_url.json")
+            return json.loads(source) if source else None
+    return None
 
 
 def sequence(items):
@@ -39,7 +48,11 @@ def parents(family, size):
             if family == "wrapper":
                 item = ("routing", ("identity",), item, ("identity",))
             leaves.append(item)
-        if family == "branch":
+        if family == "nested":
+            tree = leaves[-1]
+            for leaf in reversed(leaves[:-1]):
+                tree = ("routing", ("identity",), ("sequential", leaf, tree), ("identity",))
+        elif family == "branch":
             middle = len(leaves) // 2
             tree = (
                 "branching(2)",
@@ -106,7 +119,7 @@ def main():
     parser.add_argument(
         "--families",
         nargs="+",
-        choices=["chain", "wrapper", "branch"],
+        choices=["chain", "wrapper", "nested", "branch"],
         default=["chain", "wrapper", "branch"],
     )
     parser.add_argument("--collapse", choices=["both", "on", "off"], default="both")
@@ -131,6 +144,7 @@ def main():
         "python": platform.python_version(),
         "platform": platform.platform(),
         "package": rcswx.__file__,
+        "installation": installed_artifact(rcswx),
         "extension_sha256": hashlib.sha256(Path(_core.__file__).read_bytes()).hexdigest(),
         "affinity": sorted(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else None,
         "profiled": args.profile,
@@ -149,11 +163,12 @@ def main():
         sys.modules[spec.name] = original
         spec.loader.exec_module(original)
         report["baseline_package"] = original.__file__
+        report["baseline_installation"] = installed_artifact(original)
         report["baseline_extension_sha256"] = hashlib.sha256(
             Path(original._core.__file__).read_bytes()
         ).hexdigest()
         report["comparison"] = (
-            "Separate installed packages/native libraries in one interpreter; case/mode order rotates between repetitions. Use standalone runs for isolated RSS."
+            "Separate installed packages/native libraries in one interpreter; mode order alternates forward/reverse and rotates between repetitions. Use standalone runs for isolated RSS."
         )
     flags = [False, True] if args.collapse == "both" else [args.collapse == "on"]
     for family in args.families:
@@ -198,8 +213,9 @@ def main():
                 for repeat in range(args.repeats + 1):
                     # Rotate order rather than comparing long back-to-back runs:
                     # a hybrid laptop's thermal/frequency drift is substantial.
-                    offset = repeat % len(runs)
-                    for module, inputs, options, row in runs[offset:] + runs[:offset]:
+                    ordered = runs if repeat % 2 == 0 else runs[::-1]
+                    offset = (repeat // 2) % len(ordered)
+                    for module, inputs, options, row in ordered[offset:] + ordered[:offset]:
                         if "error" in row:
                             continue
                         sample = measured(module, inputs, options, args.profile)
@@ -216,7 +232,12 @@ def main():
                             sample["seconds"] for sample in row["samples"]
                         )
                         fingerprints.update(
-                            sample["paths_sha256"] for sample in [row["cold"], *row["samples"]]
+                            (
+                                sample["distance"],
+                                sample["paths_sha256"],
+                                json.dumps(sample["stats"], sort_keys=True),
+                            )
+                            for sample in [row["cold"], *row["samples"]]
                         )
                     report["rows"].append(row)
                     print(
@@ -238,7 +259,9 @@ def main():
                         flush=True,
                     )
                 if len(fingerprints) > 1:
-                    raise RuntimeError("Compared requests changed complete ordered path content")
+                    raise RuntimeError(
+                        "Compared requests changed distance, ordered histories, or canonical statistics"
+                    )
                 args.output.parent.mkdir(parents=True, exist_ok=True)
                 args.output.write_text(json.dumps(report, indent=2) + "\n")
 

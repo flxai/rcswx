@@ -88,11 +88,13 @@ requests; WebAssembly stays serial even with the Cargo feature enabled.
 
 `plan.execution` reports capability, requested/resolved workers, pool capacity,
 parallel/serial cells, job overlap, scratch reservation and fallback counts.
-Algorithm statistics and ordered plans are unchanged. Narrow or aliased waves
-run serially. The coordinator handles callbacks and signals; interrupted calls
+Algorithm statistics and ordered plans are unchanged. Uneconomic, aliased, or
+scratch-limited waves can run serially. The coordinator handles callbacks and signals; interrupted calls
 join their jobs before raising. Serial callback re-entry is supported; parallel
 callback re-entry and reuse of an initialized pool after `fork` fail promptly.
-Use serial execution or a fresh interpreter in a forked child.
+Use serial execution or a fresh interpreter in a forked child. Parallel execution
+helps sufficiently history-heavy waves, not every wide matrix; retain the serial
+default for unmeasured workloads.
 See [wavefront design and measurements](docs/wavefront.md) for the execution
 contract, performance evidence, and limits.
 
