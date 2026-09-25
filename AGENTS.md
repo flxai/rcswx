@@ -12,6 +12,7 @@
 - Do not edit generated, vendored, or externally managed files unless the task explicitly targets them; change their source or generation path instead.
 - Preserve public behavior unless the task changes it deliberately. When an intentional interface, configuration, or workflow change affects users, update the existing documentation that describes it.
 - Prefer the smallest clear implementation. Avoid new abstractions and dependencies unless the existing code demonstrates the need.
+- Never stage, commit, or publish `benchmarks/results/`. Keep these datasets and figures local, and never bypass their ignore rule with `git add -f`.
 
 ## Atomic Git history
 

@@ -5,14 +5,7 @@
 The original serial source is revision `2d3f9969493103de07bca78c6e5e18fc83055213`.
 Before changing its kernel, the implementation recorded:
 
-- `crates/rcswx-core/tests/fixtures/wavefront-oracle-v1.json`: 32 cases, including
-  both collapse modes, recursive branch ordering, wrapper/insertion cases,
-  ordered ties, repeated source identities, malformed input, and truncated
-  recording. It contains complete ordered histories and dependencies, selected
-  indices, explicit application prefixes and origins, seeded sampling and RNG
-  states, errors, and ordered trace events. Tests consume these expectations;
-  ordinary builds and browser-fixture regeneration never write them.
-- `benchmarks/results/wavefront-original.json`: individual public-API latency
+- Local, ignored `benchmarks/results/wavefront-original.json`: individual public-API latency
   samples, cold calls, peak RSS, input/path fingerprints, canonical counters,
   phase profiles, CPU affinity, and the exact baseline extension/wheel hashes.
 - An isolated original wheel installation under the ignored
@@ -268,7 +261,7 @@ For the negative control, use `--sizes 128 --collapse on`. The comparison packag
 must be the independently built original revision, not the current implementation
 with `workers=1`. Exact wheel and extension hashes, individual samples, cold
 calls, input fingerprints, execution reports and canonical counters accompany
-the committed [raw measurement data](../benchmarks/results/wavefront-final.json)
+the local, ignored raw measurements in `benchmarks/results/wavefront-final.json`
 (440 cold/warm samples across all runs).
 
 ### Serial and fallback controls
@@ -316,9 +309,10 @@ the original, and `--workers 1` or `--workers 4` for the final wheel).
 
 ## Cached population comparison
 
-The [original versus v0.5 CPU-time plot](../benchmarks/results/distance-runtime-original-v05-cpu.svg)
-uses the committed [population cache](../benchmarks/results/distance-runtime.json);
-rendering it does not rerun any benchmarks. Both series cover the same 1,000
+The local original-versus-v0.5 CPU-time plot uses
+`benchmarks/results/distance-runtime.json`. This cache and the generated plots
+are local-only, ignored artifacts; they are not distributed with the repository.
+Rendering does not rerun any benchmarks. Both series cover the same 1,000
 frozen equal-sized pairs. The cached original runs used one worker on CPU 0;
 v0.5 used a ten-worker ceiling over ten physical cores, with cold pool startup
 included. This is not a serial-v0.5 population comparison.
