@@ -1,4 +1,4 @@
-"""Render the four-version frozen-corpus distance comparison and its analysis."""
+"""Render selected versions of the frozen-corpus distance comparison."""
 
 import argparse
 import hashlib
@@ -31,10 +31,15 @@ def positive(value):
     return isinstance(value, (int, float)) and math.isfinite(value) and value > 0
 
 
-def analyze(report):
+def analyze(report, metric="wall_seconds"):
     series = {item["key"]: item for item in report["series"]}
-    if set(series) != set(COLORS):
-        raise ValueError("Expected original, v0.1, v0.3 and v0.5")
+    if (
+        len(series) != len(report["series"])
+        or "original" not in series
+        or len(series) < 2
+        or not set(series) <= set(COLORS)
+    ):
+        raise ValueError("Expected original and distinct supported Rust versions")
     indexed = {}
     for key, item in series.items():
         indexed[key] = {row["pair"]: row for row in item["rows"]}
@@ -45,10 +50,10 @@ def analyze(report):
             raise ValueError(f"Incorrect worker count for {key}")
     pairs = set(indexed["original"])
     if any(set(rows) != pairs for rows in indexed.values()):
-        raise ValueError("All four series must cover the same frozen pair IDs")
+        raise ValueError("All selected series must cover the same frozen pair IDs")
     matched, comparable, mismatches = set(), set(), []
     for pair in sorted(pairs):
-        rows = [indexed[key][pair] for key in COLORS]
+        rows = [indexed[key][pair] for key in series]
         if len({(row["nodes"], row["pair_sha256"]) for row in rows}) != 1:
             raise ValueError(f"Input differs across versions: {pair}")
         if not all(row["status"] == "ok" for row in rows):
@@ -56,12 +61,13 @@ def analyze(report):
         comparable.add(pair)
         if len({row["distance"] for row in rows}) != 1:
             mismatches.append(
-                {"pair": pair, "distances": {key: indexed[key][pair]["distance"] for key in COLORS}}
+                {"pair": pair, "distances": {key: indexed[key][pair]["distance"] for key in series}}
             )
             continue
-        if all(not row.get("noop", False) and positive(row.get("wall_seconds")) for row in rows):
+        if all(not row.get("noop", False) and positive(row.get(metric)) for row in rows):
             matched.add(pair)
     summary = {
+        "metric": metric,
         "pairs": len(pairs),
         "comparable": len(comparable),
         "matched_nontrivial": len(matched),
@@ -71,7 +77,7 @@ def analyze(report):
     for key, item in series.items():
         rows = item["rows"]
         ratios = [
-            indexed["original"][pair]["wall_seconds"] / indexed[key][pair]["wall_seconds"]
+            indexed["original"][pair][metric] / indexed[key][pair][metric]
             for pair in sorted(matched)
         ]
         reports = [row["native_execution"] for row in rows if row.get("native_execution")]
@@ -79,10 +85,10 @@ def analyze(report):
             "statuses": dict(Counter(row["status"] for row in rows)),
             "noop_completed": sum(row["status"] == "ok" and row.get("noop", False) for row in rows),
             "original_over_variant_median": float(np.median(ratios)) if ratios else None,
-            "median_success_wall_seconds": float(
+            f"median_success_{metric}": float(
                 np.median(
                     [
-                        row["wall_seconds"]
+                        row[metric]
                         for row in rows
                         if row["status"] == "ok" and not row.get("noop", False)
                     ]
@@ -124,6 +130,12 @@ def distribution(ax, histogram):
 
 
 def render(report, destination, summary, matched):
+    metric = summary["metric"]
+    cpu_time = metric == "process_cpu_seconds"
+    series = [item["key"] for item in report["series"]]
+    colors = dict(COLORS)
+    if len(series) == 2:
+        colors[next(key for key in series if key != "original")] = COLORS["v0.1"]
     matplotlib.rcParams.update(
         {
             "font.family": "DejaVu Serif",
@@ -144,25 +156,21 @@ def render(report, destination, summary, matched):
     plotted = []
     for item in report["series"]:
         key, rows = item["key"], item["rows"]
-        color = COLORS[key]
+        color = colors[key]
         complete = [
             row
             for row in rows
-            if row["status"] == "ok"
-            and not row.get("noop", False)
-            and positive(row.get("wall_seconds"))
+            if row["status"] == "ok" and not row.get("noop", False) and positive(row.get(metric))
         ]
         noop = [
             row
             for row in rows
-            if row["status"] == "ok"
-            and row.get("noop", False)
-            and positive(row.get("wall_seconds"))
+            if row["status"] == "ok" and row.get("noop", False) and positive(row.get(metric))
         ]
         if complete:
             ax.scatter(
                 [row["nodes"] for row in complete],
-                [row["wall_seconds"] for row in complete],
+                [row[metric] for row in complete],
                 s=14,
                 alpha=0.28,
                 color=color,
@@ -172,7 +180,7 @@ def render(report, destination, summary, matched):
             groups = defaultdict(list)
             for row in complete:
                 if row["pair"] in matched:
-                    groups[row["nodes"]].append(row["wall_seconds"])
+                    groups[row["nodes"]].append(row[metric])
             gx = sorted(groups)
             if gx:
                 median = [np.median(groups[node]) for node in gx]
@@ -180,11 +188,11 @@ def render(report, destination, summary, matched):
                 q90 = [np.quantile(groups[node], 0.9) for node in gx]
                 ax.plot(gx, median, color=color, linewidth=1.6, marker="o", markersize=3, zorder=4)
                 ax.fill_between(gx, q10, q90, color=color, alpha=0.09, linewidth=0, zorder=1)
-            plotted.extend(row["wall_seconds"] for row in complete)
+            plotted.extend(row[metric] for row in complete)
         if noop:
             ax.scatter(
                 [row["nodes"] for row in noop],
-                [row["wall_seconds"] for row in noop],
+                [row[metric] for row in noop],
                 s=22,
                 facecolors="none",
                 edgecolors=color,
@@ -192,14 +200,16 @@ def render(report, destination, summary, matched):
                 alpha=0.6,
                 zorder=3,
             )
-            plotted.extend(row["wall_seconds"] for row in noop)
+            plotted.extend(row[metric] for row in noop)
         for status, marker in [("timeout", "^"), ("rss_limit", "x"), ("exception", "s")]:
             points = [
                 (
                     row["nodes"],
-                    row.get("wall_seconds")
+                    row.get(metric)
                     if status == "exception"
-                    else row.get("observed_wall_lower_bound"),
+                    else row.get(
+                        "observed_cpu_lower_bound" if cpu_time else "observed_wall_lower_bound"
+                    ),
                 )
                 for row in rows
                 if row["status"] == status
@@ -248,18 +258,20 @@ def render(report, destination, summary, matched):
             fontsize=10,
             color="#aa4d47",
         )
-    ax.set_ylabel("Elapsed wall time (seconds, log scale)")
+    ax.set_ylabel(
+        "CPU time (seconds, log scale)" if cpu_time else "Elapsed wall time (seconds, log scale)"
+    )
     handles = [
         Line2D(
-            [], [], color=COLORS[key], marker="o", markersize=4, linewidth=1.7, label=LABELS[key]
+            [], [], color=colors[key], marker="o", markersize=4, linewidth=1.7, label=LABELS[key]
         )
-        for key in COLORS
+        for key in series
     ]
     fig.legend(
         handles=handles,
         loc="upper left",
         bbox_to_anchor=(0.073, 0.88),
-        ncol=2,
+        ncol=1 if len(series) == 2 else 2,
         columnspacing=2,
         fontsize=10,
         frameon=False,
@@ -277,8 +289,8 @@ def render(report, destination, summary, matched):
         )
         for marker, label in [
             ("o", "No-op fast path"),
-            ("^", "Wall limit (lower bound)"),
-            ("x", "RSS limit (lower bound)"),
+            ("^", "Wall limit (CPU lower bound)" if cpu_time else "Wall limit (lower bound)"),
+            ("x", "RSS limit (CPU lower bound)" if cpu_time else "RSS limit (lower bound)"),
             ("s", "Raised exception"),
         ]
     ]
@@ -291,7 +303,7 @@ def render(report, destination, summary, matched):
         frameon=False,
     )
     counts_text = []
-    for key in COLORS:
+    for key in series:
         item = summary["series"][key]
         counts = item["statuses"]
         limits = counts.get("timeout", 0) + counts.get("rss_limit", 0)
@@ -315,27 +327,40 @@ def render(report, destination, summary, matched):
         color="#444444",
         linespacing=1.35,
     )
+    title = "RCSWX distance / alignment — original vs Rust-backed"
+    if len(series) == 2:
+        title = f"RCSWX distance / alignment — original vs Rust {next(key for key in series if key != 'original')}"
     fig.suptitle(
-        "RCSWX distance / alignment — original vs Rust-backed",
+        title,
         x=0.08,
         y=0.97,
         ha="left",
         fontsize=18,
     )
     metadata = report["metadata"]
-    subtitle = f"{metadata['host']} · serial: CPU {metadata['serial_cpu']} · parallel: 10 physical cores · {metadata['timeout_wall_seconds']:g} s wall / {metadata['memory_limit_bytes'] / 1024**3:g} GiB RSS · ref {metadata['reference']['source_commit'][:7]}"
+    parallel = any(item["workers"] > 1 for item in report["series"])
+    resources = f"serial: CPU {metadata['serial_cpu']}"
+    if parallel:
+        resources += f" · parallel: {len(metadata['parallel_cpus'])} physical cores"
+    subtitle = f"{metadata['host']} · {resources} · {metadata['timeout_wall_seconds']:g} s wall / {metadata['memory_limit_bytes'] / 1024**3:g} GiB RSS · ref {metadata['reference']['source_commit'][:7]}"
     fig.text(0.08, 0.919, subtitle, fontsize=10, color="#555555")
     population, minimum, maximum = distribution(histogram, metadata["population_histogram"])
     ratios = "; ".join(
         f"{key}: {summary['series'][key]['original_over_variant_median']:.2f}×"
-        for key in ("v0.1", "v0.3", "v0.5")
-        if summary["series"][key]["original_over_variant_median"] is not None
+        for key in series
+        if key != "original" and summary["series"][key]["original_over_variant_median"] is not None
     )
+    metric_label = "CPU-time" if cpu_time else "wall-time"
+    timing_note = "CPU time sums all process threads. " if cpu_time else ""
+    if parallel:
+        timing_note += "Fresh child per pair; pool startup included; ten workers is a ceiling."
+    else:
+        timing_note += "Fresh bounded child per pair."
     caption = (
         f"{population:,} population entries · {minimum}–{maximum} nodes · {summary['pairs']:,} seeded pairs per version; {summary['comparable']:,} jointly returned, {len(summary['mismatches'])} distance disagreements.\n"
-        f"Matched nontrivial median original/version wall-time ratios: {ratios} (n={len(matched)}).\n"
+        f"Matched nontrivial median original/version {metric_label} ratios: {ratios} (n={len(matched)}).\n"
         "Lines: common successful, equal-distance, nontrivial per-node medians; bands: 10–90% observed ranges, not confidence intervals. No extrapolation.\n"
-        "Fresh bounded child per pair; native pool startup included. Ten workers is a ceiling: ineligible waves fall back to serial. No network build/evaluation."
+        f"{timing_note} No network build/evaluation."
     )
     fig.text(0.08, 0.025, caption, fontsize=9, color="#444444", va="bottom", linespacing=1.3)
     fig.subplots_adjust(left=0.08, right=0.935, bottom=0.175, top=0.75)
@@ -354,13 +379,28 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, default=Path("distance-runtime"))
+    parser.add_argument(
+        "--series",
+        nargs="+",
+        choices=list(COLORS),
+        default=list(COLORS),
+        help="Versions to compare, including original (default: all four)",
+    )
+    parser.add_argument(
+        "--metric",
+        choices=["wall_seconds", "process_cpu_seconds"],
+        default="wall_seconds",
+        help="Elapsed wall time or aggregate CPU time across all process threads",
+    )
     args = parser.parse_args()
     report = json.loads(args.input.read_text())
-    summary, matched = analyze(report)
+    available = {item["key"]: item for item in report["series"]}
+    report["series"] = [available[key] for key in args.series]
+    summary, matched = analyze(report, args.metric)
     render(report, args.output, summary, matched)
     summary.update(
         schema="rcswx-distance-runtime-plot-v1",
-        metric="wall_seconds",
+        selected_series=args.series,
         input_sha256=hashlib.sha256(args.input.read_bytes()).hexdigest(),
         renderer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         matplotlib_version=matplotlib.__version__,

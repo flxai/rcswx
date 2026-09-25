@@ -323,3 +323,31 @@ limit or promise that parallelism always reduces RSS. The final serial modes rep
 no pool access. Reproduce isolated checks by omitting `--compare-package` and
 launching the Python from each wheel installation separately (`--baseline` for
 the original, and `--workers 1` or `--workers 4` for the final wheel).
+
+## Cached population comparison
+
+The [original versus v0.5 CPU-time plot](../benchmarks/results/distance-runtime-original-v05-cpu.svg)
+uses the committed [population cache](../benchmarks/results/distance-runtime.json);
+rendering it does not rerun any benchmarks. Both series cover the same 1,000
+frozen equal-sized pairs. The cached original runs used one worker on CPU 0;
+v0.5 used a ten-worker ceiling over ten physical cores, with cold pool startup
+included. This is not a serial-v0.5 population comparison.
+
+CPU time is `process_cpu_seconds`, summed across all process threads, rather
+than the calling thread's `cpu_seconds`. Limit markers use observed aggregate
+CPU lower bounds. The median original/v0.5 CPU-time ratio is 13.15× over 979
+matched successful nontrivial pairs; exceptions, limits and no-ops are excluded.
+Both series belong to the CPU-0/ten-core campaign; the older CPU-16 original
+measurements are not mixed into this comparison.
+
+```sh
+nix develop -c uv run --no-sync --with matplotlib==3.11.2 --with scipy \
+  python benchmarks/distance_runtime.py \
+  --input benchmarks/results/distance-runtime.json \
+  --series original v0.5 --metric process_cpu_seconds \
+  --output benchmarks/results/distance-runtime-original-v05-cpu
+```
+
+The renderer writes PNG, SVG and a summary with input/renderer hashes. Use
+`--metric wall_seconds` for elapsed latency; omitting `--series` and `--metric`
+preserves the four-version wall-time comparison.
