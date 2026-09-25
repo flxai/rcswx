@@ -2,7 +2,7 @@
 
 RCSWX reimplements the Recursive Constrained Smith–Waterman crossover algorithm
 for grammar-based neural architecture search proposed in
-[Evolutionary Architecture Search through Grammar-Based Sequence Alignment](https://openreview.net/forum?id=YK8HlgLJd7)
+[Evolutionary Architecture Search through Grammar-Based Sequence Alignment](https://arxiv.org/abs/2512.04992)
 (see the [original implementation](https://github.com/flxai/rcswx-paper)).
 Its portable Rust-backed API aligns and applies edits to architecture data,
 with optional PyTorch integration.
@@ -252,7 +252,7 @@ dependency notices in [LICENSE.rust-dependencies](LICENSE.rust-dependencies).
   title     = {Evolutionary Architecture Search through Grammar-Based Sequence Alignment},
   booktitle = {International Conference on Automated Machine Learning (AutoML)},
   year      = {2026},
-  url       = {https://openreview.net/forum?id=YK8HlgLJd7}
+  url       = {https://arxiv.org/abs/2512.04992}
 }
 ```
 
