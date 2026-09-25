@@ -105,7 +105,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let analysis = session.analyze(&pair.parent1_json, &pair.parent2_json, &options_json)?;
         let id = &analysis.plan_id;
         let mut frames = vec![];
-        for k in 0..=analysis.nontrivial.len() {
+        for &k in &analysis.prefix_steps {
             let frame = session.preview_step(id, k)?;
             assert_eq!(frame.selected_indices, analysis.nontrivial[..k]);
             verify_payload(&frame, &first, &second);
@@ -119,16 +119,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "ordered endpoint failed for {}",
             pair.id
         );
-        for k in [
+        for position in [
             0,
-            analysis.nontrivial.len(),
-            usize::from(!analysis.nontrivial.is_empty()),
-            analysis.nontrivial.len(),
+            frames.len() - 1,
+            usize::from(frames.len() > 1),
+            frames.len() - 1,
             0,
         ] {
+            let k = analysis.prefix_steps[position];
             assert_eq!(
                 serde_json::to_value(session.preview_step(id, k)?)?,
-                serde_json::to_value(&frames[k])?
+                serde_json::to_value(&frames[position])?
             );
         }
         let mut samples = vec![];

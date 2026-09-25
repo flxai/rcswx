@@ -21,9 +21,9 @@ fn worker_exports_preserve_prefixes_and_structured_errors() {
         )
         .unwrap();
         let id = analysis["plan_id"].as_str().unwrap();
-        let n = analysis["nontrivial"].as_array().unwrap().len();
         let first = session.preview_step(id, 0.0).unwrap();
-        for k in 0..=n {
+        for step in analysis["prefix_steps"].as_array().unwrap() {
+            let k = step.as_u64().unwrap() as usize;
             let frame: Value =
                 serde_json::from_str(&session.preview_step(id, k as f64).unwrap()).unwrap();
             assert_eq!(

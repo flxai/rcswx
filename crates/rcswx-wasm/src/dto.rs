@@ -163,6 +163,8 @@ pub struct Analysis {
     pub operations: Vec<usize>,
     pub operations_unordered: Vec<usize>,
     pub nontrivial: Vec<usize>,
+    /// Dependency-compatible lengths of prefixes of `nontrivial`.
+    pub prefix_steps: Vec<usize>,
     pub parents: Parents<DisplaySnapshot>,
     pub tokens: Parents<Vec<TokenView>>,
     pub trace: TraceSummary,

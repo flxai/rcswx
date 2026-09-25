@@ -54,6 +54,19 @@ an explicit source revision, and refuses to overwrite an existing oracle.
 It is not part of any build/test/fixture target. Do not regenerate original
 expectations with a changed kernel.
 
+The later source-topology corrections retain this immutable baseline. The
+comparison still covers complete computation traces, plans, sampling, and
+application results for supported selections. The old exporter also applied
+raw prefixes with validation disabled, including zero-cost boundary operations
+that public selection rejects. Their offspring and application traces are not
+a compatibility contract: the `wrapper` case's final unsafe prefix depended on
+the old insertion-anchor bug. Forced wavefront runs compare **complete** captures
+against the corrected serial engine, including those unsafe prefixes, while
+supported behavior remains checked against the independent frozen baseline.
+Physical source coordinates now accompany histories through both serial
+evaluation and coordinator-side wavefront materialization; public recursive
+coordinates and computation trace ordering are unchanged.
+
 ## Read/write/alias audit
 
 The serial kernel has two different identity graphs:

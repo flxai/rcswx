@@ -88,8 +88,21 @@ bookkeeping operations remain visible but do not add stops. Costs are not a
 similarity percentage. The selected history is currently index zero; changing
 that field alone would not construct another consistent plan.
 
+`analysis.prefix_steps` lists dependency-compatible values of `k`, including
+zero. Slider positions index this list; pass the **value**, not its position,
+to `preview_step`. A missing prefix may split an inseparable wrapper edit
+group. The list checks selection dependencies, not successful materialization:
+application failures remain explicit errors, never a cached or substituted child.
+Only zero-cost binary-wrapper matches requiring branch reorientation are replayed
+alongside selected edits. This relinks existing children and rebinds the wrapper's
+anchor ID without replacing matched modules, routing functions, or wrapper
+payloads. These matches are not extra selected edits or slider stops. This is an
+intentional [correction to the original materializer](../README.md#reference-compatibility),
+not a promise of original-output parity.
+
 Empty selection starts from prepared **Parent 2**, not Parent 1. The target is
-Parent 1's ordered operation-name tree. Endpoint comparisons account for ID
+Parent 1's operation topology, modulo associative sequential grouping and
+commutative additive branches. Endpoint comparisons also account for ID
 renumbering and output arena compaction; they are not raw input JSON equality.
 Opaque parameters/provenance are inherited from actual source occurrences, and
 `input_spec` is inherited from Parent 2. They are not alignment dimensions and
@@ -146,9 +159,9 @@ Every request creates a fresh native ChaCha12 RNG; repeating it reproduces the
 same result for the pinned engine. Sampling does not consume slider state.
 An empty edit set yields an empty selection, not an operation at index zero.
 
-Native mask multiplicity, legality and cost weighting are unchanged. An
-application failure is returned, not rejection-sampled away. This is not NumPy's
-stream, and seed-to-child identity is not promised across future engine versions.
+WASM uses the core's mask multiplicity, dependency legality, and cost weighting.
+An application failure is returned, not rejection-sampled away. This is not
+NumPy's stream, and seed-to-child identity is not promised across engine versions.
 
 ## Finite browser policies
 

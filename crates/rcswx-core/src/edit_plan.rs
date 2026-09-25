@@ -28,6 +28,15 @@ pub struct Edit {
     pub node2_id: Option<String>,
     pub i: usize,
     pub j: usize,
+    /// Original token occurrences; i/j may be remapped for branch-order routing.
+    #[serde(skip)]
+    pub(crate) source_i: usize,
+    #[serde(skip)]
+    pub(crate) source_j: usize,
+    #[serde(skip)]
+    pub(crate) source_i_swapped: bool,
+    #[serde(skip)]
+    pub(crate) source_j_swapped: bool,
     pub ii: Option<usize>,
     pub jj: Option<usize>,
     pub value: f64,
@@ -69,6 +78,10 @@ fn edit_from_step(prepared: &PreparedPair, step: recursive::Step) -> Result<Edit
             .transpose()?,
         i: step.i,
         j: step.j,
+        source_i: step.source_i,
+        source_j: step.source_j,
+        source_i_swapped: false,
+        source_j_swapped: false,
         ii: None,
         jj: None,
         value: step.value,
@@ -107,29 +120,6 @@ fn token_arity(prepared: &PreparedPair, first: bool, index: usize) -> Result<usi
     }
     .ok_or(Error::Index)?;
     Ok(token.token.children.len())
-}
-
-fn first_token_with_id(
-    prepared: &PreparedPair,
-    first: bool,
-    wanted: &Option<String>,
-) -> Result<usize> {
-    let wanted = wanted
-        .as_deref()
-        .ok_or_else(|| Error::Reference("reference token is missing a source logical ID".into()))?;
-    let tokens = if first {
-        &prepared.first_tokens
-    } else {
-        &prepared.second_tokens
-    };
-    for (index, token) in tokens.iter().enumerate() {
-        if external_id(prepared, token.token.id)? == wanted {
-            return Ok(index);
-        }
-    }
-    Err(Error::Reference(
-        "reference token source logical ID is absent from prepared history".into(),
-    ))
 }
 
 fn contains(operation: &Edit, text: &str) -> bool {
@@ -206,7 +196,7 @@ fn find_loop(
     }
     for (relative, other) in operations[start.min(operations.len())..].iter().enumerate() {
         *index = Some(relative);
-        *operation = Some((other.i, other.j));
+        *operation = Some((other.source_i, other.source_j));
         if predicate(other) {
             break;
         }
@@ -215,6 +205,12 @@ fn find_loop(
 }
 
 fn process_swaps(prepared: &PreparedPair, operations: &mut [Edit], first: bool) -> Result<()> {
+    let tokens = if first {
+        &prepared.first_tokens
+    } else {
+        &prepared.second_tokens
+    };
+    let coordinate = |edit: &Edit| if first { edit.source_i } else { edit.source_j };
     for index in 0..operations.len() {
         let operation = operations.get(index).ok_or(Error::Index)?.clone();
         if !contains(&operation, "wrap_end")
@@ -223,40 +219,56 @@ fn process_swaps(prepared: &PreparedPair, operations: &mut [Edit], first: bool) 
         {
             continue;
         }
-        let owner = first_token_with_id(
-            prepared,
-            first,
-            if first {
-                &operation.node1_id
-            } else {
-                &operation.node2_id
-            },
-        )?;
-        if token_arity(prepared, first, owner)? != 4 {
-            continue;
-        }
-        let prefix = kind_prefix(&operation).to_owned();
-        let id = if first {
-            operation.node1_id.clone()
-        } else {
-            operation.node2_id.clone()
-        };
+        // Logical IDs may repeat; a boundary triple belongs to one physical
+        // occurrence, not every wrapper carrying the same ID.
+        let owner = tokens
+            .get(coordinate(&operation))
+            .and_then(|token| token.occurrence)
+            .ok_or(Error::Index)?;
+        let prefix = kind_prefix(&operation);
         let mut matching = Vec::new();
         for (candidate, other) in operations.iter().enumerate() {
-            let other_id = if first {
-                &other.node1_id
-            } else {
-                &other.node2_id
-            };
-            if kind_prefix(other) == prefix && *other_id == id {
+            if kind_prefix(other) == prefix
+                && tokens
+                    .get(coordinate(other))
+                    .is_some_and(|token| token.occurrence == Some(owner))
+            {
                 matching.push(candidate);
             }
         }
+        let opening = *matching.first().ok_or(Error::Index)?;
+        if token_arity(prepared, first, coordinate(&operations[opening]))? != 4 {
+            continue;
+        }
+        // Routing flags describe recursive alternatives. Materialization needs
+        // the order encoded by the retained path's physical source occurrences.
+        let separator = *matching.get(1).ok_or(Error::Index)?;
+        let source_open = coordinate(&operations[opening]);
+        let source_sep = coordinate(&operations[separator]);
+        let source_end = coordinate(&operation);
+        let source_swapped = operations[opening + 1..separator]
+            .iter()
+            .filter(|edit| {
+                contains(edit, if first { "add" } else { "rem" }) || contains(edit, "mut")
+            })
+            .map(coordinate)
+            .find(|&position| {
+                position > source_open && position < source_end && position != source_sep
+            })
+            .is_some_and(|position| position > source_sep);
         for &candidate in &matching {
             if first {
                 operations.get_mut(candidate).ok_or(Error::Index)?.i_swapped = operation.i_swapped;
+                operations
+                    .get_mut(candidate)
+                    .ok_or(Error::Index)?
+                    .source_i_swapped = source_swapped;
             } else {
                 operations.get_mut(candidate).ok_or(Error::Index)?.j_swapped = operation.j_swapped;
+                operations
+                    .get_mut(candidate)
+                    .ok_or(Error::Index)?
+                    .source_j_swapped = source_swapped;
             }
         }
         let positions: Vec<usize> = matching
@@ -296,9 +308,9 @@ fn add_restrictions(
     locals: &mut ReorderLocals,
 ) -> Result<()> {
     let operation = operations.get(index).ok_or(Error::Index)?.clone();
-    match token_arity(prepared, true, operation.i)? {
+    match token_arity(prepared, true, operation.source_i)? {
         4 => {
-            let owner = token_id(prepared, true, operation.i)?;
+            let owner = token_id(prepared, true, operation.source_i)?;
             let separator = find_loop(
                 operations,
                 index + 1,
@@ -308,7 +320,7 @@ fn add_restrictions(
                 "sep_idx",
                 |other| {
                     contains(other, "add_wrap")
-                        && token_id(prepared, true, other.i).is_ok_and(|id| id == owner)
+                        && token_id(prepared, true, other.source_i).is_ok_and(|id| id == owner)
                 },
             )?;
             let end = find_loop(
@@ -320,7 +332,7 @@ fn add_restrictions(
                 "end_idx",
                 |other| {
                     other.op_type == "add_wrap_end"
-                        && token_id(prepared, true, other.i).is_ok_and(|id| id == owner)
+                        && token_id(prepared, true, other.source_i).is_ok_and(|id| id == owner)
                 },
             )?;
             let (adds0, mutations0, removals0) = source_section(operations, index..separator + 1);
@@ -359,18 +371,19 @@ fn add_restrictions(
                     .collect();
                 append_group(&mut target.enabler_ops, repeated);
             }
-            if (!adds0.is_empty() && removals0.is_empty() && mutations0.is_empty())
-                || (!adds1.is_empty() && removals1.is_empty() && mutations1.is_empty())
-            {
-                let target = operations.get_mut(index).ok_or(Error::Index)?;
-                append_group(&mut target.disabler_ops, vec![index]);
-                append_group(&mut target.disabler_ops, vec![index]);
-                append_group(&mut target.enabler_ops, adds0);
-                append_group(&mut target.enabler_ops, adds1);
+            for (adds, mutations, removals) in [
+                (adds0, mutations0, removals0),
+                (adds1, mutations1, removals1),
+            ] {
+                if !adds.is_empty() && removals.is_empty() && mutations.is_empty() {
+                    let target = operations.get_mut(index).ok_or(Error::Index)?;
+                    append_group(&mut target.disabler_ops, vec![index]);
+                    append_group(&mut target.enabler_ops, adds);
+                }
             }
         }
         3 => {
-            let owner = token_id(prepared, true, operation.i)?;
+            let owner = token_id(prepared, true, operation.source_i)?;
             let end = find_loop(
                 operations,
                 index,
@@ -380,7 +393,7 @@ fn add_restrictions(
                 "end_idx",
                 |other| {
                     other.op_type == "add_wrap_end"
-                        && token_id(prepared, true, other.i).is_ok_and(|id| id == owner)
+                        && token_id(prepared, true, other.source_i).is_ok_and(|id| id == owner)
                 },
             )?;
             let (adds, mutations, removals) = source_section(operations, index..end + 1);
@@ -422,9 +435,9 @@ fn rem_restrictions(
     locals: &mut ReorderLocals,
 ) -> Result<()> {
     let operation = operations.get(index).ok_or(Error::Index)?.clone();
-    match token_arity(prepared, false, operation.j)? {
+    match token_arity(prepared, false, operation.source_j)? {
         3 => {
-            let owner = token_id(prepared, false, operation.j)?;
+            let owner = token_id(prepared, false, operation.source_j)?;
             let end = find_loop(
                 operations,
                 index,
@@ -434,7 +447,7 @@ fn rem_restrictions(
                 "end_idx",
                 |other| {
                     other.op_type == "rem_wrap_end"
-                        && token_id(prepared, false, other.j).is_ok_and(|id| id == owner)
+                        && token_id(prepared, false, other.source_j).is_ok_and(|id| id == owner)
                 },
             )?;
             let (adds, mutations, removals) = source_section(operations, index..end + 1);
@@ -448,7 +461,7 @@ fn rem_restrictions(
             }
         }
         4 => {
-            let owner = token_id(prepared, false, operation.j)?;
+            let owner = token_id(prepared, false, operation.source_j)?;
             let separator = find_loop(
                 operations,
                 index + 1,
@@ -458,7 +471,7 @@ fn rem_restrictions(
                 "sep_idx",
                 |other| {
                     contains(other, "rem_wrap")
-                        && token_id(prepared, false, other.j).is_ok_and(|id| id == owner)
+                        && token_id(prepared, false, other.source_j).is_ok_and(|id| id == owner)
                 },
             )?;
             let end = find_loop(
@@ -470,7 +483,7 @@ fn rem_restrictions(
                 "end_idx",
                 |other| {
                     other.op_type == "rem_wrap_end"
-                        && token_id(prepared, false, other.j).is_ok_and(|id| id == owner)
+                        && token_id(prepared, false, other.source_j).is_ok_and(|id| id == owner)
                 },
             )?;
             let (adds0, mutations0, removals0) = source_section(operations, index..separator + 1);
@@ -532,11 +545,11 @@ fn reordered_operations(
     for (index, operation_index) in enumerated.into_iter().enumerate() {
         let operation = source.get(operation_index).ok_or(Error::Index)?;
         if contains(operation, "add")
-            && (token_arity(prepared, true, operation.i)? == 4
-                || token_name(prepared, true, operation.i)?.contains("sep"))
+            && (token_arity(prepared, true, operation.source_i)? == 4
+                || token_name(prepared, true, operation.source_i)?.contains("sep"))
             && operation.i_swapped
         {
-            let owner = token_id(prepared, true, operation.i)?;
+            let owner = token_id(prepared, true, operation.source_i)?;
             python_search(
                 source,
                 &operations,
@@ -545,7 +558,7 @@ fn reordered_operations(
                 &mut locals.sep_operation,
                 |other| {
                     contains(other, "add")
-                        && token_id(prepared, true, other.i).is_ok_and(|id| id == owner)
+                        && token_id(prepared, true, other.source_i).is_ok_and(|id| id == owner)
                 },
             )?;
             let separator = advance_loop_index(&mut locals.sep_index, index + 1, "sep_idx")?;
@@ -558,7 +571,7 @@ fn reordered_operations(
                 &mut locals.end_operation,
                 |other| {
                     contains(other, "add")
-                        && token_id(prepared, true, other.i).is_ok_and(|id| id == owner)
+                        && token_id(prepared, true, other.source_i).is_ok_and(|id| id == owner)
                 },
             )?;
             let end = advance_loop_index(&mut locals.end_index, separator + 1, "end_idx")?;
@@ -576,11 +589,11 @@ fn reordered_operations(
                 rebind_order(&mut operations, index, separator, end)?;
             }
         } else if contains(operation, "rem")
-            && (token_arity(prepared, false, operation.j)? == 4
-                || token_name(prepared, false, operation.j)?.contains("sep"))
+            && (token_arity(prepared, false, operation.source_j)? == 4
+                || token_name(prepared, false, operation.source_j)?.contains("sep"))
             && operation.j_swapped
         {
-            let owner = token_id(prepared, false, operation.j)?;
+            let owner = token_id(prepared, false, operation.source_j)?;
             python_search(
                 source,
                 &operations,
@@ -589,7 +602,7 @@ fn reordered_operations(
                 &mut locals.sep_operation,
                 |other| {
                     contains(other, "rem")
-                        && token_id(prepared, false, other.j).is_ok_and(|id| id == owner)
+                        && token_id(prepared, false, other.source_j).is_ok_and(|id| id == owner)
                 },
             )?;
             let separator = advance_loop_index(&mut locals.sep_index, index + 1, "sep_idx")?;
@@ -602,7 +615,7 @@ fn reordered_operations(
                 &mut locals.end_operation,
                 |other| {
                     contains(other, "rem")
-                        && token_id(prepared, false, other.j).is_ok_and(|id| id == owner)
+                        && token_id(prepared, false, other.source_j).is_ok_and(|id| id == owner)
                 },
             )?;
             let end = advance_loop_index(&mut locals.end_index, separator + 1, "end_idx")?;
@@ -620,18 +633,18 @@ fn reordered_operations(
                 rebind_order(&mut operations, index, separator, end)?;
             }
         } else if contains(operation, "mut")
-            && (token_arity(prepared, true, operation.i)? == 4
-                || token_name(prepared, true, operation.i)?.contains("sep"))
+            && (token_arity(prepared, true, operation.source_i)? == 4
+                || token_name(prepared, true, operation.source_i)?.contains("sep"))
             && (operation.i_swapped || operation.j_swapped)
         {
-            let owner = token_id(prepared, true, operation.i)?;
+            let owner = token_id(prepared, true, operation.source_i)?;
             python_search(
                 source,
                 &operations,
                 index + 1,
                 &mut locals.sep_index,
                 &mut locals.sep_operation,
-                |other| token_id(prepared, true, other.i).is_ok_and(|id| id == owner),
+                |other| token_id(prepared, true, other.source_i).is_ok_and(|id| id == owner),
             )?;
             let separator = advance_loop_index(&mut locals.sep_index, index + 1, "sep_idx")?;
             python_search(
@@ -640,7 +653,7 @@ fn reordered_operations(
                 separator + 1,
                 &mut locals.end_index,
                 &mut locals.end_operation,
-                |other| token_id(prepared, true, other.i).is_ok_and(|id| id == owner),
+                |other| token_id(prepared, true, other.source_i).is_ok_and(|id| id == owner),
             )?;
             let end = advance_loop_index(&mut locals.end_index, separator + 1, "end_idx")?;
             if token_id(
@@ -681,7 +694,7 @@ fn python_search(
     for (relative, &source_index) in operations[start.min(operations.len())..].iter().enumerate() {
         let other = source.get(source_index).ok_or(Error::Index)?;
         *index = Some(relative);
-        *operation = Some((other.i, other.j));
+        *operation = Some((other.source_i, other.source_j));
         if predicate(other) {
             break;
         }
@@ -1197,6 +1210,10 @@ mod tests {
             node2_id: Some("second".into()),
             i,
             j,
+            source_i: i,
+            source_j: j,
+            source_i_swapped: false,
+            source_j_swapped: false,
             ii: None,
             jj: None,
             value,

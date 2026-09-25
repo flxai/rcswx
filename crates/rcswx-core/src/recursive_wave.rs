@@ -36,6 +36,7 @@ pub(super) fn materialize(
     tokens: (&[Token], &[Token]),
     (i, j): (usize, usize),
     start: (usize, usize),
+    source_position: (usize, usize),
     draft: cell_eval::Draft<Proposed>,
 ) -> Result<cell_eval::Draft> {
     // Preserve canonical accounting/error order before publishing any cell data.
@@ -71,6 +72,7 @@ pub(super) fn materialize(
                 proposed.direction,
                 parent,
                 draft.value.ok_or(Failure::EmptyMinimum)?,
+                source_position,
             ),
             Some(parent.clone()),
             parent.len + 1,
@@ -408,6 +410,11 @@ mod tests {
         include!("../tests/support/wavefront_oracle.rs");
     }
 
+    #[cfg(feature = "trace")]
+    mod contract {
+        include!("../tests/support/wavefront_contract.rs");
+    }
+
     fn tokens(size: usize) -> Vec<Token> {
         let mut tokens = vec![Token {
             id: 0,
@@ -443,7 +450,7 @@ mod tests {
             for i in 0..tokens.len() {
                 if let Some(j) = diagonal.checked_sub(i).filter(|&j| j < tokens.len()) {
                     kernel
-                        .fill_cell(&matrix, tokens, tokens, (i, j), (0, 0))
+                        .fill_cell(&matrix, tokens, tokens, (i, j), (0, 0), (i, j))
                         .unwrap();
                 }
             }
@@ -568,10 +575,8 @@ mod tests {
             let second = case["second"].as_str().unwrap();
             let collapse = case["collapse_corners"].as_bool().unwrap();
             let max_events = case["max_events"].as_u64().unwrap() as usize;
-            assert_eq!(
-                oracle::capture(first, second, collapse, max_events),
-                case["expected"]
-            );
+            let serial = oracle::capture(first, second, collapse, max_events);
+            contract::assert_frozen_contract(&serial, &case["expected"]);
             for workers in [2, 4] {
                 for size in [2, 3, 17, ROUND_CELLS] {
                     let mut execution = Execution::new(Workers::new(workers).unwrap()).unwrap();
@@ -586,7 +591,7 @@ mod tests {
                         Limits::default(),
                     );
                     assert_eq!(
-                        actual, case["expected"],
+                        actual, serial,
                         "{} workers={workers} round={size} collapse={collapse}",
                         case["name"]
                     );

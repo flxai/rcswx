@@ -113,6 +113,111 @@ def test_opaque_metadata_numbers_survive_round_trip_and_application():
     assert child["nodes"][0]["provenance"] == second_data["nodes"][0]["provenance"]
 
 
+def operation_tree(architecture):
+    data = architecture.to_dict()
+
+    def subtree(index):
+        node = data["nodes"][index]
+        return (node["name"], *(subtree(child) for child in node["children"]))
+
+    return subtree(data["root"])
+
+
+@pytest.mark.parametrize("reorient", [False, True])
+def test_selected_mutation_preserves_unedited_module_and_wrapper_metadata(reorient):
+    parents = []
+    for source, activation in (("first", "relu"), ("second", "identity")):
+        if reorient:
+            branches = (
+                ("linear(32)", "linear(16)") if source == "first" else ("linear(16)", "linear(32)")
+            )
+            description = (
+                "sequential",
+                (
+                    "branching(2)",
+                    ("clone(2)",),
+                    *(("computation", (name,)) for name in branches),
+                    ("cat(2,2)",),
+                ),
+                ("computation", (activation,)),
+            )
+        else:
+            description = (
+                "sequential",
+                ("computation", ("linear(16)",)),
+                ("routing", ("identity",), ("computation", (activation,)), ("identity",)),
+            )
+        data = Architecture.from_tree(description).to_dict()
+        for node in data["nodes"]:
+            node["parameters"] = {"source": source}
+            node["provenance"] = {"source": source}
+        parents.append(Architecture.from_dict(data))
+
+    plan = edit_path(*parents)
+    child = apply_edits(plan, plan.select("1" * len(plan.nontrivial_ops)))
+    assert operation_tree(child) == operation_tree(parents[0])
+    unchanged = {"linear(16)", "linear(32)", "routing", "branching(2)", "clone(2)", "cat(2,2)"}
+    for node in child.to_dict()["nodes"]:
+        if node["name"] in unchanged | {"relu"}:
+            source = "second" if node["name"] in unchanged else "first"
+            assert node["parameters"]["source"] == node["provenance"]["source"] == source
+
+
+def test_repeated_wrapper_ids_do_not_conflate_branch_orientations():
+    def branch(left, right):
+        return (
+            "branching(2)",
+            ("clone(2)",),
+            ("computation", (left,)),
+            ("computation", (right,)),
+            ("cat(2,2)",),
+        )
+
+    first = Architecture.from_tree(
+        ("sequential", branch("linear(64)", "linear(128)"), branch("linear(32)", "relu"))
+    )
+    second = Architecture.from_tree(
+        ("sequential", branch("linear(64)", "linear(128)"), branch("linear(16)", "linear(32)"))
+    )
+    original_distance = edit_path(first, second).distance
+    data = first.to_dict()
+    wrappers = [node for node in data["nodes"] if node["name"] == "branching(2)"]
+    wrappers[1]["id"] = wrappers[0]["id"]
+    first = Architecture.from_dict(data)
+
+    plan = edit_path(first, second)
+    assert plan.distance == original_distance
+    child = apply_edits(plan, plan.select("1" * len(plan.nontrivial_ops)))
+    assert operation_tree(child) == operation_tree(first)
+
+
+def test_added_branch_requires_its_addition_but_not_an_edit_in_the_retained_branch():
+    first = Architecture.from_tree(
+        (
+            "branching(2)",
+            ("clone(2)",),
+            ("computation", ("linear(16)",)),
+            ("computation", ("relu",)),
+            ("add(2)",),
+        )
+    )
+    second = Architecture.from_tree(("computation", ("identity",)))
+    plan = edit_path(first, second)
+    wrapper_only = "".join("1" if op.op_type == "add_wrap" else "0" for op in plan.nontrivial_ops)
+    with pytest.raises(ValueError):
+        plan.select(wrapper_only)
+
+    additions = "".join("1" if op.op_type.startswith("add") else "0" for op in plan.nontrivial_ops)
+    child = apply_edits(plan, plan.select(additions))
+    assert operation_tree(child) == (
+        "branching(2)",
+        ("clone(2)",),
+        ("computation", ("identity",)),
+        ("computation", ("relu",)),
+        ("add(2)",),
+    )
+
+
 def test_stale_legacy_plan_rejects_selection_without_advancing_rng():
     from types import SimpleNamespace
 

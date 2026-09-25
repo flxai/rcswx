@@ -27,22 +27,25 @@ fn every_admitted_prefix_repeats_after_failures_and_seeded_samples() {
             .analyze(a, b, r#"{"api":1,"trace_level":"full"}"#)
             .unwrap();
         let id = &p.plan_id;
-        let frames = (0..=p.nontrivial.len())
-            .map(|k| serde_json::to_value(s.preview_step(id, k).unwrap()).unwrap())
+        let frames = p
+            .prefix_steps
+            .iter()
+            .map(|&k| serde_json::to_value(s.preview_step(id, k).unwrap()).unwrap())
             .collect::<Vec<_>>();
         let before = serde_json::to_value(s.recording(id).unwrap()).unwrap();
         assert!(s.apply_selection(id, "[99999]").is_err());
-        for k in [
+        for position in [
             0,
-            p.nontrivial.len(),
-            usize::from(!p.nontrivial.is_empty()),
-            p.nontrivial.len(),
+            frames.len() - 1,
+            usize::from(frames.len() > 1),
+            frames.len() - 1,
             0,
         ] {
+            let k = p.prefix_steps[position];
             let _ = s.sample(id, &"00".repeat(32), 0.0).unwrap();
             assert_eq!(
                 serde_json::to_value(s.preview_step(id, k).unwrap()).unwrap(),
-                frames[k]
+                frames[position]
             );
         }
         assert_eq!(

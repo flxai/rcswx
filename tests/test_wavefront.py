@@ -129,6 +129,55 @@ def test_parallel_preserves_complete_ordered_plans_and_consumers(collapse, worke
 
 
 @PARALLEL
+def test_parallel_nested_swaps_preserve_topology_and_matched_payloads(two_workers):
+    def branch(left, right):
+        return ("branching(2)", ("clone(2)",), left, right, ("cat(2,2)",))
+
+    leaf = ("computation", ("linear(8)",))
+    other = ("computation", ("linear(16)",))
+    outer = ("computation", ("linear(4)",))
+    descriptions = (
+        ("sequential", branch(branch(other, leaf), outer), ("computation", ("relu",))),
+        ("sequential", branch(outer, branch(leaf, other)), ("computation", ("identity",))),
+    )
+    pair = []
+    for source, description in zip(("first", "second"), descriptions, strict=True):
+        for width in range(80, 16, -2):
+            description = (
+                "routing",
+                ("identity",),
+                ("sequential", ("computation", (f"linear({width})",)), description),
+                ("identity",),
+            )
+        data = Architecture.from_tree(description).to_dict()
+        for node in data["nodes"]:
+            node["parameters"] = node["provenance"] = {"source": source}
+        pair.append(Architecture.from_dict(data))
+
+    def topology(architecture):
+        data = architecture.to_dict()
+
+        def subtree(index):
+            node = data["nodes"][index]
+            return (node["name"], *(subtree(child) for child in node["children"]))
+
+        return subtree(data["root"])
+
+    serial = edit_path(*pair, workers=1)
+    parallel = edit_path(*pair, workers=2)
+    assert parallel.execution["parallel_rounds"] > 0
+    assert parallel._native.paths_json() == serial._native.paths_json()
+    serial_child = apply_edits(serial, serial.select("1" * len(serial.nontrivial_ops)))
+    child = apply_edits(parallel, parallel.select("1" * len(parallel.nontrivial_ops)))
+    assert child.to_json() == serial_child.to_json()
+    assert topology(child) == topology(pair[0])
+    for node in child.to_dict()["nodes"]:
+        if node["name"] not in {"sequential", "computation"}:
+            source = "first" if node["name"] == "relu" else "second"
+            assert node["parameters"] == node["provenance"] == {"source": source}
+
+
+@PARALLEL
 @pytest.mark.parametrize("failure", ["false", "exception"])
 def test_callback_failure_preserves_exception_and_executor_reuse(failure, two_workers):
     snapshot = prepared()

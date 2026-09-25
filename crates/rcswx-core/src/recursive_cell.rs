@@ -22,7 +22,13 @@ pub(super) struct Input<'a> {
 }
 
 impl Input<'_> {
-    pub fn step(&self, direction: usize, parent: &Path, value: f64) -> Step {
+    pub fn step(
+        &self,
+        direction: usize,
+        parent: &Path,
+        value: f64,
+        (source_i, source_j): (usize, usize),
+    ) -> Step {
         let one = self.first;
         let two = self.second;
         let source = self.predecessors[direction];
@@ -83,6 +89,8 @@ impl Input<'_> {
             node2_id: Some(two.id),
             i: self.position.0,
             j: self.position.1,
+            source_i,
+            source_j,
             value: charge,
             i_swapped: false,
             j_swapped: false,
@@ -267,6 +275,8 @@ mod tests {
             node2_id: None,
             i: 0,
             j: 0,
+            source_i: 0,
+            source_j: 0,
             value: 0.0,
             i_swapped: false,
             j_swapped: false,
