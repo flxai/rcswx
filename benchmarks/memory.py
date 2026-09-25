@@ -146,7 +146,7 @@ def outcome_record(phase, result, native, records_dir=None):
     return [model_record(*item) for item in result]
 
 
-def request(case, parents, builder, guard, native, phase, collapse_corners=False):
+def request(case, parents, builder, guard, native, phase, collapse_corners=False, workers=1):
     import torch
 
     from tests.reference.original import load
@@ -157,7 +157,10 @@ def request(case, parents, builder, guard, native, phase, collapse_corners=False
             from rcswx import Alignment
         else:
             Alignment = reference.algorithm.AlignmentMatrixRecursive
-        return lambda: Alignment(*parents, collapse_corners=collapse_corners, limiter=guard)
+        options = {"workers": workers} if native and workers != 1 else {}
+        return lambda: Alignment(
+            *parents, collapse_corners=collapse_corners, limiter=guard, **options
+        )
     if phase == "raw":
         if native:
             from rcswx import raw_crossover
@@ -207,6 +210,7 @@ def worker(args):
             "phase": args.phase[0],
             "collapse_corners": collapse,
             "repeat": args._repeat,
+            "workers": args.workers if args.backend == "native" else 1,
         },
     }
     dump(work / "progress.json", progress)
@@ -262,7 +266,11 @@ def worker(args):
             parents, builder, guard = prepare_pair(case, native)
         if args.reverse:
             parents = tuple(reversed(parents))
-        invoke = request(case, parents, builder, guard, native, args.phase[0], collapse)
+        invoke = request(
+            case, parents, builder, guard, native, args.phase[0], collapse, args.workers
+        )
+        if native and args.affinity_cpus:
+            os.sched_setaffinity(0, set(args.affinity_cpus))
         nodes = [len(list(root.serialise())) for root in parents]
         if sys.getprofile() is not None or sys.gettrace() is not None:
             raise RuntimeError("Worker must not inherit Python trace/profile hooks")
@@ -317,6 +325,9 @@ def worker(args):
         "internal_compute_time_seconds": number(getattr(result, "compute_time", None)),
         "profiled": args.measure == "heap",
     }
+    execution_json = getattr(getattr(result, "_native", None), "execution_json", None)
+    if execution_json is not None:
+        measurement["native_execution"] = json.loads(execution_json())
     if args.measure == "rss":
         measurement.update(
             baseline_rss_bytes=baseline["VmRSS"],
@@ -448,6 +459,11 @@ def run_worker(args, case, phase, measure, backend, repeat, captures, on_spawn=N
         command.append("--reverse")
     if getattr(args, "runtime_config", None) is not None:
         command.extend(("--runtime-config", str(args.runtime_config.resolve())))
+    if backend == "native":
+        command.extend(("--workers", str(getattr(args, "workers", 1))))
+        if getattr(args, "affinity_cpus", None):
+            command.append("--affinity-cpus")
+            command.extend(map(str, args.affinity_cpus))
     child_environment = dict(
         os.environ,
         OMP_NUM_THREADS="1",
@@ -714,6 +730,8 @@ def main():
     parser.add_argument("--list", action="store_true")
     parser.add_argument("--collapse-corners", choices=("off", "on", "both"), default="off")
     parser.add_argument("--runtime-config", type=Path)
+    parser.add_argument("--workers", type=int, default=1)
+    parser.add_argument("--affinity-cpus", type=int, nargs="+")
     parser.add_argument("--wall-budget-seconds", type=float)
     parser.add_argument("--budget-file", type=Path)
     parser.add_argument("--_worker", action="store_true", help=argparse.SUPPRESS)
@@ -729,6 +747,15 @@ def main():
         or args.rss_limit_mib <= 0
     ):
         parser.error("repeats, timeout and RSS limit must be finite and positive")
+    if args.workers < 1:
+        parser.error("workers must be positive")
+    if args.workers != 1 or args.affinity_cpus is not None:
+        if args.suite != "table42" or args.phase not in (None, ["align"]):
+            parser.error("Explicit workers and affinity require Table 4.2 alignment")
+        if args.affinity_cpus is None or len(set(args.affinity_cpus)) < args.workers:
+            parser.error("Provide at least one distinct affinity CPU per requested worker")
+        if len(set(args.affinity_cpus)) != len(args.affinity_cpus) or min(args.affinity_cpus) < 0:
+            parser.error("Affinity CPUs must be distinct nonnegative indices")
     if args._worker and args.collapse_corners == "both":
         parser.error("A worker must receive one explicit corner-collapse mode")
     if args.suite == "table42":
