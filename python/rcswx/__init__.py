@@ -9,7 +9,7 @@ from .crossover import CrossoverResult, crossover, crossover_with_report
 from .portable import Architecture, from_dict, from_json, to_dict, to_json
 from .recursive import MatrixOperation, raw_crossover
 
-__version__ = "0.1.0"
+__version__ = "0.5.2"
 
 _LAZY_EXPORTS = {
     "DerivationTreeNode": (".genotype", "DerivationTreeNode"),

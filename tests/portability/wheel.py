@@ -103,6 +103,7 @@ def assert_installed_root(environment: Path, available: tuple[str, ...], paralle
         environment,
         f"""
 import importlib.machinery
+import importlib.metadata
 import importlib.util
 import pathlib
 import sys
@@ -114,6 +115,7 @@ prefix = pathlib.Path(sys.prefix).resolve()
 assert location.is_relative_to(prefix), (location, prefix)
 assert extension.is_relative_to(prefix), (extension, prefix)
 assert any(extension.name.endswith(suffix) for suffix in importlib.machinery.EXTENSION_SUFFIXES), extension
+assert rcswx.__version__ == importlib.metadata.version("rcswx")
 assert _core.PARALLEL_CAPABLE is {parallel!r}
 def parent(changed):
     items = [
