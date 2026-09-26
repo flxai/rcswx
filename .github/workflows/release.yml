@@ -1,0 +1,181 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  wheels:
+    name: Wheel (${{ matrix.platform.target }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13", "3.14"]
+        platform:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+          - runner: macos-15
+            target: aarch64-apple-darwin
+          - runner: windows-2022
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+      - name: Build portable wheel
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
+        with:
+          maturin-version: "1.15.0"
+          rust-toolchain: "1.85.0"
+          target: ${{ matrix.platform.target }}
+          manylinux: "2014"
+          args: >-
+            --release --locked --out dist
+            --interpreter ${{ runner.os == 'Linux' && format('python{0}', matrix.python) || 'python' }}
+      - name: Exercise the exact installed wheel
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import subprocess
+          import sys
+          wheel, = pathlib.Path("dist").glob("*.whl")
+          environment = pathlib.Path(os.environ["RUNNER_TEMP"]) / "wheel-smoke"
+          interpreter = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+          subprocess.run(["uv", "venv", "--python", sys.executable, str(environment)], check=True)
+          subprocess.run(["uv", "pip", "install", "--python", str(interpreter), "--no-deps", str(wheel)], check=True)
+          example = pathlib.Path("examples/portable.py").resolve()
+          subprocess.run([str(interpreter), "-I", str(example)], cwd=environment, check=True)
+          PY
+      - name: Validate all optional dependency combinations
+        if: matrix.platform.target == 'x86_64-unknown-linux-gnu'
+        shell: bash
+        run: |
+          python - <<'PY'
+          import pathlib
+          import subprocess
+          import sys
+          wheel, = pathlib.Path("dist").glob("*.whl")
+          subprocess.run([sys.executable, "tests/portability/wheel.py", "--wheel", str(wheel), "--python", sys.executable], check=True)
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: wheel-${{ matrix.platform.target }}-${{ matrix.python }}
+          path: dist/*.whl
+          if-no-files-found: error
+
+  sdist:
+    name: Source distribution
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+      - name: Check release version
+        env:
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import tomllib
+          project = tomllib.loads(pathlib.Path("pyproject.toml").read_text())
+          workspace = tomllib.loads(pathlib.Path("Cargo.toml").read_text())
+          version = project["project"]["version"]
+          assert workspace["workspace"]["package"]["version"] == version
+          tag = os.environ["RELEASE_TAG"]
+          assert not tag or tag == f"v{version}", (tag, version)
+          PY
+      - name: Build source distribution
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
+        with:
+          maturin-version: "1.15.0"
+          rust-toolchain: "1.85.0"
+          command: sdist
+          args: --out dist
+      - name: Check archive and build from source
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import subprocess
+          import sys
+          import tarfile
+          archive, = pathlib.Path("dist").glob("*.tar.gz")
+          with tarfile.open(archive) as source:
+              for name in source.getnames():
+                  assert "/benchmarks/results/" not in name, name
+                  assert "/benchmark-results/" not in name, name
+          environment = pathlib.Path(os.environ["RUNNER_TEMP"]) / "source-smoke"
+          interpreter = environment / "bin/python"
+          subprocess.run(["uv", "venv", "--python", sys.executable, str(environment)], check=True)
+          subprocess.run(["uv", "pip", "install", "--python", str(interpreter), str(archive)], check=True)
+          example = pathlib.Path("examples/portable.py").resolve()
+          subprocess.run([str(interpreter), "-I", str(example)], cwd=environment, check=True)
+          PY
+      - name: Check PyPI metadata
+        run: uv tool run twine check --strict dist/*
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  github-release:
+    name: Publish GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [wheels, sdist]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish validated distributions
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" dist/* --verify-tag --title "RCSWX $RELEASE_TAG" --generate-notes
+
+  pypi:
+    name: Publish to PyPI
+    needs: github-release
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/project/rcswx/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish validated distributions
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1

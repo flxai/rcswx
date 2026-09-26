@@ -21,8 +21,7 @@ uv add 'rcswx[torch,reference]'      # Both optional surfaces.
 ```
 
 Equivalent `uv pip install` or `python -m pip install` commands work in an
-active virtual environment. The package is not published by this repository;
-use the commands above against a published release, or build a wheel locally.
+active virtual environment. Source builds require Rust/Cargo.
 
 For source development, first enter the locked Nix shell on NixOS, then install
 both optional surfaces deliberately:
@@ -203,11 +202,11 @@ editable import as proof.
 
 ```sh
 make wheel
-RCSWX_WHEEL=dist/rcswx-0.1.0-...whl RCSWX_PYTHON=python3.12 make wheel-test
+RCSWX_WHEEL=dist/rcswx-0.5.2-...whl RCSWX_PYTHON=python3.12 make wheel-test
 ```
 
 For a parallel-capable artifact, use `make wheel-parallel`, then
-`RCSWX_WHEEL=dist/parallel/rcswx-0.1.0-...whl make wheel-parallel-test`.
+`RCSWX_WHEEL=dist/parallel/rcswx-0.5.2-...whl make wheel-parallel-test`.
 That gate verifies capability and serial/parallel plan parity in every surface.
 `make wasm-parallel-check` executes the core and frozen oracle in Node with the
 feature enabled, proving that native threads do not enter the WASM dependency

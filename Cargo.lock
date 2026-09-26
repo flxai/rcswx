@@ -413,7 +413,7 @@ dependencies = [
 
 [[package]]
 name = "rcswx-core"
-version = "0.1.0"
+version = "0.5.2"
 dependencies = [
  "libm",
  "num-bigint",
@@ -427,7 +427,7 @@ dependencies = [
 
 [[package]]
 name = "rcswx-python"
-version = "0.1.0"
+version = "0.5.2"
 dependencies = [
  "pyo3",
  "rcswx-core",
@@ -436,7 +436,7 @@ dependencies = [
 
 [[package]]
 name = "rcswx-wasm"
-version = "0.1.0"
+version = "0.5.2"
 dependencies = [
  "js-sys",
  "rcswx-core",
