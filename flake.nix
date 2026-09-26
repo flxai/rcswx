@@ -43,7 +43,7 @@
     mkRcswx = pythonPackages: propagatedBuildInputs:
       pythonPackages.buildPythonPackage {
         pname = "rcswx";
-        version = "0.1.0";
+        version = "0.5.2";
         pyproject = true;
         src = packageSource;
         cargoDeps = pkgs.rustPlatform.importCargoLock {

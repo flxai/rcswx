@@ -50,7 +50,7 @@ can instead run `make sync`, which deliberately installs both optional extras.
 
 ## Run from a published wheel
 
-After a release is published, use the extra that matches the script:
+Use the extra that matches the script:
 
 ```sh
 python -m pip install rcswx
