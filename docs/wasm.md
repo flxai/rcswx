@@ -97,7 +97,7 @@ Only zero-cost binary-wrapper matches requiring branch reorientation are replaye
 alongside selected edits. This relinks existing children and rebinds the wrapper's
 anchor ID without replacing matched modules, routing functions, or wrapper
 payloads. These matches are not extra selected edits or slider stops. This is an
-intentional [correction to the original materializer](../README.md#reference-compatibility),
+intentional [correction to the original materializer](compatibility.md#intentional-operator-corrections),
 not a promise of original-output parity.
 
 Empty selection starts from prepared **Parent 2**, not Parent 1. The target is
