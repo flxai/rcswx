@@ -31,6 +31,7 @@ TORCH_EXAMPLES = (
     "validated_crossover.py",
     "torch_module_crossover.py",
     "torch_converter.py",
+    "torch_graph_import.py",
 )
 SURFACES = {
     "minimal": (),

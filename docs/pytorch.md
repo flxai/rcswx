@@ -94,6 +94,46 @@ Existing `capture`, `build`, `crossover`, and `crossover_with_report` remain
 no-forward operations. Only the explicit import/validation workflow executes
 isolated verification forwards.
 
+### Cross verified imports
+
+```python
+from rcswx.torch import crossover_imported
+
+first = import_model(
+    nn.Sequential(nn.Linear(8, 16), nn.ReLU()), example_inputs=examples
+)
+second = import_model(
+    nn.Sequential(nn.Linear(8, 32), nn.Softmax(dim=-1)), example_inputs=examples
+)
+result = crossover_imported(first, second, validation_inputs=examples, seed=0)
+child = result.child
+print(result.report["validation"])
+```
+
+This entrypoint accepts verified graph-import snapshots, not arbitrary modules
+or captures from the legacy converter path. It snapshots their data-only
+manifests, checks compatible grammar/input assumptions, and invokes the existing
+portable crossover exactly once. It recomputes the sampled derivation's
+interfaces before constructing learned tensors, then checks runtime behavior on
+a disposable child copy. A shape-invalid join or unsupported composition raises
+without repair, retry, resampling, or a partially validated return value.
+
+Validation inputs must match both imported shapes. Dtype/device changes require
+explicit `build_options` overrides and corresponding validation tensors; training
+mode defaults to parent one's recorded mode unless overridden. Native `seed`
+controls structural sampling only. Fresh child initialization consumes the usual
+Torch RNG; validation consumes no additional Torch RNG and does not update the
+returned child's buffers, gradients, or mode.
+
+The result uses the existing `ModuleCrossoverResult` contract, including
+`child`, `architecture`, and the portable crossover report. Additional
+`report["validation"]` records the checked output interface.
+Child bindings are regenerated for the built hierarchy; source parameter paths
+are not reused. Train the child normally and use the existing
+[managed checkpoint recipe](#save-and-load-trained-state) below.
+The [standalone import example](../examples/torch_graph_import.py) exercises a
+genuinely mixed child, an optimizer step, and exact prediction recovery on load.
+
 ## Build a model from architecture data
 
 This pair differs in both output width and activation. Define the architectures,

@@ -13,7 +13,7 @@ except ModuleNotFoundError as error:
 
 from .build import build
 from .converters import linear_relu_sequential_converter
-from .crossover import crossover, crossover_with_report
+from .crossover import crossover, crossover_imported, crossover_with_report
 from .graph_import import import_model
 from .provenance import capture, captured_from_manifest, load, save
 from .registry import (
@@ -47,6 +47,7 @@ __all__ = [
     "capture",
     "captured_from_manifest",
     "crossover",
+    "crossover_imported",
     "crossover_with_report",
     "import_model",
     "linear_relu_sequential_converter",
