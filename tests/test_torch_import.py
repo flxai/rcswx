@@ -277,3 +277,16 @@ def test_forward_mode_mutation_is_rejected_without_touching_source():
     with pytest.raises(UnsupportedModuleError):
         import_model(source, example_inputs=(torch.randn(4, 8),))
     assert source.training
+
+
+def test_augmented_addition_is_rejected_even_when_values_do_not_change():
+    class Inplace(nn.Module):
+        def forward(self, x):
+            x += x
+            return x
+
+    inputs = torch.zeros(4, 8)
+    version = inputs._version
+    with pytest.raises(UnsupportedModuleError):
+        import_model(Inplace(), example_inputs=(inputs,))
+    assert inputs._version == version
