@@ -377,7 +377,7 @@ wheels = [
 
 [[package]]
 name = "rcswx"
-version = "0.5.3"
+version = "0.6.0"
 source = { editable = "." }
 
 [package.optional-dependencies]
