@@ -4,8 +4,8 @@ Small CPU demonstrations for the [Python quickstart](../README.md). No example
 needs a dataset, GPU, or an `einsearch` checkout.
 
 Start with [portable.py](portable.py) to inspect edits and mix architectures
-without Torch. Then run [torch_module_crossover.py](torch_module_crossover.py)
-to build the same pair as PyTorch modules and run a mixed child. The
+without Torch. Then run [torch_graph_import.py](torch_graph_import.py) to import
+ordinary PyTorch models, validate a mixed child, train it, and save/load it. The
 [portable guide](../docs/portable.md) and [PyTorch guide](../docs/pytorch.md)
 provide step-by-step recipes; this page lists the runnable scripts.
 
@@ -14,6 +14,7 @@ provide step-by-step recipes; this page lists the runnable scripts.
 | File | Requires | Demonstrates |
 | --- | --- | --- |
 | [portable.py](portable.py) | minimal | Weighted edits, explicit and sampled mixed offspring, and an empty selection. |
+| [torch_graph_import.py](torch_graph_import.py) | `torch` | Import ordinary models into einspace v1, validate a mixed child, train, and checkpoint it. |
 | [torch_module_crossover.py](torch_module_crossover.py) | `torch` | Two widths and activations, module crossover, and a forward pass through the mixed child. |
 | [torch_converter.py](torch_converter.py) | `torch` | Register an exact `nn.Sequential` Linear/ReLU converter. |
 | [parents.py](parents.py) | `torch` | Construct fresh parent trees, build their PyTorch models, and check shapes. |
@@ -46,10 +47,10 @@ Add the PyTorch extra for the framework examples:
 
 ```sh
 uv sync --locked --extra torch
-uv run --locked --extra torch python examples/torch_module_crossover.py
+uv run --locked --extra torch python examples/torch_graph_import.py
 ```
 
-Replace `torch_module_crossover.py` with any other framework example.
+Replace `torch_graph_import.py` with any other framework example.
 
 Development contributors can instead run `make sync`, which deliberately installs
 both optional extras; see the [development guide](../docs/development.md).
@@ -63,7 +64,7 @@ python -m pip install rcswx
 python examples/portable.py
 
 python -m pip install 'rcswx[torch]'
-python examples/torch_module_crossover.py
+python examples/torch_graph_import.py
 ```
 
 For a uv-managed consuming project, use `uv add rcswx` or

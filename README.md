@@ -8,10 +8,10 @@ Use it to inspect how two architectures differ, choose or sample edits, and
 build a fresh PyTorch model from the resulting architecture. Training, evaluation,
 and population management remain part of your own research code.
 
-**Inputs are architecture trees, not arbitrary trained models.** Each tree
-records the operations and composition rules used to construct a network.
-PyTorch integration supports RCSWX-built models and explicitly registered
-converters; crossover does **not** inherit learned weights.
+The core consumes architecture trees. The PyTorch integration can **import
+ordinary `nn.Module` computations that fit the existing `einspace` grammar**,
+verify their reconstruction, and return a validated fresh child. RCSWX-built
+models and explicit converters remain supported. No workflow inherits weights.
 
 The Rust core implements Recursive Constrained Smith–Waterman crossover from
 [Evolutionary Architecture Search through Grammar-Based Sequence Alignment](https://arxiv.org/abs/2512.04992).
@@ -114,48 +114,48 @@ Install the optional integration:
 python -m pip install 'rcswx[torch]'
 ```
 
-**Continue with `first` and `second` from above.** Build them as PyTorch modules,
-cross the modules, then inspect and run the child:
+Start from ordinary PyTorch modules; no hand-written architecture tree is needed:
 
 ```python
 import torch
-from rcswx.torch import build, crossover_with_report
-
-input_spec = {
-    "shape": [4, 8],  # A batch of four examples with eight input features.
-    "mode": "col",   # Features occupy the last dimension.
-    "other_shape": None,
-    "other_mode": None,
-    "branching_factor": 1,
-    "last_im_shape": None,
-}
+from torch import nn
+from rcswx.torch import crossover_imported, import_model
 
 torch.manual_seed(0)  # Weight initialization; separate from structural sampling.
-first_model = build(first, input_spec=input_spec)
-second_model = build(second, input_spec=input_spec)
-result = crossover_with_report(first_model, second_model, seed=0)
+examples = (torch.randn(4, 8),)
+first_model = nn.Sequential(nn.Linear(8, 16), nn.ReLU())
+second_model = nn.Sequential(nn.Linear(8, 32), nn.Softmax(dim=-1))
+first = import_model(
+    first_model, example_inputs=examples, grammar="einspace", grammar_version="1"
+)
+second = import_model(
+    second_model, example_inputs=examples, grammar="einspace", grammar_version="1"
+)
+result = crossover_imported(first, second, validation_inputs=examples, seed=0)
 child_model = result.child
 
 print("Selected edits:", result.report["crossover_operations"])
+print("Validation:", result.report["validation"])
 print(child_model)
-child_model.eval()
-with torch.no_grad():
-    predictions = child_model(torch.randn(4, 8))
-print("Output shape:", tuple(predictions.shape))
+print("Output shape:", tuple(child_model(*examples).shape))
 ```
 
-For this pair, `seed=0` selects the activation edit: the printed module contains
-`Linear(in_features=8, out_features=32, bias=True)` followed by `ReLU()`, and the
-output shape is `(4, 32)`. This is a fresh `torch.nn.Module` with newly initialized
-parameters—not inherited weights. Train it with your usual PyTorch loop.
+For this pair, `seed=0` selects the activation edit: the child is
+`Linear(8, 32) → ReLU`, with output shape `(4, 32)`. It has fresh parameters, not
+inherited weights. Import verifies source/reconstruction behavior using
+corresponding state on disposable copies; crossover validates the actual sampled
+child's grammar, shape, and runtime contract without changing native selection.
+Unsupported models and invalid offspring raise: there is no approximation,
+repair, or retry.
 
-The remaining `input_spec` fields describe branch and image-layout bookkeeping;
-the [input specification guide](docs/pytorch.md#adapt-the-input-specification)
-explains every field and how to adapt the example. For an existing
-`nn.Sequential` model, see the
-[explicit converter recipe](docs/pytorch.md#import-a-supported-nnsequential-model);
-arbitrary modules are not automatically importable. The
-[standalone module example](examples/torch_module_crossover.py) includes all setup.
+The initial backend is unchanged `einspace` version `"1"`: supported dense and
+convolutional configurations, normalization, and structured binary add/cat
+branches—not arbitrary PyTorch graphs. See the
+[support matrix and validation limits](docs/pytorch.md#import-an-ordinary-pytorch-model).
+The [complete runnable example](examples/torch_graph_import.py) trains the mixed
+child and restores its trained predictions from a managed checkpoint.
+For existing architecture trees or legacy no-forward module crossover, see the
+[PyTorch guide](docs/pytorch.md).
 
 ## Important semantics
 
@@ -163,9 +163,10 @@ arbitrary modules are not automatically importable. The
   PyTorch, TensorFlow, or Keras models.
 - **Fresh model state:** module crossover does not transfer learned weights,
   buffer values, or optimizer state.
-- **Validate for your task:** structural validity is not a universal guarantee
-  of tensor-shape validity. Module crossover does not run a hidden validation
-  forward pass or retry loop.
+- **Validate for your task:** `import_model` and `crossover_imported` explicitly
+  verify reconstruction or offspring validity on supplied inputs. The existing
+  `capture`, `build`, `crossover`, and `crossover_with_report` APIs remain
+  no-forward operations. The new entrypoint never repairs or retries an invalid child.
 - **Reproducibility:** native sampling has its own seeded RNG. Seed PyTorch
   separately for weight initialization; see [sampling and replay](docs/portable.md#sampling-and-replay).
 - **Reference compatibility:** RCSWX is a corrected port, not a bug-for-bug
