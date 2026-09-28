@@ -66,6 +66,13 @@ The gate checks metadata, missing-extra errors, root import and help-rendering
 isolation, and runnable examples. It never accepts an editable import as proof
 of the wheel's behavior.
 
+## Release tags
+
+Push `vMAJOR.MINOR.PATCH` to trigger the release workflow. For a zero-patch
+release, `vMAJOR.MINOR` is also accepted: `v0.6` releases package version
+`0.6.0`. Python and Rust package versions must match. The workflow publishes
+to GitHub and PyPI only after the release artifacts pass validation.
+
 ## Parallel builds
 
 Build and check a parallel-capable development extension explicitly:

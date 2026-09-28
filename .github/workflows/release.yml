@@ -107,7 +107,8 @@ jobs:
           version = project["project"]["version"]
           assert workspace["workspace"]["package"]["version"] == version
           tag = os.environ["RELEASE_TAG"]
-          assert not tag or tag == f"v{version}", (tag, version)
+          release_tags = {f"v{version}", f"v{version.removesuffix('.0')}"}
+          assert not tag or tag in release_tags, (tag, version)
           PY
       - name: Build source distribution
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
