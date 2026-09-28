@@ -3,16 +3,18 @@
 Small CPU demonstrations for the [Python quickstart](../README.md). No example
 needs a dataset, GPU, or an `einsearch` checkout.
 
-Start with [torch_module_crossover.py](torch_module_crossover.py) for supported
-PyTorch models, or [portable.py](portable.py) for architecture data without Torch.
-The [PyTorch guide](../docs/pytorch.md) and [portable guide](../docs/portable.md)
-explain the contracts; this page lists scripts and how to run them.
+Start with [portable.py](portable.py) to inspect edits and mix architectures
+without Torch. Then run [torch_module_crossover.py](torch_module_crossover.py)
+to build the same pair as PyTorch modules and run a mixed child. The
+[portable guide](../docs/portable.md) and [PyTorch guide](../docs/pytorch.md)
+provide step-by-step recipes; this page lists the runnable scripts.
 
 ## Examples at a glance
 
 | File | Requires | Demonstrates |
 | --- | --- | --- |
-| [torch_module_crossover.py](torch_module_crossover.py) | `torch` | Build, capture, and module-level crossover. |
+| [portable.py](portable.py) | minimal | Weighted edits, explicit and sampled mixed offspring, and an empty selection. |
+| [torch_module_crossover.py](torch_module_crossover.py) | `torch` | Two widths and activations, module crossover, and a forward pass through the mixed child. |
 | [torch_converter.py](torch_converter.py) | `torch` | Register an exact `nn.Sequential` Linear/ReLU converter. |
 | [parents.py](parents.py) | `torch` | Construct fresh parent trees, build their PyTorch models, and check shapes. |
 | [distance.py](distance.py) | `torch` | Parent and self edit distances. |
@@ -20,7 +22,6 @@ explain the contracts; this page lists scripts and how to run them.
 | [crossover.py](crossover.py) | `torch` | Tree crossover, reconstruction, and a model forward pass. |
 | [crossover_report.py](crossover_report.py) | `torch` | Selection and crossover report fields. |
 | [validated_crossover.py](validated_crossover.py) | `torch` | Reconstruction plus a validation forward pass. |
-| [portable.py](portable.py) | minimal | Data-only trees, explicit selection/application, and native seeded sampling. |
 | [reference_sampling.py](reference_sampling.py) | `reference` | Explicit reference selection using NumPy's global seed, without Torch. |
 | [nix/flake.nix](nix/flake.nix) | `torch` | Add the Torch-enabled Nix variant to a consuming project. |
 | [web/](web/README.md) | tracked Nix/Node/WASM toolchain | Browser worker, exact edit-prefix slider, recorded recursive alignment, and seeded native sampling. |
@@ -34,20 +35,21 @@ install the example files.
 Requires Python 3.12–3.14, Rust/Cargo, and [uv](https://docs.astral.sh/uv/).
 On NixOS, enter `nix develop` first.
 
-Install the PyTorch extra for the framework examples:
+Start with the portable example; it needs no scientific-Python dependencies:
+
+```sh
+uv sync --locked
+uv run --locked python examples/portable.py
+```
+
+Add the PyTorch extra for the framework examples:
 
 ```sh
 uv sync --locked --extra torch
 uv run --locked --extra torch python examples/torch_module_crossover.py
 ```
 
-Replace `torch_module_crossover.py` with any other framework example. For the
-portable example, no scientific-Python dependency is required:
-
-```sh
-uv sync --locked
-uv run --locked python examples/portable.py
-```
+Replace `torch_module_crossover.py` with any other framework example.
 
 Development contributors can instead run `make sync`, which deliberately installs
 both optional extras; see the [development guide](../docs/development.md).
@@ -57,11 +59,11 @@ both optional extras; see the [development guide](../docs/development.md).
 Use the extra that matches the script:
 
 ```sh
-python -m pip install 'rcswx[torch]'
-python examples/torch_module_crossover.py
-
 python -m pip install rcswx
 python examples/portable.py
+
+python -m pip install 'rcswx[torch]'
+python examples/torch_module_crossover.py
 ```
 
 For a uv-managed consuming project, use `uv add rcswx` or
