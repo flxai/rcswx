@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import torch
 from torch import nn
-from torch.fx import symbolic_trace
+from torch.fx import GraphModule, Proxy, Tracer
 
 from ._isolation import isolated_model, preserve_rng
 from .grammar_backends import resolve_backend
@@ -17,6 +17,17 @@ from .provenance import (
 )
 from .types import CapturedArchitecture, UnsupportedModuleError
 from .validation import verify_import
+
+
+class _ImportProxy(Proxy):
+    def __iadd__(self, other):
+        # FX's ordinary Proxy falls back to __add__, erasing input mutation.
+        raise UnsupportedModuleError("capture: in-place addition is unsupported")
+
+
+class _ImportTracer(Tracer):
+    def proxy(self, node):
+        return _ImportProxy(node, self)
 
 
 def checked_inputs(values, *, context: str) -> tuple[torch.Tensor, ...]:
@@ -90,7 +101,8 @@ def import_model(
         before = _structure_signature(isolated)
         before_execution = _execution_assumptions(isolated)
         try:
-            graph = symbolic_trace(nn.Sequential(isolated))
+            wrapper = nn.Sequential(isolated)
+            graph = GraphModule(wrapper, _ImportTracer().trace(wrapper))
         except Exception as error:
             raise UnsupportedModuleError(
                 f"capture: FX cannot represent the source: {error}"
