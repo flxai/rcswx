@@ -39,7 +39,8 @@ def __getattr__(name: str):
 
 
 def __dir__() -> list[str]:
-    return sorted([*globals(), *_LAZY_EXPORTS])
+    # Introspection must not load optional integrations just to discover names.
+    return sorted(set(globals()) | set(__all__))
 
 
 __all__ = [

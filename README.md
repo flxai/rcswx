@@ -32,6 +32,10 @@ executable models, as in the PyTorch example below.
 Source builds require Rust/Cargo; see the [development guide](docs/development.md)
 for working from a checkout and [Nix usage](examples/README.md#nix-flakes).
 
+`help(rcswx)` works without extras. Root introspection lists the portable API
+and already-loaded attributes; optional legacy exports remain available through
+explicit imports.
+
 ## How it works
 
 ```text

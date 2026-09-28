@@ -106,6 +106,7 @@ import importlib.machinery
 import importlib.metadata
 import importlib.util
 import pathlib
+import pydoc
 import sys
 import rcswx
 from rcswx import _core
@@ -117,6 +118,9 @@ assert extension.is_relative_to(prefix), (extension, prefix)
 assert any(extension.name.endswith(suffix) for suffix in importlib.machinery.EXTENSION_SUFFIXES), extension
 assert rcswx.__version__ == importlib.metadata.version("rcswx")
 assert _core.PARALLEL_CAPABLE is {parallel!r}
+documentation = pydoc.render_doc(rcswx, renderer=pydoc.plaintext)
+for name in rcswx.__all__:
+    assert name in documentation, name
 def parent(changed):
     items = [
         ("computation", (f"linear({{16 + 2 * index + int(changed and index == 24)}})",))
