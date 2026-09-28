@@ -9,15 +9,90 @@ order; the external-model recipe uses the same `input_spec`.
 
 ## Which models are supported?
 
+- **Ordinary PyTorch models in the supported grammar:** `import_model` captures
+  their computation, lowers it into the existing grammar, and verifies a
+  reconstruction against the original.
 - **RCSWX-built models:** `build` retains structural provenance, so `capture`
   can recover the architecture without guessing how it was constructed.
 - **External models with an explicit converter:** register a converter for the
   supported types. The [Linear/ReLU recipe](#import-a-supported-nnsequential-model)
-  below starts from an ordinary `nn.Sequential`.
+  below is the legacy, no-forward path for a narrow `nn.Sequential` subset.
 
-This is not a generic importer for arbitrary `nn.Module`, FX, or ONNX graphs.
-Unsupported structures are rejected, not approximated. TensorFlow/Keras
-integration is not provided.
+Unsupported structures are rejected, not approximated. This is not arbitrary
+FX/ONNX graph execution, and TensorFlow/Keras integration is not provided.
+
+## Import an ordinary PyTorch model
+
+```python
+import torch
+from torch import nn
+from rcswx.torch import build, import_model
+
+source = nn.Sequential(nn.Linear(8, 16), nn.ReLU(), nn.Linear(16, 32))
+examples = (torch.randn(4, 8),)
+imported = import_model(
+    source, example_inputs=examples, grammar="einspace", grammar_version="1"
+)
+fresh_model = build(imported)
+```
+
+`import_model` traces the computation with FX on an isolated, meta-device copy;
+it does not infer execution order from the module hierarchy. It returns a
+data-only `CapturedArchitecture`, not the source model or its learned tensors.
+`build(imported)` initializes fresh state: **verification is not inheritance**.
+
+Grammar selection is explicit and defaults to the existing `einspace` version
+`"1"` (the grammar originating in einsearch). Other names or versions are
+rejected. Neither the grammar nor native RCSWX alignment, edit costs, or sampling
+is changed by importing a model.
+
+The supported language is deliberately narrower than PyTorch:
+
+- Biased `Linear` with output widths 16, 32, 64, 128, 256, 512, 1024, or 2048.
+  `F.linear` is accepted only with registered weight and bias parameters.
+- Non-inplace ReLU, identity, and softmax on the final dimension.
+- Rank-two `LayerNorm` over the final dimension, rank-three `BatchNorm1d`, and
+  rank-four `BatchNorm2d`, with the grammar's default epsilon, affine state,
+  momentum, and running-statistics behavior.
+- Biased, ungrouped, zero-padded `Conv2d` with dilation one, supported output
+  widths, and square `(kernel, stride, padding)` tuples `(1,1,0)`, `(1,2,0)`,
+  `(3,1,1)`, `(3,2,1)`, `(4,4,0)`, `(8,8,0)`, or `(16,16,0)`. This lowers to
+  the existing image-to-column, linear, and column-to-image routing operations.
+- Sequential composition and nested, structured two-branch forks with equal-shape
+  addition or concatenation on a grammar-supported non-batch dimension. Branch
+  order is preserved. Crossing dependencies, repeated stateful invocations, and
+  shared modules/storage are rejected rather than duplicated.
+
+Module, functional, and method spellings are normalized only where their
+semantics match these operations. Singleton computations receive the grammar's
+required sequential/identity root embedding. Every resulting derivation must
+also satisfy the existing grammar's layout and shape rules; this is not a promise
+that arbitrary combinations of individually supported layers are representable.
+
+Supply exactly one finite, floating-point, rank-two to rank-four CPU/CUDA tensor.
+The capture records its fixed shape, dtype, and device. Mixed module modes,
+hooks, unsupported options, data-dependent control flow, unrepresented work,
+and detected forward-time configuration mutation are errors.
+
+Import always validates grammar/shape constraints and a one-to-one state
+correspondence, then compares original and reconstructed outputs and buffer
+updates on disposable real-tensor copies in both training and evaluation modes.
+Corresponding state is copied **only into the verifier**; convolution weights are
+reshaped into the grammar's linear representation there. Tolerances are
+dtype-aware and recorded in `metadata["validation"]`; nonfinite outputs fail.
+The caller's tensors, parameters, gradients, buffers, modes, and PyTorch RNG
+state are preserved on success and failure.
+
+These checks establish faithfulness for the supported lowering and supplied
+example, not equivalence of arbitrary Python programs or unseen input signatures.
+Custom Python code executes during tracing/copying: it must not perform external
+side effects, and this API is not an untrusted-code sandbox. Opaque/custom-block
+exchange requires a future, more expressive grammar; there is no opaque fallback
+in `einspace` version `"1"`.
+
+Existing `capture`, `build`, `crossover`, and `crossover_with_report` remain
+no-forward operations. Only the explicit import/validation workflow executes
+isolated verification forwards.
 
 ## Build a model from architecture data
 
