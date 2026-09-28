@@ -20,15 +20,15 @@ For the original implementation and paper experiments, see
 
 ## Installation
 
-Requires Python 3.12–3.14. For the PyTorch workflow, install in your environment:
+Requires Python 3.12–3.14. Start with the minimal package:
 
 ```sh
-python -m pip install 'rcswx[torch]'
+python -m pip install rcswx
 ```
 
-For a uv-managed project, use `uv add 'rcswx[torch]'` instead. If you only need
-structural alignment and crossover on data, install `rcswx` without the extra:
-the minimal package does not install or import Torch, NumPy, or SciPy.
+For a uv-managed project, use `uv add rcswx` instead. The minimal package does
+not install or import Torch, NumPy, or SciPy. Add `rcswx[torch]` when you want
+executable models, as in the PyTorch example below.
 Source builds require Rust/Cargo; see the [development guide](docs/development.md)
 for working from a checkout and [Nix usage](examples/README.md#nix-flakes).
 
@@ -54,85 +54,104 @@ so selection is constrained rather than an arbitrary mix of layers.
 The distance measures structural edits—not differences in weights, predictions,
 or accuracy.
 
+## Portable example
+
+Start with two small networks: `Linear(…, 16) → ReLU` and
+`Linear(…, 32) → Softmax`. No Torch installation or input tensors are needed to
+compare and recombine their structure.
+
+```python
+from rcswx import Architecture, apply_edits, edit_path
+
+
+def architecture(width, activation):
+    return Architecture.from_tree(
+        (
+            "sequential",
+            ("computation", (f"linear({width})",)),
+            ("computation", (activation,)),
+        )
+    )
+
+
+first = architecture(16, "relu")
+second = architecture(32, "softmax")
+plan = edit_path(first, second)
+
+for bit, edit in enumerate(plan.nontrivial_ops):
+    print(f"Bit {bit}: {edit}")
+selection = plan.select("10")  # Replace the activation, keep parent two's width.
+child = apply_edits(plan, selection)
+
+print("Full distance:", plan.distance, "Selected cost:", selection.cost)
+print("Child operations:", [node["name"] for node in child.to_dict()["nodes"]])
+```
+
+Each tuple is `(operation_name, *children)`. The bundled `einspace` grammar
+(version `"1"`, the default) uses `sequential` for composition and `computation`
+to wrap a layer. Here, `linear(16)` names a linear layer with 16 output features.
+
+This plan has two weighted edits: activation replacement costs `0.5`, and width
+replacement costs `0.25`. The full distance is `0.75`, **not a count of changed
+layers**. Selecting only the first edit costs `0.5` and produces
+`['sequential', 'computation', 'linear(32)', 'computation', 'relu']`:
+**parent two's width with parent one's activation**.
+
+The mask is specific to this plan's displayed edit order. Use `plan.sample(seed=0)`
+instead to sample a valid selection. Portable values contain no learned tensors,
+and both parents remain unchanged. See the [portable guide](docs/portable.md)
+for selection, serialization, reproducibility, and resource limits.
+
 ## PyTorch example
 
-Build two small networks using the bundled einspace grammar, cross their
-architectures, and run the child on a batch. Both parents map eight input
-features to sixteen output features; they differ in their activation.
+Install the optional integration:
+
+```sh
+python -m pip install 'rcswx[torch]'
+```
+
+**Continue with `first` and `second` from above.** Build them as PyTorch modules,
+cross the modules, then inspect and run the child:
 
 ```python
 import torch
-from rcswx import Architecture
-from rcswx.torch import build, crossover
+from rcswx.torch import build, crossover_with_report
 
 input_spec = {
-    "shape": [4, 8],
-    "mode": "col",
+    "shape": [4, 8],  # A batch of four examples with eight input features.
+    "mode": "col",   # Features occupy the last dimension.
     "other_shape": None,
     "other_mode": None,
     "branching_factor": 1,
     "last_im_shape": None,
 }
 
+torch.manual_seed(0)  # Weight initialization; separate from structural sampling.
+first_model = build(first, input_spec=input_spec)
+second_model = build(second, input_spec=input_spec)
+result = crossover_with_report(first_model, second_model, seed=0)
+child_model = result.child
 
-def parent(activation):
-    architecture = Architecture.from_tree(
-        (
-            "sequential",
-            ("computation", ("linear(16)",)),
-            ("computation", (activation,)),
-        ),
-        grammar="einspace",
-        grammar_version="1",
-        input_spec=input_spec,
-    )
-    return build(architecture, build_options={"dtype": torch.float32})
-
-
-first = parent("relu")
-second = parent("softmax")
-child = crossover(first, second, seed=17)
-
+print("Selected edits:", result.report["crossover_operations"])
+print(child_model)
+child_model.eval()
 with torch.no_grad():
-    print("Child output shape:", tuple(child(torch.zeros(4, 8)).shape))
-print("Fresh model:", child is not first and child is not second)
+    predictions = child_model(torch.randn(4, 8))
+print("Output shape:", tuple(predictions.shape))
 ```
 
-The output shape is `(4, 16)`, and the child is a fresh model. Its parameters
-are newly initialized, not copied from either parent. `seed=17` controls the
-structural choice, not PyTorch's weight initialization.
+For this pair, `seed=0` selects the activation edit: the printed module contains
+`Linear(in_features=8, out_features=32, bias=True)` followed by `ReLU()`, and the
+output shape is `(4, 32)`. This is a fresh `torch.nn.Module` with newly initialized
+parameters—not inherited weights. Train it with your usual PyTorch loop.
 
-See the [PyTorch guide](docs/pytorch.md) for supported models, capture,
-converters, device/dtype choices, and checkpoints. The
-[report example](examples/torch_module_crossover.py) also exposes the selected
-operations and captured architecture.
-
-## Portable example
-
-Work directly with architecture data when you do not need a model or Torch.
-This small structural example aligns two activation trees, selects the activation
-replacement, and prints the resulting child's operations:
-
-```python
-from rcswx import Architecture, apply_edits, edit_path
-
-first = Architecture.from_tree(("computation", ("relu",)))
-second = Architecture.from_tree(("computation", ("sigmoid",)))
-plan = edit_path(first, second)
-selection = plan.select("1")  # Apply this pair's single nontrivial edit.
-child = apply_edits(plan, selection)
-
-print("Edit distance:", plan.distance)
-print("Child operations:", [node["name"] for node in child.to_dict()["nodes"]])
-```
-
-Here the edit distance is `0.5` and the child operations are
-`['computation', 'relu']`. Use `plan.sample(seed=42)` instead of `plan.select(...)`
-to draw a selection rather than choosing one explicitly.
-
-Portable values contain structure and metadata, not tensors or executable
-modules. The parents remain unchanged. See the [portable guide](docs/portable.md)
-for explicit selection, serialization, reproducibility, and resource limits.
+The remaining `input_spec` fields describe branch and image-layout bookkeeping;
+the [input specification guide](docs/pytorch.md#adapt-the-input-specification)
+explains every field and how to adapt the example. For an existing
+`nn.Sequential` model, see the
+[explicit converter recipe](docs/pytorch.md#import-a-supported-nnsequential-model);
+arbitrary modules are not automatically importable. The
+[standalone module example](examples/torch_module_crossover.py) includes all setup.
 
 ## Important semantics
 
@@ -152,8 +171,8 @@ for explicit selection, serialization, reproducibility, and resource limits.
 
 ## Documentation
 
-- [PyTorch guide](docs/pytorch.md) — model construction, crossover, capture, and persistence.
-- [Portable guide](docs/portable.md) — architecture data, edit plans, sampling, and limits.
+- [Portable guide](docs/portable.md) — represent architectures, choose edits, and replay or save results.
+- [PyTorch guide](docs/pytorch.md) — build and cross models, import a supported module, and save trained state.
 - [Runnable examples](examples/README.md) — small CPU scripts; no dataset or training required.
 - [Reference compatibility](docs/compatibility.md) — intentional corrections and comparison scope.
 - [Development](docs/development.md) — source setup, builds, and verification.

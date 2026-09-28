@@ -96,6 +96,24 @@ predecessors, prefilled boundary candidates, and skipped computed cells keep
 the original semantics; preparation of a later position must not raise an
 algorithm error before an earlier position is published.
 
+## Resource checks and host callbacks
+
+For the public quota recipe, see [bounding work and memory](portable.md#bound-work-and-memory).
+Work/output/allocation quotas account every checkpoint in Rust. Accounted native
+allocation bytes are not process RSS.
+
+On legacy/PyTorch trees, the `Limiter`'s `memory_crossover` RSS guard remains
+host-side. Retained native operations poll it at their first checkpoint, every
+1,024 checkpoints thereafter, and before returning a successful native result.
+Native quota accounting is not throttled with host polling. RSS checks are
+sampled and can overshoot a threshold between polls, so they are not a hard
+process-memory ceiling.
+
+Parallel calls additionally poll elapsed time at 10 ms intervals while waiting
+for compute jobs. This does not change canonical work or allocation counters.
+The coordinator handles callbacks and signals; interrupted calls join their
+jobs before raising. The re-entry and fork restrictions are described below.
+
 ## Ownership and execution decisions
 
 - Mutable cells remain coordinator-owned. Workers receive immutable cell views,
@@ -130,6 +148,10 @@ uses the process's available parallelism when first initialized; `workers=1`
 does not inspect or initialize it. A call's resolved ceiling is
 `min(requested, capacity)`, or the full capacity for `workers=-1`.
 
+Boolean/non-integer worker counts, zero, and values below `-1` are rejected
+before legacy parent preparation. Serial-only builds reject parallel requests;
+WebAssembly stays serial even with the Cargo feature enabled.
+
 Ordinary diagonals are visited in the original alternating order. A read-only
 work estimate rejects low-density frontiers before allocating lane buffers.
 Admitted rounds contain at most 1,024 positions. Their reserved payload is
@@ -153,7 +175,12 @@ protects only chunk transfer and is released before evaluation. Faster workers
 can take additional chunks without increasing the job ceiling or requiring
 per-cell locks. This matters on heterogeneous CPUs and highly uneven histories.
 
-`plan.execution` is separate from algorithm statistics and trace recording:
+`plan.execution` reports capability, requested/resolved workers, pool capacity,
+parallel/serial cells, job overlap, scratch reservation, and fallback counts.
+These diagnostics are separate from algorithm statistics and trace recording;
+ordered plans and algorithm statistics remain unchanged. Uneconomic, aliased, or
+scratch-limited waves can run serially.
+
 `pool_capacity=None` means this serial call did not touch the pool, even if
 another call initialized it. `jobs` counts submitted compute jobs and
 `peak_jobs` counts their maximum overlapping active lifetimes.

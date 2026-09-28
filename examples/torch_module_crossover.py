@@ -18,11 +18,11 @@ INPUT_SPEC = {
 }
 
 
-def parent(activation: str) -> Architecture:
+def parent(width: int, activation: str) -> Architecture:
     return Architecture.from_tree(
         (
             "sequential",
-            ("computation", ("linear(16)",)),
+            ("computation", (f"linear({width})",)),
             ("computation", (activation,)),
         ),
         grammar="einspace",
@@ -32,15 +32,18 @@ def parent(activation: str) -> Architecture:
 
 
 def main() -> None:
-    first = build(parent("relu"), build_options={"dtype": torch.float32})
-    second = build(parent("softmax"), build_options={"dtype": torch.float32})
-    result = crossover_with_report(first, second, seed=17)
+    torch.manual_seed(0)
+    first = build(parent(16, "relu"), build_options={"dtype": torch.float32})
+    second = build(parent(32, "softmax"), build_options={"dtype": torch.float32})
+    result = crossover_with_report(first, second, seed=0)
 
     print("Captured grammar:", capture(result.child).architecture.to_dict()["grammar"])
     print("Selected operations:", result.report["crossover_operations"])
     print("Child is fresh:", result.child is not first and result.child is not second)
+    print(result.child)
+    result.child.eval()
     with torch.no_grad():
-        print("Child output shape:", tuple(result.child(torch.zeros(4, 8)).shape))
+        print("Child output shape:", tuple(result.child(torch.randn(4, 8)).shape))
 
 
 if __name__ == "__main__":
