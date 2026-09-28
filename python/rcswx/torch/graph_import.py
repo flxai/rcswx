@@ -61,8 +61,18 @@ def import_model(
         raise TypeError("import_model requires torch.nn.Module")
     _assert_no_sharing(model)
     for path, module in model.named_modules():
-        if module._forward_hooks or module._forward_pre_hooks or module._backward_hooks:
+        if (
+            module._forward_hooks
+            or module._forward_pre_hooks
+            or module._backward_hooks
+            or module._backward_pre_hooks
+        ):
             raise UnsupportedModuleError(f"capture: module hooks at {path!r} are unsupported")
+    for path, tensor in (*model.named_parameters(), *model.named_buffers()):
+        if tensor._backward_hooks or getattr(tensor, "_post_accumulate_grad_hooks", None):
+            raise UnsupportedModuleError(
+                f"capture: tensor gradient hooks at {path!r} are unsupported"
+            )
     execution = _execution_assumptions(model)
     if len(set(execution["module_training"].values())) != 1:
         raise UnsupportedModuleError("capture: mixed module training modes are unsupported")
@@ -78,14 +88,20 @@ def import_model(
     with preserve_rng((*model.parameters(), *model.buffers(), *inputs)):
         isolated = isolated_model(model, meta=True)
         before = _structure_signature(isolated)
+        before_execution = _execution_assumptions(isolated)
         try:
             graph = symbolic_trace(nn.Sequential(isolated))
         except Exception as error:
             raise UnsupportedModuleError(
                 f"capture: FX cannot represent the source: {error}"
             ) from error
-        if _structure_signature(isolated) != before:
-            raise UnsupportedModuleError("capture: forward mutated source module configuration")
+        if (
+            _structure_signature(isolated) != before
+            or _execution_assumptions(isolated) != before_execution
+        ):
+            raise UnsupportedModuleError(
+                "capture: forward mutated source module configuration or execution settings"
+            )
         lowered = backend.lower(graph, input_spec)
 
         # Wrapping makes a standalone standard layer trace as a leaf too.
