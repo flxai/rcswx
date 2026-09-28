@@ -62,9 +62,9 @@ make wheel-test
 This uses `python3` by default. To test a particular available interpreter, use
 `RCSWX_PYTHON=python3.12 make wheel-test`, for example.
 
-The gate checks metadata, missing-extra errors, root import isolation, and
-runnable examples. It never accepts an editable import as proof of the wheel's
-behavior.
+The gate checks metadata, missing-extra errors, root import and help-rendering
+isolation, and runnable examples. It never accepts an editable import as proof
+of the wheel's behavior.
 
 ## Parallel builds
 
