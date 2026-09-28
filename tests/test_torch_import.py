@@ -72,7 +72,16 @@ def test_parameter_changes_remain_visible_to_existing_edit_costs():
 
 
 @pytest.mark.parametrize(
-    "family", ["dense", "residual", "concatenation", "normalization", "convolution"]
+    "family",
+    [
+        "dense",
+        "residual",
+        "concatenation",
+        "normalization",
+        "layer_norm",
+        "identity",
+        "convolution",
+    ],
 )
 def test_reconstruction_preserves_forward_gradients_and_running_state(family):
     if family == "dense":
@@ -84,6 +93,10 @@ def test_reconstruction_preserves_forward_gradients_and_running_state(family):
         source, shape = Concatenate(), (4, 8)
     elif family == "normalization":
         source, shape = nn.Sequential(nn.BatchNorm1d(16), nn.ReLU()), (4, 16, 7)
+    elif family == "layer_norm":
+        source, shape = nn.Sequential(nn.LayerNorm(16), nn.ReLU()), (4, 16)
+    elif family == "identity":
+        source, shape = nn.Identity(), (4, 8)
     else:
         source = nn.Sequential(nn.Conv2d(3, 16, 3, padding=1), nn.BatchNorm2d(16), nn.ReLU())
         shape = (4, 3, 8, 8)
@@ -235,3 +248,32 @@ def test_numerically_wrong_lowering_is_rejected_even_when_shapes_match(monkeypat
     monkeypatch.setattr(EinspaceBackend, "lower", wrong_activation)
     with pytest.raises(UnsupportedModuleError):
         import_model(nn.ReLU(), example_inputs=(torch.arange(32.0).reshape(4, 8),))
+
+
+@pytest.mark.parametrize("hook_kind", ["module_pre", "parameter", "post_accumulate"])
+def test_unrepresentable_gradient_hooks_are_rejected(hook_kind):
+    source = nn.Linear(8, 16)
+    if hook_kind == "module_pre":
+        handle = source.register_full_backward_pre_hook(
+            lambda module, gradients: (torch.zeros_like(gradients[0]),)
+        )
+    elif hook_kind == "parameter":
+        handle = source.weight.register_hook(lambda gradient: gradient * 0)
+    else:
+        handle = source.weight.register_post_accumulate_grad_hook(
+            lambda parameter: parameter.grad.zero_()
+        )
+    with handle, pytest.raises(UnsupportedModuleError):
+        import_model(source, example_inputs=(torch.randn(4, 8),))
+
+
+def test_forward_mode_mutation_is_rejected_without_touching_source():
+    class MutatingMode(nn.Module):
+        def forward(self, x):
+            self.eval()
+            return x.relu()
+
+    source = MutatingMode()
+    with pytest.raises(UnsupportedModuleError):
+        import_model(source, example_inputs=(torch.randn(4, 8),))
+    assert source.training
