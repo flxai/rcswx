@@ -27,6 +27,13 @@ Node, and browser tooling. It does not install a global target or runner.
 For consuming Nix packages rather than developing the repository, see
 [Nix flakes](../examples/README.md#nix-flakes).
 
+## Local benchmark output
+
+`benchmark-results/` and `benchmarks/results/` are ignored local output directories.
+Keep generated datasets, raw evidence, and figures out of commits and Git history;
+never bypass their ignore rules with `git add -f`. Benchmark drivers remain tracked
+under `benchmarks/`.
+
 ## Local checks
 
 Run the repository's configured commands inside that environment:
