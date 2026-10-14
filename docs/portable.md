@@ -213,3 +213,135 @@ a request for multiple workers does not guarantee every wave runs in parallel.
 After `fork`, do not reuse an initialized pool: use serial execution or a fresh
 interpreter. The [wavefront reference](wavefront.md) covers execution diagnostics,
 callback re-entry, scheduler fallbacks, and performance evidence.
+
+## Typed ordered-tree diagnostics
+
+`rcswx.compare_typed(first, second)` is a separate JSON-only native capability.
+It accepts non-neural semantic occurrence trees rather than `Architecture`
+values or einspace operation names. The minimal package includes it; no Torch,
+NumPy, SciPy, network fetch, or Python scoring fallback is used.
+
+```python
+from rcswx import compare_typed
+
+
+def amount(identifier, value):
+    return {
+        "version": "rcswx-typed-ordered-v1",
+        "root": identifier,
+        "nodes": [
+            {
+                "id": identifier,
+                "kind": "literal",
+                "semantic_type": "integer",
+                "role": "amount",
+                "value": value,
+                "children": [],
+            }
+        ],
+    }
+
+
+result = compare_typed(amount("first-amount", 3), amount("second-amount", 2))
+assert result["distance"] == 1
+assert result["edits"] == [
+    {
+        "operation": "substitute",
+        "first_id": "first-amount",
+        "second_id": "second-amount",
+        "cost": 1,
+    }
+]
+```
+
+### Wire and cost contract
+
+Each tree has exactly `version`, `root`, and `nodes`. Each node has exactly
+`id`, `kind`, `semantic_type`, `role`, `value`, and `children`:
+
+- `version` is `"rcswx-typed-ordered-v1"`; `root` and every child reference are
+  nonempty occurrence-ID strings, not array positions.
+- `kind` is `constructor`, `list`, `tuple`, or `literal`. Semantic type and
+  argument role are nonempty strings. Nullary and arbitrary-arity constructor,
+  list, and tuple nodes are supported; literals have no children.
+- Constructor `value` is its nonempty canonical name. Do not duplicate that
+  constructor tag as an extra literal occurrence. List/tuple `value` is `null`;
+  literal values may be any JSON scalar. Numbers compare as exact decimal
+  values without floating-point rounding, including arbitrary-width integers;
+  equivalent numeric spellings such as `1` and `1.0` compare equally within
+  the same semantic type. Booleans and strings do not equal numbers.
+- `children` is an ordered list of distinct occurrence references. Every node
+  must be reachable exactly once. Cycles, shared occurrences, duplicate IDs,
+  orphan nodes, missing references, unknown fields, and malformed values fail
+  with an explicit exception. NaN/infinity are not JSON values. Number exponents
+  outside the native signed 64-bit normalization range are unsupported errors,
+  not rounded or fabricated scores.
+- Occurrence IDs, node-table order, and JSON key order do not score. Keep
+  provenance/reverse source paths outside this wire and resolve returned IDs
+  back to source data in the caller.
+
+The diagnostic policy is `"typed-unit-v1"`. Kind, semantic type, and role must
+match for a substitution; an unequal constructor/literal value then costs one,
+while an exact match costs zero. Incompatible nodes require deletion/insertion,
+each costing one per semantic occurrence. Thus removing/adding a whole subtree
+charges every occurrence, not one opaque subtree charge. There is no branch
+permutation, movement operation, gameplay weighting, size normalization, or
+claim of semantic equivalence/relevance.
+
+Edits transform **second toward first**. This typed policy requires immediate
+parents to correspond: insertion/deletion consumes **whole subtrees**, emitting
+one charged edit for every occurrence. It does not promote removed nodes'
+children or wrap retained children in inserted nodes. Matched occurrences
+preserve parents and ordered sibling relationships. Equal preorder labels with
+different attachments are not an identity match. This API explains full paths;
+it does not expose crossover, partial-edit application, or the legacy weighted
+policy. These restrictions are explicit typed-policy choices; they do not alter
+the architecture API's historical wrapper behavior.
+
+### Native path and result fields
+
+Typed ordered mode generalizes the existing recursive RCSWX add/mutate/remove
+cell recurrence and persistent operation histories. Every semantic occurrence
+has a scored opening and a zero-cost owned closure; boundary bookkeeping is
+not a semantic edit. The legacy grammar-specific behavior is unchanged.
+Native Rust `Tree::from_json` parses the wire shape; comparison validates and
+prepares each semantic tree once before scoring. The recurrence reuses two row
+buffers. Closure legality is carried by the active-owner state, so zero-cost
+closing transitions share the preceding semantic history rather than allocating
+discarded boundary-operation records.
+Because closing legality depends on earlier opening correspondences, generic
+mode retains the minimum history **per active matched-owner stack**, rather than
+discarding all histories above one cell-wide minimum. Only paired owners close
+together, and opening pairs require their immediate parents to be the current
+pair (or both occurrences to be roots). At a fixed cell, token positions and the
+active stack determine future opening/closing legality, so a lower-cost history
+in the same state dominates. Independent tiny mapping enumeration exercises
+this pruning and cost behavior; demonstrated exactness is limited to those
+tested structural cases, not a claim of general semantic optimality. This is
+the native typed policy, not a flat token alignment or replacement scorer.
+
+One deterministic minimum-cost path is returned, not all tied paths:
+
+| Field | Value |
+| --- | --- |
+| `version` | `"rcswx-typed-ordered-result-v1"` |
+| `tree_version` | `"rcswx-typed-ordered-v1"` |
+| `policy` | `"typed-unit-v1"` |
+| `backend` | `"rcswx-native-recursive-ordered"` |
+| `direction` | `"second-to-first"` |
+| `distance` | Native nonnegative integer sum of semantic edit costs |
+| `correspondences` | Ordered `{"first_id": str, "second_id": str}` for matches/substitutions |
+| `edits` | Ordered `{"operation": str, "first_id": str or null, "second_id": str or null, "cost": int}` |
+
+`operation` is `match`, `substitute`, `insert`, or `delete`. Insertions consume
+one first occurrence (`second_id=null`); deletions consume one second occurrence
+(`first_id=null`). Every first/second occurrence appears exactly once in `edits`,
+including zero-cost matches. Every charged operation is explained, and
+`sum(edit["cost"] for edit in result["edits"]) == result["distance"]`.
+Neither a successful serialization nor a low distance establishes binding-aware
+equivalence or semantic approval; domain-specific validation remains the caller's
+responsibility.
+
+Typed mode is currently serial even in parallel-capable builds. Closure-state
+retention can grow substantially on ambiguous repeated nested shapes; it does
+not inherit the architecture API's quota/selection interfaces.

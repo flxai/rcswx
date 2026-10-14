@@ -261,6 +261,70 @@ impl<P> Draft<P> {
     }
 }
 
+/// The generic typed policy evaluates the same add/mutate/remove predecessor
+/// recurrence, but retains a minimum for each future-relevant closure state.
+/// A cell-wide minimum would discard legal histories before their owners close.
+pub(super) fn ordered_cell(
+    predecessors: [Option<&super::ordered::OrderedCell>; 3],
+    states: &mut super::ordered::States,
+    (first, second): (super::ordered::Event, super::ordered::Event),
+    (i, j): (usize, usize),
+    mutation: Option<super::ordered::Mutation>,
+) -> crate::error::Result<super::ordered::OrderedCell> {
+    use super::History;
+    use super::ordered::{Lane, OrderedCell};
+    use crate::error::Error;
+
+    let mut cell = OrderedCell::new();
+    for direction in [0, 2, 1] {
+        let Some(source) = predecessors[direction] else {
+            continue;
+        };
+        for (&state, lane) in source {
+            let Some((state, charge, kind, first_id, second_id)) =
+                states.transition(state, direction, first, second, mutation)?
+            else {
+                continue;
+            };
+            let cost = lane
+                .cost
+                .checked_add(charge)
+                .ok_or(Error::Limit("typed cost"))?;
+            if cell.get(&state).is_some_and(|current| current.cost <= cost) {
+                continue;
+            }
+            // Typed closure legality lives entirely in States. Boundary-only
+            // transitions need no operation allocation in the semantic history.
+            let history = if matches!(kind, Kind::AddEnd | Kind::RemEnd | Kind::MutEnd) {
+                lane.history.clone()
+            } else {
+                let step = Step {
+                    id: lane.history.len,
+                    kind,
+                    node1_id: first_id
+                        .map(i64::try_from)
+                        .transpose()
+                        .map_err(|_| Error::Limit("typed occurrence"))?,
+                    node2_id: second_id
+                        .map(i64::try_from)
+                        .transpose()
+                        .map_err(|_| Error::Limit("typed occurrence"))?,
+                    i,
+                    j,
+                    source_i: i,
+                    source_j: j,
+                    value: charge as f64,
+                    i_swapped: false,
+                    j_swapped: false,
+                };
+                History::new(step, Some(lane.history.clone()), lane.history.len + 1)
+            };
+            cell.insert(state, Lane { cost, history });
+        }
+    }
+    Ok(cell)
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::{History, HistoryRef};

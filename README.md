@@ -18,6 +18,12 @@ The Rust core implements Recursive Constrained Smith–Waterman crossover from
 For the original implementation and paper experiments, see
 [rcswx-paper](https://github.com/flxai/rcswx-paper).
 
+`rcswx.compare_typed(first, second)` also provides an explicit
+[typed ordered-tree diagnostic policy](docs/portable.md#typed-ordered-tree-diagnostics)
+for non-neural semantic trees. It retains every occurrence and reports native
+unit-cost edits; it does not reuse einspace labels or silently treat arbitrary
+trees as neural architectures. Existing architecture/crossover APIs are unchanged.
+
 ## Installation
 
 Requires Python 3.12–3.14. Start with the minimal package:

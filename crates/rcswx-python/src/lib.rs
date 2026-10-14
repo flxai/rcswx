@@ -5,6 +5,7 @@ mod execution;
 mod recursive;
 pub(crate) mod sampling;
 mod selection;
+mod typed;
 
 #[pymodule]
 fn _core(module: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -13,5 +14,6 @@ fn _core(module: &Bound<'_, PyModule>) -> PyResult<()> {
     sampling::register(module)?;
     engine::register(module)?;
     execution::register(module)?;
+    typed::register(module)?;
     Ok(())
 }

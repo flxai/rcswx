@@ -60,6 +60,29 @@ configured formatters. Use the narrowest relevant test when iterating; runnable
 Python examples and their required extras are listed in the
 [example catalogue](../examples/README.md).
 
+For the native typed ordered policy, a minimal checkout gate needs no optional
+Torch or reference extras. Inside the configured Nix shell, use:
+
+```sh
+uv sync --locked
+uv run --locked maturin develop
+cargo test -p rcswx-core --locked
+uv run --locked pytest tests/test_typed_api.py tests/test_portable_api.py
+```
+
+`make test` includes those cases together with the legacy regression suites.
+The tiny typed mapping oracle enumerates partial occurrence mappings independently
+of the native cell recurrence; it is test-only and is never a scoring fallback.
+
+The verified minimal integration milestone on 2026-10-14 used Python 3.14.7:
+41 core tests and 135 combined typed/portable Python tests passed, together with
+the configured formatting, workspace Clippy, and Ruff checks. Independent
+integration verification also exercised 127 tiny reference cases and rejected
+nine malformed inputs. This evidence covers the serial typed capability and
+minimal portable regression surface, not the full Torch/reference-extra suites,
+parallel execution, or WebAssembly/browser execution gates; those optional
+surfaces were unchanged and were not exercised for this milestone.
+
 ## Test the exact wheel
 
 Build one wheel, then test that exact artifact in fresh minimal, Torch,

@@ -26,6 +26,9 @@ use std::sync::atomic::{AtomicU8, Ordering};
 #[path = "recursive_cell.rs"]
 mod cell_eval;
 
+#[path = "recursive_ordered.rs"]
+pub(crate) mod ordered;
+
 #[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
 #[path = "recursive_wave.rs"]
 mod wave;

@@ -8,6 +8,7 @@ from .api import Alignment, Selection, apply_edits, distance, edit_path
 from .crossover import CrossoverResult, crossover, crossover_with_report
 from .portable import Architecture, from_dict, from_json, to_dict, to_json
 from .recursive import MatrixOperation, raw_crossover
+from .typed import compare_typed
 
 __version__ = "0.6.0"
 
@@ -51,6 +52,7 @@ __all__ = [
     "NativeRng",
     "Selection",
     "apply_edits",
+    "compare_typed",
     "crossover",
     "crossover_with_report",
     "distance",

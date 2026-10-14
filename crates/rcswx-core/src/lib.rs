@@ -11,3 +11,4 @@ pub mod selection;
 pub mod tokens;
 #[cfg(feature = "trace")]
 pub mod trace;
+pub mod typed;
