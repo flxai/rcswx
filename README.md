@@ -44,18 +44,19 @@ explicit imports.
 
 ## How it works
 
-```text
-Two parent architecture trees
-             ↓
-    Align their structures
-             ↓
-          Edit plan
-             ↓
-    Select or sample edits
-             ↓
-    Offspring architecture
-             ↓
-  Build a fresh PyTorch model (optional)
+```mermaid
+flowchart LR
+    A1["Parent A (tree)"] -->|sequence| A2["Parent A (sequence)"]
+    B1["Parent B (tree)"] -->|sequence| B2["Parent B (sequence)"]
+    A2 -->|align structures| EP["Edit plan<br/>(from B toward A)"]
+    B2 -->|align structures| EP
+    EP -->|select / sample edits| OFF[Offspring]
+    OFF -.->|optional: derive| PT[PyTorch model]
+
+    classDef plan stroke-width:2.5px;
+    classDef optional stroke-dasharray:6 4;
+    class EP plan
+    class PT optional
 ```
 
 The edit plan describes changes from the second parent toward the first.
