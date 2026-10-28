@@ -39,29 +39,28 @@ WASM tools are needed.
 - **Export recording:** download a local JSON bundle containing the trace and
   current child's lossless architecture JSON text. No model data is uploaded.
 
-Cached native records are readable immediately, including when WASM loading is
-blocked. Their exact input hashes and engine identity are retained. An error is
-shown explicitly; an unavailable live result is never relabeled as successful
-computation. Reduced-motion mode disables automatic playback. Text descriptions,
-labels, table semantics and keyboard controls supplement the SVG presentation.
+The browser demo uses cached native records immediately, including when WASM
+loading is blocked. Their exact input hashes and engine identity are retained.
+An error is shown explicitly; an unavailable live result is never relabeled as
+successful computation. Reduced-motion mode disables automatic playback. Text
+descriptions, labels, table semantics and keyboard controls supplement the SVG
+presentation.
 
 ## Fixture source and regeneration
 
 `fixtures/inputs.json` owns the five exact architecture pairs and explanatory
-captions. `fixtures/recordings.json` is generated from `fixtures/inputs.json` by the native exporter; it is an ignored build input, not a checked-in historical oracle. Make web-build, web-check, and web-demo generate it automatically. Direct npm dev/build/check/test entrypoints generate it before use.
+captions. `fixtures/recordings.json` is generated from those inputs by the
+native exporter (`make wasm-fixtures`); it is an ignored build input, not a
+checked-in historical oracle. `make web-build`, `make web-check`, and
+`make web-demo` generate it automatically. Direct `npm run dev`, `build`,
+`check`, and `test` entrypoints also generate it before use.
 
-Generation command:
-
-```sh
-make wasm-fixtures
-```
-
-The native Rust exporter validates every prefix, the prepared-second empty
-selection, ordered structural endpoints and advertised surviving metadata. It
-also checks `0 → n → 1 → n → 0` repeatability and records three fixed seeds.
-The browser parity test compares the resulting plans, full event streams,
-applications and samples against the built WASM artifact, excluding only runtime
-plan IDs and build provenance. Recordings are ignored generated inputs, not fixed historical
+The exporter validates every prefix, the prepared-second empty selection,
+ordered structural endpoints and advertised surviving metadata. It also checks
+`0 → n → 1 → n → 0` repeatability and records three fixed seeds. The browser
+parity test compares the resulting plans, full event streams, applications and
+samples against the built WASM artifact, excluding only runtime plan IDs and
+build provenance. Recordings are ignored generated inputs, not fixed historical
 oracles; do not edit them by hand.
 
 `src/protocol.ts` and `src/client.ts` are the framework-independent consumer

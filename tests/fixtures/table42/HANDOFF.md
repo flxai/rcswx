@@ -8,7 +8,7 @@ Implement and run the four ResNet–MLP-Mixer comparisons from Table 4.2 using (
 
 This document **supersedes `RCSWX_BENCHMARK_HANDOFF.md`** and the earlier instructions to search for or reconstruct ResNet34/Mixer d12. Those definitions have now been supplied by the coauthor. The earlier `baselines.zip` is not the fixture authority. The latest six Python files and their pinned bytes are.
 
-**Already provided:** source files; expanded strings; ordered static trees; source-operation streams; checksums; five passing static recovery tests; the coauthor’s notebook setup excerpt. The original table image was used as unbundled user-supplied provenance and is not included in this repository. **Not executed here:** runtime genotype construction, PyTorch forward passes, reference/Rust alignments, or performance measurements. Do not promote static validation into runtime validation.
+**Already provided:** source files; expanded strings; ordered static trees; source-operation streams; checksums; five passing static recovery tests; and the coauthor’s notebook setup excerpt. The original table image was used as unbundled user-supplied provenance and is not included in this repository. **Not executed here:** runtime genotype construction, PyTorch forward passes, reference/Rust alignments, or performance measurements. Do not promote static validation into runtime validation.
 
 Use this document with its companion bundle. Run from the bundle root:
 

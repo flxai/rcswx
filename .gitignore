@@ -21,6 +21,6 @@ examples/web/playwright-report/
 examples/web/public/THIRD_PARTY_NOTICES
 # Purged artifacts stay outside versioned source.
 crates/rcswx-core/tests/fixtures/wavefront-oracle-v1.json
-examples/web/fixtures/recordings.json
-tests/fixtures/reference_inventory.json
 tests/fixtures/table42/evidence/table_4_2.png
+tests/fixtures/reference_inventory.json
+examples/web/fixtures/recordings.json

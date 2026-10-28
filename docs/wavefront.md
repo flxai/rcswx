@@ -42,11 +42,13 @@ plan assembly are inside it. The first call and warm repetitions are separate.
 The RSS high-water mark is reset between samples on Linux; unavailable reset
 is represented explicitly rather than misreported as a per-call peak.
 
-The frozen behavioral oracle and exporter have been removed. Live wavefront
-correctness tests compare current serial and parallel execution on generated
-inputs; historical performance measurements are not a behavioral oracle.
+The frozen behavioral oracle and its exporter have been removed. Wavefront
+correctness coverage now compares the current serial and wavefront execution
+directly on deterministic generated cases; it does not preserve independent
+historical expected outputs. The measurements above are historical performance
+observations, not a behavioral oracle.
 
-Physical source coordinates accompany histories through serial evaluation
+Physical source coordinates accompany histories through both serial evaluation
 and coordinator-side wavefront materialization; public recursive coordinates
 and computation trace ordering are unchanged.
 

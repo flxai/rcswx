@@ -403,11 +403,83 @@ pub(super) fn evaluate(
 mod tests {
     use super::*;
     use crate::execution::Workers;
+    #[cfg(feature = "trace")]
+    mod capture {
+        use crate as rcswx_core;
+        include!("../tests/support/wavefront_capture.rs");
+    }
 
     #[cfg(feature = "trace")]
-    mod oracle {
-        use crate as rcswx_core;
-        include!("../tests/support/wavefront_oracle.rs");
+    #[test]
+    fn generated_inputs_match_complete_serial_captures() {
+        use crate::architecture::Limits;
+        let probe = Execution::new(Workers::new(2).unwrap()).unwrap();
+        if probe.report.worker_limit < 2 {
+            return;
+        }
+        let architecture = |leaf: &str| {
+            format!(
+                r#"{{"schema":1,"grammar":"article","grammar_version":"1","root":0,"nodes":[{{"id":"0","name":"sequential","children":[1,2]}},{{"id":"1","name":"sequential","children":[3,4]}},{{"id":"2","name":"computation","children":[5]}},{{"id":"3","name":"branching(2)","children":[6,7,8,9]}},{{"id":"4","name":"computation","children":[10]}},{{"id":"5","name":"identity","children":[]}},{{"id":"6","name":"clone(2)","children":[]}},{{"id":"7","name":"computation","children":[11]}},{{"id":"8","name":"computation","children":[12]}},{{"id":"9","name":"add(2)","children":[]}},{{"id":"10","name":"{leaf}","children":[]}},{{"id":"11","name":"{leaf}","children":[]}},{{"id":"12","name":"sigmoid","children":[]}}]}}"#
+            )
+        };
+        let first = architecture("identity");
+        let second = architecture("computation");
+        for collapse in [false, true] {
+            for max_events in [0, 2, 10_000] {
+                let expected = capture::capture(&first, &second, collapse, max_events);
+                assert!(expected["analysis"].get("error").is_none());
+                for round_cells in [2, 3, 17] {
+                    let mut execution = Execution::new(Workers::new(2).unwrap()).unwrap();
+                    execution.force_parallel = true;
+                    execution.round_cells = round_cells;
+                    let actual = capture::capture_with_execution(
+                        &first,
+                        &second,
+                        collapse,
+                        max_events,
+                        &mut execution,
+                        Limits::default(),
+                    );
+                    assert_eq!(
+                        actual, expected,
+                        "collapse={collapse} max_events={max_events} round={round_cells}"
+                    );
+                    assert!(execution.report.parallel_cells > 0);
+                }
+            }
+        }
+        for limits in [
+            Limits {
+                max_work: Some(1),
+                ..Limits::default()
+            },
+            Limits {
+                max_output: Some(1),
+                ..Limits::default()
+            },
+        ] {
+            let expected = capture::capture_with_execution(
+                &first,
+                &second,
+                true,
+                10_000,
+                &mut Execution::serial(),
+                limits.clone(),
+            );
+            let mut execution = Execution::new(Workers::new(2).unwrap()).unwrap();
+            execution.force_parallel = true;
+            execution.round_cells = 2;
+            let actual = capture::capture_with_execution(
+                &first,
+                &second,
+                true,
+                10_000,
+                &mut execution,
+                limits,
+            );
+            assert!(actual["analysis"].get("error").is_some());
+            assert_eq!(actual, expected);
+        }
     }
 
     fn tokens(size: usize) -> Vec<Token> {
@@ -551,121 +623,5 @@ mod tests {
         );
         assert_eq!(execution.report.parallel_rounds, 0);
         assert!(execution.report.scratch_fallbacks > 0);
-    }
-
-    #[cfg(feature = "trace")]
-    #[test]
-    fn generated_inputs_match_complete_serial_captures() {
-        use crate::architecture::Limits;
-        let probe = Execution::new(Workers::new(2).unwrap()).unwrap();
-        if probe.report.worker_limit < 2 {
-            return;
-        }
-        let architecture = |leaf: &str| {
-            format!(
-                r#"{{"schema":1,"grammar":"article","grammar_version":"1","root":0,"nodes":[{{"id":"0","name":"sequential","children":[1,2]}},{{"id":"1","name":"sequential","children":[3,4]}},{{"id":"2","name":"computation","children":[5]}},{{"id":"3","name":"branching(2)","children":[6,7,8,9]}},{{"id":"4","name":"computation","children":[10]}},{{"id":"5","name":"identity","children":[]}},{{"id":"6","name":"clone(2)","children":[]}},{{"id":"7","name":"computation","children":[11]}},{{"id":"8","name":"computation","children":[12]}},{{"id":"9","name":"add(2)","children":[]}},{{"id":"10","name":"{leaf}","children":[]}},{{"id":"11","name":"{leaf}","children":[]}},{{"id":"12","name":"sigmoid","children":[]}}]}}"#
-            )
-        };
-        let first = architecture("identity");
-        let second = architecture("computation");
-        for collapse in [false, true] {
-            for max_events in [0, 2, 10_000] {
-                let expected = oracle::capture(&first, &second, collapse, max_events);
-                assert!(expected["analysis"].get("error").is_none());
-                for round_cells in [2, 3, 17] {
-                    let mut execution = Execution::new(Workers::new(2).unwrap()).unwrap();
-                    execution.force_parallel = true;
-                    execution.round_cells = round_cells;
-                    let actual = oracle::capture_with_execution(
-                        &first,
-                        &second,
-                        collapse,
-                        max_events,
-                        &mut execution,
-                        Limits::default(),
-                    );
-                    assert_eq!(
-                        actual, expected,
-                        "collapse={collapse} max_events={max_events} round={round_cells}"
-                    );
-                    assert!(execution.report.parallel_cells > 0);
-                }
-            }
-        }
-        for limits in [
-            Limits {
-                max_work: Some(1),
-                ..Limits::default()
-            },
-            Limits {
-                max_output: Some(1),
-                ..Limits::default()
-            },
-        ] {
-            let expected = oracle::capture_with_execution(
-                &first,
-                &second,
-                true,
-                10_000,
-                &mut Execution::serial(),
-                limits.clone(),
-            );
-            let mut execution = Execution::new(Workers::new(2).unwrap()).unwrap();
-            execution.force_parallel = true;
-            execution.round_cells = 2;
-            let actual = oracle::capture_with_execution(
-                &first,
-                &second,
-                true,
-                10_000,
-                &mut execution,
-                limits,
-            );
-            assert!(actual["analysis"].get("error").is_some());
-            assert_eq!(actual, expected);
-        }
-    }
-
-    #[cfg(feature = "trace")]
-    #[test]
-    fn resource_failures_keep_serial_partial_trace_and_error_precedence() {
-        use crate::architecture::Limits;
-        let first = r#"{"schema":1,"grammar":"article","grammar_version":"1","root":0,"nodes":[{"id":"0","name":"sequential","children":[1,2]},{"id":"1","name":"computation","children":[]},{"id":"2","name":"identity","children":[] }]}"#;
-        let second = first.replace("identity", "computation");
-        for limits in [
-            Limits {
-                max_work: Some(1),
-                ..Limits::default()
-            },
-            Limits {
-                max_output: Some(1),
-                ..Limits::default()
-            },
-        ] {
-            let expected = oracle::capture_with_execution(
-                first,
-                &second,
-                true,
-                10_000,
-                &mut Execution::serial(),
-                limits.clone(),
-            );
-            let mut execution = Execution::new(Workers::new(2).unwrap()).unwrap();
-            if execution.report.worker_limit < 2 {
-                return;
-            }
-            execution.force_parallel = true;
-            execution.round_cells = 2;
-            let actual = oracle::capture_with_execution(
-                first,
-                &second,
-                true,
-                10_000,
-                &mut execution,
-                limits,
-            );
-            assert!(actual["analysis"].get("error").is_some());
-            assert_eq!(actual, expected);
-        }
     }
 }

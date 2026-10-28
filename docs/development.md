@@ -34,6 +34,17 @@ Keep generated datasets, raw evidence, and figures out of commits and Git histor
 never bypass their ignore rules with `git add -f`. Benchmark drivers remain tracked
 under `benchmarks/`.
 
+Browser recordings are generated from maintained inputs by `make wasm-fixtures`;
+web build, check, and demo commands generate them automatically. Do not commit
+recordings, inventory reports, the retired frozen oracle, or the original table
+image. Wavefront correctness checks compare live serial and parallel execution;
+the table targets retain transcribed values and the unbundled image's hash.
+
+The artifact purge rewrites existing commits and release tags. Use a fresh clone
+after the rewrite; merging an old clone can reintroduce the removed history.
+Previously published distribution archives and third-party clones are separate
+copies and are not changed by rewriting Git refs.
+
 ## Local checks
 
 Run the repository's configured commands inside that environment:
@@ -75,13 +86,11 @@ of the wheel's behavior.
 
 ## Release tags
 
-Only newly created tags or manual workflow dispatch run release builds; moving
-an existing tag does not republish its immutable package version.
-
-Push `vMAJOR.MINOR.PATCH` to trigger the release workflow. For a zero-patch
-release, `vMAJOR.MINOR` is also accepted: `v0.6` releases package version
+Create a new `vMAJOR.MINOR.PATCH` tag to trigger the release workflow. For a
+zero-patch release, `vMAJOR.MINOR` is also accepted: `v0.6` releases package version
 `0.6.0`. Python and Rust package versions must match. The workflow publishes
-to GitHub and PyPI only after the release artifacts pass validation.
+to GitHub and PyPI only after the release artifacts pass validation. Moving an
+existing tag during a history rewrite does not republish its package version.
 
 ## Parallel builds
 

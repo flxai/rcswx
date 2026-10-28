@@ -16,11 +16,11 @@ nix develop
 make wasm-build          # crates/rcswx-wasm/pkg: ES module, WASM, types, licenses
 make wasm-bindings-test  # native session tests and real dedicated-worker tests
 make wasm-fixtures       # generate recordings from exact inputs using native Rust
-make web-demo            # local example at /rcswx/
+make web-demo            # generates recordings and serves the local example at /rcswx/
 # In another shell:
 make web-test            # exact release artifact in Chromium, Firefox, WebKit
 make web-check           # generate recordings, then formatter and TypeScript checks
-make web-build           # generate recordings and produce static assets
+make web-build            # generate recordings and produce static assets
 ```
 
 `make web-build` produces static assets under `examples/web/dist`. `wasm-pack`
@@ -294,7 +294,8 @@ source was removed after execution.
 Vite reported 276.90 kB gzip for WASM and 25.48 kB gzip for the shared
 renderer/record chunk. The distributable's npm dry-run tarball was 298,683 bytes;
 its unpacked files totaled 1,328,050 bytes, including 455,160 bytes of third-party
-notices. Generated artifacts, including browser recordings, are ignored, not committed.
+notices. Generated artifacts, including browser recordings, are ignored, not
+committed.
 
 ### Local browser timings
 

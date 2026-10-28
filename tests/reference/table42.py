@@ -18,7 +18,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 BUNDLE_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "table42"
-CHECKSUMS_SHA256 = "571c36fc2eea250763d40990cc8e650fe1678fec7b8dec9946f5d2394561b8db"
+CHECKSUMS_SHA256 = "003222a3a69abafb0b7d487beb20197156001daa805df305329c765607ead9f5"
 EXTRA_FACTORIES = ("linear_x(4)", "linear_x(0.25)")
 INPUT_PARAMS = {
     "shape": [2, 3, 32, 32],

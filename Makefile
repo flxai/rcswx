@@ -90,7 +90,7 @@ web-deps:
 web-build: wasm-build wasm-fixtures web-deps
 	npm --prefix examples/web --ignore-scripts run build
 
-web-check: wasm-build web-deps wasm-fixtures
+web-check: wasm-build wasm-fixtures web-deps
 	npm --prefix examples/web --ignore-scripts run check
 
 web-test: web-build

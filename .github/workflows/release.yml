@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   wheels:
+    # Moving an existing tag must not republish an immutable package version.
     if: github.event_name != 'push' || github.event.created
     name: Wheel (${{ matrix.platform.target }}, Python ${{ matrix.python }})
     runs-on: ${{ matrix.platform.runner }}
