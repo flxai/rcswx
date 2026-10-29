@@ -272,8 +272,8 @@ impl<'a> Application<'a> {
         Ok(best)
     }
 
-    /// Reference wrapper anchors additionally ignore endpoints/separators on the
-    /// wrong orientation and disallow backwards jumps through an interior branch.
+    /// Reference wrapper anchors additionally ignore endpoints and separators,
+    /// and disallow backwards jumps through an interior branch.
     fn nearest_wrapper_anchor(
         &self,
         operation: &Edit,
@@ -329,8 +329,11 @@ impl<'a> Application<'a> {
                 {
                     continue;
                 }
+                // The reference's `"_sep" == swapped` test reads remapped
+                // coordinates, where a swapped opener names its separator. On
+                // physical tokens it keeps every opener and drops separators.
                 let name = self.source_name(parent, token)?;
-                if name.contains("_end") || name.contains("_sep") != swapped {
+                if name.contains("_end") || name.contains("_sep") {
                     continue;
                 }
                 let distance = position as isize - closing as isize;
@@ -1438,6 +1441,7 @@ mod tests {
     use super::*;
     use crate::architecture::{Limits, SCHEMA_VERSION};
     use crate::tokens::prepare;
+    use serde_json::{Value, json};
     use std::collections::BTreeMap;
 
     fn node(id: &str, name: &str, children: &[usize]) -> Node {
@@ -1772,5 +1776,137 @@ mod tests {
             apply(&mut plan, &[0], false, &mut budget),
             Err(Error::Index)
         ));
+    }
+
+    fn budgeted<T>(f: impl FnOnce(&mut Budget<'_>) -> T) -> T {
+        let mut check = || Ok(());
+        f(&mut Budget {
+            limits: Limits::default(),
+            work: 0,
+            output: 0,
+            allocation_bytes: 0,
+            check: &mut check,
+            wait_check: None,
+        })
+    }
+    /// Python `Architecture.from_tree` layout: preorder occurrences, where
+    /// `id` maps a preorder index to its logical ID.
+    fn tree(value: &Value, id: impl Fn(usize) -> i64) -> Architecture {
+        fn add(value: &Value, id: &dyn Fn(usize) -> i64, nodes: &mut Vec<Node>) -> usize {
+            let index = nodes.len();
+            let items = value.as_array().unwrap();
+            nodes.push(node(
+                &id(index).to_string(),
+                items[0].as_str().unwrap(),
+                &[],
+            ));
+            let children = items[1..].iter().map(|item| add(item, id, nodes)).collect();
+            nodes[index].children = children;
+            index
+        }
+        let mut nodes = Vec::new();
+        add(value, &id, &mut nodes);
+        architecture(nodes)
+    }
+    fn topology(architecture: &Architecture) -> Value {
+        fn visit(architecture: &Architecture, index: usize) -> Value {
+            let node = &architecture.nodes[index];
+            let mut items = vec![Value::from(node.name.as_str())];
+            items.extend(
+                node.children
+                    .iter()
+                    .map(|&child| visit(architecture, child)),
+            );
+            Value::Array(items)
+        }
+        visit(architecture, architecture.root)
+    }
+    fn analyzed(first: Architecture, second: Architecture) -> EditPlan {
+        let prepared = prepare(first, second).unwrap();
+        budgeted(|budget| {
+            crate::edit_plan::analyze(prepared, false, "regression".into(), budget).unwrap()
+        })
+    }
+    /// Apply the validated selection of nontrivial edits accepted by `keep`.
+    fn apply_where(plan: &mut EditPlan, keep: impl Fn(&Edit) -> bool) -> Result<Architecture> {
+        let path = &plan.paths[plan.path_index];
+        let selected = plan
+            .nontrivial
+            .iter()
+            .copied()
+            .filter(|&index| keep(&path[index]))
+            .collect::<Vec<_>>();
+        budgeted(|budget| apply(plan, &selected, true, budget)).map(|child| child.architecture)
+    }
+    fn computation(name: &str) -> Value {
+        json!(["computation", [name]])
+    }
+
+    #[test]
+    fn wrapper_separator_anchor_accepts_a_swapped_opener() {
+        let first = json!([
+            "sequential",
+            [
+                "branching(2)",
+                ["clone(2)"],
+                [
+                    "branching(2)",
+                    ["clone(2)"],
+                    computation("identity"),
+                    computation("linear(32)"),
+                    ["cat(2,1)"]
+                ],
+                [
+                    "branching(2)",
+                    ["clone(2)"],
+                    computation("relu"),
+                    computation("sigmoid"),
+                    ["add(2)"]
+                ],
+                ["cat(2,1)"]
+            ],
+            [
+                "branching(2)",
+                ["clone(2)"],
+                [
+                    "routing",
+                    ["identity"],
+                    computation("linear(16)"),
+                    ["identity"]
+                ],
+                ["routing", ["identity"], computation("relu"), ["identity"]],
+                ["add(2)"]
+            ]
+        ]);
+        let second = json!([
+            "sequential",
+            [
+                "sequential",
+                [
+                    "routing",
+                    ["identity"],
+                    computation("linear(32)"),
+                    ["identity"]
+                ],
+                ["sequential", computation("sigmoid"), computation("relu")]
+            ],
+            [
+                "sequential",
+                computation("linear(16)"),
+                computation("linear(32)")
+            ]
+        ]);
+        let mut plan = analyzed(tree(&first, |i| i as i64), tree(&second, |i| i as i64));
+        // The outer wrapper's separator pass meets the inner add(2) wrapper's
+        // opener on a source-swapped path. It must end the first branch there.
+        assert!(
+            plan.paths[plan.path_index]
+                .iter()
+                .any(|op| op.op_type == "add_wrap"
+                    && op.source_i_swapped
+                    && plan.prepared.first_tokens[op.source_i].token.name == "branching(2)")
+        );
+        let child = apply_where(&mut plan, |_| true).unwrap();
+        assert_eq!(topology(&child), first);
     }
 }
