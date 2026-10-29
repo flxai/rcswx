@@ -648,6 +648,13 @@ impl<'a> Application<'a> {
                         position - 1
                     })
                     .ok_or(Error::Index)?
+            } else if children.len() == 3 {
+                // Only functions surround a single-module wrapper's module.
+                // The reference promotes one into the module slot when the
+                // wrapper's own removal is not selected.
+                return Err(Error::Reference(
+                    "removal would leave a wrapper without a module".into(),
+                ));
             } else {
                 *children
                     .get(1 + usize::from(position == 1))
@@ -2052,5 +2059,49 @@ mod tests {
         );
         let child = apply_where(&mut plan, |_| true).unwrap();
         assert_eq!(serial(&topology(&child)), serial(&first));
+    }
+
+    #[test]
+    fn removal_rejects_promoting_a_routing_function() {
+        let routing = |module: Value| json!(["routing", ["identity"], module, ["identity"]]);
+        let first = json!([
+            "branching(2)",
+            ["clone(2)"],
+            routing(json!([
+                "sequential",
+                computation("linear(16)"),
+                computation("linear(32)")
+            ])),
+            routing(computation("linear(16)")),
+            ["add(2)"]
+        ]);
+        let retained = json!([
+            "branching(2)",
+            ["clone(2)"],
+            computation("sigmoid"),
+            routing(computation("norm")),
+            ["add(2)"]
+        ]);
+        let second = json!([
+            "sequential",
+            retained,
+            routing(routing(computation("linear(32)")))
+        ]);
+        let mut plan = analyzed(tree(&first, |i| i as i64), tree(&second, |i| i as i64));
+        // Preorder occurrences of the outer routing, inner routing and module.
+        let [outer, inner, module] = [11, 13, 15].map(|i| plan.prepared.parent2_ids[i].clone());
+        let removes = |op: &Edit, ids: &[&String]| {
+            op.op_type.starts_with("rem") && ids.iter().any(|id| op.node2_id.as_ref() == Some(*id))
+        };
+        // Either enclosing removal legally enables removing the module. Without
+        // the other, a routing function would be promoted into a module slot.
+        for wrapper in [&outer, &inner] {
+            assert!(matches!(
+                apply_where(&mut plan, |op| removes(op, &[&module, wrapper])),
+                Err(Error::Reference(_))
+            ));
+        }
+        let child = apply_where(&mut plan, |op| removes(op, &[&module, &inner, &outer])).unwrap();
+        assert_eq!(topology(&child), retained);
     }
 }

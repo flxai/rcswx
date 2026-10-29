@@ -25,6 +25,10 @@ The following corrections deliberately differ from that source:
   wrapper payloads. When an accompanying binary-wrapper match requires a branch
   reorientation, application relinks its children and rebinds its anchor ID
   without copying the matched subtree from parent one.
+- Removing the only module of a routing or single-module branching wrapper
+  fails when that wrapper stays. The original's nested-wrapper dependencies
+  allow such selections, then promote a routing or aggregation function into the
+  module slot. Sampling is unchanged; application reports the failure.
 
 These corrections can change edit application order, valid selections, offspring,
 and failure behavior.
