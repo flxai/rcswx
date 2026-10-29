@@ -119,6 +119,20 @@ where
         (result, callback_error)
     })
 }
+/// An empty plan has exactly one selection, the empty mask. The retained-plan
+/// boundary returns it without a draw (the low-level zero-operation enumeration
+/// law is unchanged) but still rejects arguments a non-empty plan would reject.
+fn check_empty_plan_skewness(skewness: f64) -> PyResult<()> {
+    if skewness.is_finite() {
+        Ok(())
+    } else {
+        Err(python_error(
+            Error::Numerical("skewness must be finite".into()),
+            None,
+        ))
+    }
+}
+
 /// Opt-in profiling spans are binding-owned, independent of executor polling.
 #[derive(Clone, Default)]
 struct Profile {
@@ -362,6 +376,10 @@ impl NativePlan {
             .plan
             .selection_operations()
             .map_err(|error| python_error(error, None))?;
+        if operations.is_empty() {
+            check_empty_plan_skewness(skewness)?;
+            return Ok((vec![String::new()], vec![0.0], vec![1.0]));
+        }
         let profiled = self.profile.enabled;
         let limits = self.limits.clone();
         let (outcome, callback_error) =
@@ -400,6 +418,10 @@ impl NativePlan {
             .plan
             .selection_operations()
             .map_err(|error| python_error(error, None))?;
+        if operations.is_empty() {
+            check_empty_plan_skewness(skewness)?;
+            return Ok((String::new(), 0.0));
+        }
         let profiled = self.profile.enabled;
         let limits = self.limits.clone();
         let (outcome, callback_error) =

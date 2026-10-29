@@ -65,6 +65,57 @@ def test_empty_plan_selection_starts_at_second_portable_parent():
     assert type(selection.cost) is int
 
 
+def empty_plan():
+    tree = ("sequential", ("computation", ("linear(16)",)), ("computation", ("relu",)))
+    plan = edit_path(Architecture.from_tree(tree), Architecture.from_tree(tree))
+    assert plan.nontrivial_ops == []
+    return plan
+
+
+def test_empty_plan_sampling_returns_its_only_selection_without_drawing():
+    from rcswx import NativeRng
+
+    plan = empty_plan()
+    rng = NativeRng(0)
+    before = rng.state()
+
+    assert plan.probabilities(3) == ([""], [0.0], [1.0])
+    selection = plan.sample(3, rng=rng)
+    assert selection.indices == ()
+    assert selection.cost == 0
+    assert rng.state() == before
+    assert plan.sample(seed=0).indices == ()
+
+    for skewness in (float("nan"), float("inf")):
+        with pytest.raises(ValueError, match="finite"):
+            plan.probabilities(skewness)
+        with pytest.raises(ValueError, match="finite"):
+            plan.sample(skewness, rng=rng)
+    with pytest.raises(TypeError):
+        plan.sample(None, seed=0)
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        plan.sample(seed=0, rng=rng)
+    with pytest.raises(ValueError, match="sampler must be"):
+        plan.sample(sampler="other")
+    assert rng.state() == before
+
+
+def test_empty_plan_reference_sampling_does_not_draw_from_numpy():
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("scipy")
+    plan = empty_plan()
+    np.random.seed(5)
+    before = np.random.get_state()
+
+    assert plan.sample(sampler="reference").indices == ()
+    with pytest.raises(ValueError, match="finite"):
+        plan.sample(float("nan"), sampler="reference")
+    with pytest.raises(ValueError, match="only by sampler='native'"):
+        plan.sample(sampler="reference", seed=1)
+    after = np.random.get_state()
+    assert before[1].tobytes() == after[1].tobytes() and before[2:] == after[2:]
+
+
 def test_selection_cannot_cross_native_plan_boundaries():
     first = Architecture.from_tree(("identity",))
     second = Architecture.from_tree(("relu",))

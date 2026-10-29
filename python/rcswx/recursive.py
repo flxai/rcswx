@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import secrets
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
@@ -580,8 +581,14 @@ class Alignment:
             from .sampling_reference import select_mask
 
             resolve_rng(sampler, seed, rng)
+            skewness = float(skewness)
+            if not self._nontrivial_indices:
+                # The only selection of an empty plan needs no global-stream draw.
+                if not math.isfinite(skewness):
+                    raise ValueError("skewness must be finite")
+                return self.select("")
             masks, costs = self._native.combinations(_memory_check(self.limiter))
-            return self.select(select_mask(masks, costs, float(skewness)))
+            return self.select(select_mask(masks, costs, skewness))
         raise ValueError("sampler must be 'native' or 'reference'")
 
     def _selection_indices(self, selected_ops: object, *, validate: bool) -> tuple[int, ...]:
