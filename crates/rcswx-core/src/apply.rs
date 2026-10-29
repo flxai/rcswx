@@ -272,8 +272,9 @@ impl<'a> Application<'a> {
         Ok(best)
     }
 
-    /// Reference wrapper anchors additionally ignore endpoints and separators,
-    /// and disallow backwards jumps through an interior branch.
+    /// Reference wrapper anchors additionally ignore separators, and disallow
+    /// backwards jumps through an interior branch. Endpoints count only for a
+    /// nested wrapper that closes inside the added wrapper's span.
     fn nearest_wrapper_anchor(
         &self,
         operation: &Edit,
@@ -304,6 +305,7 @@ impl<'a> Application<'a> {
             }
         }
         let special_second = best.is_some();
+        let current = self.unordered_position(operation)?;
         for (position, &index) in self.plan.operations_unordered.iter().enumerate() {
             let candidate = self.op(index)?;
             for (parent, token, relevant, swapped) in [
@@ -323,21 +325,32 @@ impl<'a> Application<'a> {
                 if special_second && matches!(parent, Parent::Second) {
                     continue;
                 }
-                if !relevant
-                    || !self.active_token(parent, token)?
-                    || !self.same_depth(operation, position, depths)?
-                {
+                if !relevant || !self.active_token(parent, token)? {
                     continue;
                 }
                 // The reference's `"_sep" == swapped` test reads remapped
                 // coordinates, where a swapped opener names its separator. On
                 // physical tokens it keeps every opener and drops separators.
                 let name = self.source_name(parent, token)?;
-                if name.contains("_end") || name.contains("_sep") {
+                // A nested wrapper ending the span is its last module. The
+                // reference skips its endpoint, its opener, and its branch
+                // contents, so the added wrapper closed before it. An end
+                // marker's own depth is inside its final branch.
+                let nested_end = name.contains("_end") && current < position && position < closing;
+                if nested_end {
+                    if depths.get(position + 1) != depths.get(current) {
+                        continue;
+                    }
+                } else if name.contains("_end")
+                    || name.contains("_sep")
+                    || !self.same_depth(operation, position, depths)?
+                {
                     continue;
                 }
                 let distance = position as isize - closing as isize;
-                if distance == 0 || (distance < 0 && self.source_arity(parent, token)? >= 2) {
+                if distance == 0
+                    || (!nested_end && distance < 0 && self.source_arity(parent, token)? >= 2)
+                {
                     continue;
                 }
                 let item = Anchor {
@@ -467,10 +480,17 @@ impl<'a> Application<'a> {
             self.nearest_wrapper_anchor(operation, end_position, Some(end_second), &depths)?;
         let mut end = match endpoint {
             None => None,
-            Some(anchor) if anchor.after => self
-                .next_after(self.anchor_node(anchor)?, arity == 3)?
-                .map(|node| self.id(node).map(str::to_owned))
-                .transpose()?,
+            Some(anchor) if anchor.after => {
+                // An endpoint names a wrapper that closes inside the span, so
+                // the span continues after its whole subtree. The reference
+                // steps into a branch wrapper here, splitting it off the span.
+                let closed = self
+                    .source_name(anchor.parent, anchor.token)?
+                    .contains("_end");
+                self.next_after(self.anchor_node(anchor)?, arity == 3 || closed)?
+                    .map(|node| self.id(node).map(str::to_owned))
+                    .transpose()?
+            }
             Some(anchor) => Some(self.id(self.anchor_node(anchor)?)?.to_owned()),
         };
         let mut target = self.sequence_boundary(start, end.as_deref())?;
@@ -2103,5 +2123,54 @@ mod tests {
         }
         let child = apply_where(&mut plan, |op| removes(op, &[&module, &inner, &outer])).unwrap();
         assert_eq!(topology(&child), retained);
+    }
+
+    #[test]
+    fn added_wrapper_keeps_its_trailing_nested_wrapper() {
+        let routing = |module: Value| json!(["routing", ["identity"], module, ["identity"]]);
+        let branch =
+            |one: Value, two: Value| json!(["branching(2)", ["clone(2)"], one, two, ["cat(2,1)"]]);
+        let sequence = |one: Value, two: Value| json!(["sequential", one, two]);
+        let inner = branch(computation("linear(16)"), computation("linear(32)"));
+        let cases = [
+            // Only the nested wrapper's endpoint lies between its last module
+            // and the routing's closer; its branches have their own depths.
+            (
+                routing(sequence(
+                    computation("relu"),
+                    json!([
+                        "branching(2)",
+                        ["clone(2)"],
+                        computation("identity"),
+                        computation("relu"),
+                        ["add(2)"]
+                    ]),
+                )),
+                computation("linear(32)"),
+            ),
+            (
+                branch(
+                    computation("linear(16)"),
+                    sequence(
+                        computation("sigmoid"),
+                        branch(computation("relu"), computation("sigmoid")),
+                    ),
+                ),
+                sequence(computation("relu"), computation("relu")),
+            ),
+            // The closer aligns with a matched wrapper retained from parent two.
+            (
+                branch(
+                    computation("norm"),
+                    sequence(computation("relu"), inner.clone()),
+                ),
+                sequence(computation("sigmoid"), inner),
+            ),
+        ];
+        for (first, second) in cases {
+            let mut plan = analyzed(tree(&first, |i| i as i64), tree(&second, |i| i as i64));
+            let child = apply_where(&mut plan, |_| true).unwrap();
+            assert_eq!(serial(&topology(&child)), serial(&first), "{first}");
+        }
     }
 }

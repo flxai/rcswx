@@ -18,6 +18,9 @@ The following corrections deliberately differ from that source:
   than remapped trace coordinates. Swap bookkeeping distinguishes wrappers even
   when their logical IDs repeat. Removing a binary wrapper serializes its
   branches in the retained path's order, not by the recursive swap flag.
+- An added wrapper keeps a nested wrapper that ends its span, including a
+  matched wrapper retained from parent two. The original closes the added
+  wrapper before that nested wrapper, which then follows it.
 - Adding a binary wrapper requires added material only in a branch that would
   otherwise be empty. The original can also require an addition in the retained
   branch, including an impossible empty enabler group.
