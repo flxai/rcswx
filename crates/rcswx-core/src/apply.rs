@@ -702,10 +702,15 @@ impl<'a> Application<'a> {
         let occurrence = self.occurrence(Parent::First, operation.source_i)?;
         let copied = self.copy_parent(Parent::First, occurrence, budget)?;
         let added = copied[occurrence];
-        let second_id = self
-            .source_id(Parent::Second, operation.source_j)?
-            .to_owned();
-        let (before, target) = if second_id == "-1" {
+        // Only the synthetic start token prepends. A real occurrence may carry
+        // logical ID "-1", for example after renumbering below negative IDs.
+        let at_start = self
+            .tokens(Parent::Second)
+            .get(operation.source_j)
+            .ok_or(Error::Index)?
+            .occurrence
+            .is_none();
+        let (before, target) = if at_start {
             (true, self.root)
         } else {
             match self.nearest_add_anchor(operation, &self.depth()?)? {
@@ -1908,5 +1913,65 @@ mod tests {
         );
         let child = apply_where(&mut plan, |_| true).unwrap();
         assert_eq!(topology(&child), first);
+    }
+
+    #[test]
+    fn negative_logical_ids_do_not_alias_the_start_sentinel() {
+        let cases = [
+            // Insertion after a real occurrence renumbered to "-1".
+            (
+                json!([
+                    "sequential",
+                    ["sequential", computation("relu"), computation("linear(16)")],
+                    computation("softmax")
+                ]),
+                json!(["sequential", computation("relu"), computation("softmax")]),
+                -3,
+                -1,
+            ),
+            (
+                json!([
+                    "branching(2)",
+                    ["clone(2)"],
+                    ["sequential", computation("relu"), computation("sigmoid")],
+                    computation("norm"),
+                    ["add(2)"]
+                ]),
+                json!([
+                    "branching(2)",
+                    ["clone(2)"],
+                    computation("relu"),
+                    computation("norm"),
+                    ["add(2)"]
+                ]),
+                -13,
+                1,
+            ),
+            // A genuine start insertion while parent two's root is "-1".
+            (
+                json!([
+                    "sequential",
+                    computation("sigmoid"),
+                    ["sequential", computation("relu"), computation("norm")]
+                ]),
+                json!(["sequential", computation("relu"), computation("norm")]),
+                -9,
+                1,
+            ),
+        ];
+        for (first, second, base, step) in cases {
+            for base in [0, base] {
+                let mut plan = analyzed(
+                    tree(&first, |i| base + step * i as i64),
+                    tree(&second, |i| i as i64),
+                );
+                assert_eq!(
+                    base < 0,
+                    plan.prepared.parent2_ids.iter().any(|id| id == "-1")
+                );
+                let child = apply_where(&mut plan, |_| true).unwrap();
+                assert_eq!(topology(&child), first, "first IDs start at {base}");
+            }
+        }
     }
 }
