@@ -186,3 +186,24 @@ fn seeded_masks_use_nontrivial_positions_and_empty_edits_stay_empty() {
         );
     }
 }
+#[test]
+fn repeated_selection_indices_are_rejected_instead_of_double_charged() {
+    let pairs = inputs();
+    let (a, b) = parents(&pairs[0]);
+    let mut s = Session::new("duplicate").unwrap();
+    let p = s.analyze(a, b, "{}").unwrap();
+    let (index, single) = p
+        .nontrivial
+        .iter()
+        .find_map(|&index| {
+            s.apply_selection(&p.plan_id, &json!([index]).to_string())
+                .ok()
+                .map(|applied| (index, applied))
+        })
+        .unwrap();
+    assert_eq!(single.cost, p.path[index].value);
+    let error = s
+        .apply_selection(&p.plan_id, &json!([index, index]).to_string())
+        .unwrap_err();
+    assert_eq!(error.code, "invalid_selection");
+}

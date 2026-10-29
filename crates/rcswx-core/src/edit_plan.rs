@@ -826,16 +826,23 @@ impl EditPlan {
 
     /// Validate one explicit selection without enumerating alternative masks.
     /// Membership follows legacy `MatrixOperation.__eq__`: equal operation IDs
-    /// are equivalent even when their retained path occurrences differ.
+    /// are equivalent even when their retained path occurrences differ. Each
+    /// path occurrence may be selected once, so its cost is charged once.
     pub fn validate_selection(&self, indices: &[usize]) -> Result<()> {
         let path = self.selected_path()?;
         let nontrivial: HashSet<usize> = self.nontrivial.iter().copied().collect();
+        let mut selected_indices = HashSet::new();
         let mut selected_ids = HashSet::new();
         for &index in indices {
             let edit = path.get(index).ok_or(Error::Index)?;
             if !nontrivial.contains(&index) {
                 return Err(Error::InvalidInput(
                     "selection contains a trivial operation".into(),
+                ));
+            }
+            if !selected_indices.insert(index) {
+                return Err(Error::InvalidInput(
+                    "selection contains a duplicate operation".into(),
                 ));
             }
             selected_ids.insert(edit.id);
@@ -1252,6 +1259,13 @@ mod tests {
             ))
         );
         assert_eq!(plan.validate_selection(&[usize::MAX]), Err(Error::Index));
+        let repeated = [plan.nontrivial[0], plan.nontrivial[0]];
+        assert_eq!(
+            plan.validate_selection(&repeated),
+            Err(Error::InvalidInput(
+                "selection contains a duplicate operation".into()
+            ))
+        );
     }
 
     #[test]

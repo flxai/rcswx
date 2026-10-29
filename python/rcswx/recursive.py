@@ -557,6 +557,8 @@ class Alignment:
             indices = tuple(indices_or_mask)
             if any(not isinstance(index, int) or isinstance(index, bool) for index in indices):
                 raise TypeError("selection indices must be integers")
+            if any(index < 0 for index in indices):
+                raise ValueError("selection indices must be non-negative")
         self._native.validate_selection(indices)
         return Selection(self, indices)
 

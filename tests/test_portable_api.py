@@ -244,3 +244,17 @@ def test_stale_legacy_plan_rejects_selection_without_advancing_rng():
     with pytest.raises(ValueError, match="parents changed"):
         plan.sample(rng=rng)
     assert rng.state() == before
+
+
+def test_selection_rejects_repeated_and_negative_indices_without_double_charging():
+    first = Architecture.from_tree(("computation", ("identity",)))
+    second = Architecture.from_tree(("computation", ("relu",)))
+    plan = edit_path(first, second)
+    (index,) = plan.select("1").indices
+    single = plan.select([index])
+    assert single.cost == plan.distance == 0.5
+
+    with pytest.raises(ValueError, match="duplicate"):
+        plan.select([index, index])
+    with pytest.raises(ValueError, match="non-negative"):
+        plan.select([-1])
