@@ -86,3 +86,17 @@ def test_converter_rejects_parameter_sharing_instead_of_forcing_a_tree():
 
     with pytest.raises(UnsupportedModuleError, match="sharing"):
         capture(source, input_spec=INPUT_SPEC)
+
+
+def test_converter_capture_rejects_module_hooks():
+    registration = register_importer(
+        "hooked-linear-relu", "1", [nn.Sequential], linear_relu_sequential_converter
+    )
+    source = nn.Sequential(nn.Linear(8, 16), nn.ReLU())
+    try:
+        with source[1].register_forward_hook(lambda module, inputs, output: output + 1):
+            with pytest.raises(UnsupportedModuleError, match="hooks at '1'"):
+                capture(source, input_spec=INPUT_SPEC)
+    finally:
+        unregister_importer(registration.name, registration.version)
+

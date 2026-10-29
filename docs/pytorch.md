@@ -299,8 +299,10 @@ per-tensor dtype, device, and gradient requirements, **not tensor values**.
 Explicit build options override device, floating/complex dtype, or training mode.
 
 Capture rejects stale retained topology or bindings, shared modules, shared
-parameter/buffer objects, and distinct tensors that share backing storage.
-Stale provenance is not silently reinterpreted through a converter.
+parameter/buffer objects, distinct tensors that share backing storage, and
+module forward/backward hooks or parameter/buffer gradient hooks on the root or
+any submodule; the architecture cannot represent hook behavior, so remove the
+hooks first. Stale provenance is not silently reinterpreted through a converter.
 
 ## Save and load trained state
 

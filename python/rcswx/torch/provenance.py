@@ -48,10 +48,12 @@ def capture(
 
     Capture never executes ``forward``. A model bearing stale retained
     provenance raises immediately; it is never silently reinterpreted through
-    a converter.
+    a converter. Module and tensor hooks are rejected because the captured
+    architecture cannot represent them.
     """
     if not isinstance(model, nn.Module):
         raise TypeError("capture requires torch.nn.Module")
+    _assert_no_hooks(model, context="capture")
     carrier = _carrier_from(model)
     if carrier is not None:
         return _capture_retained(model, carrier, input_spec)
@@ -508,6 +510,22 @@ def _validate_bindings(model: nn.Module, captured: CapturedArchitecture) -> None
             raise StaleProvenanceError("retained provenance parameter binding is stale")
         if any(path not in buffers for path in buffer_paths):
             raise StaleProvenanceError("retained provenance buffer binding is stale")
+
+
+def _assert_no_hooks(model: nn.Module, *, context: str) -> None:
+    for path, module in model.named_modules():
+        if (
+            module._forward_hooks
+            or module._forward_pre_hooks
+            or module._backward_hooks
+            or module._backward_pre_hooks
+        ):
+            raise UnsupportedModuleError(f"{context}: module hooks at {path!r} are unsupported")
+    for path, tensor in (*model.named_parameters(), *model.named_buffers()):
+        if tensor._backward_hooks or getattr(tensor, "_post_accumulate_grad_hooks", None):
+            raise UnsupportedModuleError(
+                f"{context}: tensor gradient hooks at {path!r} are unsupported"
+            )
 
 
 def _assert_no_sharing(model: nn.Module) -> None:

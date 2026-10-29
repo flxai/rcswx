@@ -243,3 +243,33 @@ def test_capture_rejects_stale_structure_without_treating_trained_values_as_stal
     model.first_fn = torch.nn.Identity()
     with pytest.raises(StaleProvenanceError, match="stale"):
         capture(model)
+
+
+@pytest.mark.parametrize("target", ["root", "child"])
+@pytest.mark.parametrize(
+    "hook_kind", ["forward", "forward_pre", "backward", "backward_pre", "parameter"]
+)
+def test_capture_and_save_reject_hooks_instead_of_dropping_them(tmp_path, target, hook_kind):
+    model = build(architecture("relu"))
+    module = model if target == "root" else model.first_fn.computation_fn.fn
+    if hook_kind == "forward":
+        handle = module.register_forward_hook(lambda module, inputs, output: output + 1)
+    elif hook_kind == "forward_pre":
+        handle = module.register_forward_pre_hook(lambda module, inputs: (inputs[0] + 1,))
+    elif hook_kind == "backward":
+        handle = module.register_full_backward_hook(lambda module, grad_in, grad_out: None)
+    elif hook_kind == "backward_pre":
+        handle = module.register_full_backward_pre_hook(lambda module, grad_out: None)
+    else:
+        handle = next(module.parameters()).register_hook(lambda gradient: gradient * 0)
+    checkpoint = tmp_path / "hooked.pt"
+
+    with handle:
+        with pytest.raises(UnsupportedModuleError, match="hooks at"):
+            capture(model)
+        with pytest.raises(UnsupportedModuleError, match="hooks at"):
+            save(model, checkpoint)
+    assert not checkpoint.exists()
+
+    save(model, checkpoint)
+    assert capture(load(checkpoint)).architecture == capture(model).architecture

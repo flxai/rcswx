@@ -9,6 +9,7 @@ from torch.fx import GraphModule, Proxy, Tracer
 from ._isolation import isolated_model, preserve_rng
 from .grammar_backends import resolve_backend
 from .provenance import (
+    _assert_no_hooks,
     _assert_no_sharing,
     _converter_bindings,
     _execution_assumptions,
@@ -71,19 +72,7 @@ def import_model(
     if not isinstance(model, nn.Module):
         raise TypeError("import_model requires torch.nn.Module")
     _assert_no_sharing(model)
-    for path, module in model.named_modules():
-        if (
-            module._forward_hooks
-            or module._forward_pre_hooks
-            or module._backward_hooks
-            or module._backward_pre_hooks
-        ):
-            raise UnsupportedModuleError(f"capture: module hooks at {path!r} are unsupported")
-    for path, tensor in (*model.named_parameters(), *model.named_buffers()):
-        if tensor._backward_hooks or getattr(tensor, "_post_accumulate_grad_hooks", None):
-            raise UnsupportedModuleError(
-                f"capture: tensor gradient hooks at {path!r} are unsupported"
-            )
+    _assert_no_hooks(model, context="capture")
     execution = _execution_assumptions(model)
     if len(set(execution["module_training"].values())) != 1:
         raise UnsupportedModuleError("capture: mixed module training modes are unsupported")
