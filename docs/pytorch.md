@@ -324,8 +324,15 @@ The checkpoint contains a validated manifest and state dictionary. Unlike
 `build(capture(model))`, loading restores parameter and buffer values. Optimizer
 state is not included; save it separately if you need to resume training.
 
-Loading uses Torch's weights-only loader and rebuilds supported structures through
-the installed grammar/converter contracts. It validates the manifest and state
+Managed checkpoints cover only RCSWX-built modules with retained provenance:
+those returned by `build`, `load`, or module crossover. `save` rejects a
+converter-captured source model before writing the file, because its state
+layout differs from the rebuilt module's. Save such a model with
+`torch.save(model.state_dict(), ...)`, or use `build(capture(model))` for a
+fresh managed module (source weights are not copied).
+
+Loading uses Torch's weights-only loader and rebuilds the architecture through
+the installed grammar. It validates the manifest and state
 dictionary rather than unpickling a whole executable model. A checkpoint cannot
 make an unsupported architecture importable.
 

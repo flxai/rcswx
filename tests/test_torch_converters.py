@@ -7,7 +7,9 @@ from rcswx.torch import (
     build,
     capture,
     linear_relu_sequential_converter,
+    load,
     register_importer,
+    save,
     unregister_importer,
 )
 from torch import nn
@@ -100,3 +102,31 @@ def test_converter_capture_rejects_module_hooks():
     finally:
         unregister_importer(registration.name, registration.version)
 
+
+def test_managed_save_rejects_converter_capture_without_touching_destination(tmp_path):
+    def converter(model, input_spec):
+        # The converter supplies its own input assumptions, so save's
+        # input-free capture succeeds and must be rejected by save itself.
+        return linear_relu_sequential_converter(model, INPUT_SPEC)
+
+    registration = register_importer("spec-linear-relu", "1", [nn.Sequential], converter)
+    source = nn.Sequential(nn.Linear(8, 16), nn.ReLU())
+    checkpoint = tmp_path / "source.pt"
+    checkpoint.write_bytes(b"existing")
+    try:
+        assert capture(source).metadata["capture_kind"] == "converter"
+        with pytest.raises(UnsupportedModuleError, match="retained provenance"):
+            save(source, checkpoint)
+        assert checkpoint.read_bytes() == b"existing"
+
+        managed = build(capture(source))
+    finally:
+        unregister_importer(registration.name, registration.version)
+
+    managed.eval()
+    save(managed, checkpoint)
+    restored = load(checkpoint)
+    restored.eval()
+    inputs = torch.randn(3, 8)
+    with torch.no_grad():
+        torch.testing.assert_close(restored(inputs), managed(inputs))

@@ -94,8 +94,17 @@ def save(model: nn.Module, path: Any) -> None:
 
     The function deliberately does not save a whole module object. ``load``
     uses PyTorch's weights-only mode and the installed grammar allowlist.
+    Only RCSWX-built modules with retained provenance are supported; other
+    captures are rejected before ``path`` is written.
     """
     captured = capture(model)
+    if captured.metadata.get("capture_kind") != "retained":
+        raise UnsupportedModuleError(
+            "managed checkpoints support only RCSWX-built modules with retained "
+            "provenance; load cannot restore converter-captured source state. "
+            "Use build(capture(model)) for a fresh managed module, or save "
+            "model.state_dict() with torch.save"
+        )
     state_dict = model.state_dict()
     state_dict[_extra_state_key()] = captured.to_manifest()
     torch.save(
