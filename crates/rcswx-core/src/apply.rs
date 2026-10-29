@@ -754,20 +754,25 @@ impl<'a> Application<'a> {
                         } else {
                             (true, *self.children(node)?.get(1).ok_or(Error::Index)?)
                         }
-                    } else if name.contains("_end") {
+                    } else if name.contains("_end") || name.contains("_sep") {
+                        // Inserting before a boundary closes the branch the path
+                        // traverses last or first. The reference's `"_sep" ==
+                        // swapped` test reads remapped coordinates; physical
+                        // children follow the swap, and before an opener is
+                        // before its wrapper.
+                        let children = self.children(node)?;
+                        let swapped = usize::from(anchor.swapped);
+                        let branch = if name.contains("_end") {
+                            children.len().checked_sub(2 + swapped)
+                        } else {
+                            Some(1 + swapped)
+                        };
                         (
                             false,
-                            *self
-                                .children(node)?
-                                .iter()
-                                .rev()
-                                .nth(1)
+                            *branch
+                                .and_then(|branch| children.get(branch))
                                 .ok_or(Error::Index)?,
                         )
-                    } else if (name.contains("_sep") && !anchor.swapped)
-                        || (!name.contains("_sep") && anchor.swapped)
-                    {
-                        (false, *self.children(node)?.get(1).ok_or(Error::Index)?)
                     } else {
                         (true, node)
                     }
@@ -2211,6 +2216,40 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(ends.first(), Some(&"rem_wrap_end"));
         assert_eq!(ends.last(), Some(&"add_wrap_end"));
+        let child = apply_where(&mut plan, |_| true).unwrap();
+        assert_eq!(serial(&topology(&child)), serial(&first));
+    }
+
+    #[test]
+    fn insertion_before_a_swapped_opener_precedes_its_wrapper() {
+        let branch =
+            |one: Value, two: Value| json!(["branching(2)", ["clone(2)"], one, two, ["cat(2,1)"]]);
+        let first = branch(
+            computation("norm"),
+            json!([
+                "sequential",
+                computation("sigmoid"),
+                branch(computation("sigmoid"), computation("relu"))
+            ]),
+        );
+        let second = json!([
+            "sequential",
+            computation("relu"),
+            branch(computation("relu"), computation("linear(16)"))
+        ]);
+        let mut plan = analyzed(tree(&first, |i| i as i64), tree(&second, |i| i as i64));
+        // The insertion's nearest anchor is the following opener of a
+        // zero-cost match that the path traverses in swapped order.
+        let path = &plan.paths[plan.path_index];
+        let order = plan
+            .operations_unordered
+            .iter()
+            .map(|&index| &path[index])
+            .collect::<Vec<_>>();
+        assert!(order.windows(2).any(|pair| pair[0].op_type == "add_module"
+            && pair[1].op_type == "mut_wrap"
+            && pair[1].value == 0.0
+            && pair[1].source_i_swapped != pair[1].source_j_swapped));
         let child = apply_where(&mut plan, |_| true).unwrap();
         assert_eq!(serial(&topology(&child)), serial(&first));
     }
