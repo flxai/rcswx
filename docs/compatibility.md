@@ -17,7 +17,9 @@ The following corrections deliberately differ from that source:
 - Recursive edits and wrapper boundaries use physical source occurrences rather
   than remapped trace coordinates. Swap bookkeeping distinguishes wrappers even
   when their logical IDs repeat. Removing a binary wrapper serializes its
-  branches in the retained path's order, not by the recursive swap flag.
+  branches in the retained path's order, not by the recursive swap flag. An
+  added wrapper closes at its own boundary edits, not at a parent-two removal
+  that carries its logical ID.
 - An added wrapper keeps a nested wrapper that ends its span, including a
   matched wrapper retained from parent two. The original closes the added
   wrapper before that nested wrapper, which then follows it.

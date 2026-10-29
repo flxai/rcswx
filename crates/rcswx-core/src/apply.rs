@@ -427,6 +427,28 @@ impl<'a> Application<'a> {
         Ok(node)
     }
 
+    /// Path position and parent-two token of the edit consuming an added
+    /// wrapper's own boundary. The reference matches any `_end` or `_sep` edit
+    /// carrying the wrapper's logical ID, including parent-two removals aligned
+    /// while parent one still points at its opener.
+    fn own_boundary(&self, operation: &Edit, name: &str) -> Result<(usize, usize)> {
+        let owner = self.occurrence(Parent::First, operation.source_i)?;
+        for (position, &index) in self.plan.operations_unordered.iter().enumerate() {
+            let candidate = self.op(index)?;
+            let token = self
+                .tokens(Parent::First)
+                .get(candidate.source_i)
+                .ok_or(Error::Index)?;
+            if (candidate.op_type.contains("add") || candidate.op_type.contains("mut"))
+                && token.occurrence == Some(owner)
+                && token.token.name == name
+            {
+                return Ok((position, candidate.source_j));
+            }
+        }
+        Err(Error::Index)
+    }
+
     /// Reconstruct the same serial segment chosen by `add_wrap`. The initial end
     /// anchor pass selects three-child wrappers. Four-child branch wrappers repeat
     /// selection at their separator before replacing two serialized branches.
@@ -465,17 +487,7 @@ impl<'a> Application<'a> {
         }
         let start = start.ok_or(Error::Index)?;
         let depths = self.depth()?;
-        let (end_position, end_second) = self
-            .plan
-            .operations_unordered
-            .iter()
-            .enumerate()
-            .find_map(|(position, &index)| {
-                let candidate = self.op(index).ok()?;
-                (candidate.node1_id == operation.node1_id && candidate.op_type.contains("_end"))
-                    .then_some((position, candidate.source_j))
-            })
-            .ok_or(Error::Index)?;
+        let (end_position, end_second) = self.own_boundary(operation, "wrap_end")?;
         let endpoint =
             self.nearest_wrapper_anchor(operation, end_position, Some(end_second), &depths)?;
         let mut end = match endpoint {
@@ -512,17 +524,7 @@ impl<'a> Application<'a> {
         }
         if arity == 4 {
             let depths = self.depth()?;
-            let separator = self
-                .plan
-                .operations_unordered
-                .iter()
-                .enumerate()
-                .find_map(|(position, &index)| {
-                    let candidate = self.op(index).ok()?;
-                    (candidate.node1_id == operation.node1_id && candidate.op_type.contains("_sep"))
-                        .then_some(position)
-                })
-                .ok_or(Error::Index)?;
+            let (separator, _) = self.own_boundary(operation, "wrap_sep")?;
             end = match self.nearest_wrapper_anchor(operation, separator, None, &depths)? {
                 None => None,
                 Some(anchor) if anchor.after => self
@@ -2172,5 +2174,44 @@ mod tests {
             let child = apply_where(&mut plan, |_| true).unwrap();
             assert_eq!(serial(&topology(&child)), serial(&first), "{first}");
         }
+    }
+
+    #[test]
+    fn added_wrapper_closes_at_its_own_boundary() {
+        let routing = |module: Value| json!(["routing", ["identity"], module, ["identity"]]);
+        let branch =
+            |one: Value, two: Value| json!(["branching(2)", ["clone(2)"], one, two, ["cat(2,1)"]]);
+        let first = routing(routing(json!([
+            "sequential",
+            computation("relu"),
+            computation("norm")
+        ])));
+        let second = branch(
+            computation("norm"),
+            json!([
+                "sequential",
+                branch(computation("linear(16)"), computation("linear(16)")),
+                branch(computation("relu"), computation("norm"))
+            ]),
+        );
+        let mut plan = analyzed(tree(&first, |i| i as i64), tree(&second, |i| i as i64));
+        // Removing parent two's wrappers aligns while parent one still points
+        // at the inner routing's opener, so a removal endpoint carries its ID
+        // before the routing's own endpoint.
+        let inner = plan.prepared.first.nodes[2].id.clone();
+        let path = &plan.paths[plan.path_index];
+        let ends = plan
+            .operations_unordered
+            .iter()
+            .map(|&index| &path[index])
+            .filter(|op| {
+                op.node1_id.as_deref() == Some(inner.as_str()) && op.op_type.contains("_end")
+            })
+            .map(|op| op.op_type.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(ends.first(), Some(&"rem_wrap_end"));
+        assert_eq!(ends.last(), Some(&"add_wrap_end"));
+        let child = apply_where(&mut plan, |_| true).unwrap();
+        assert_eq!(serial(&topology(&child)), serial(&first));
     }
 }
