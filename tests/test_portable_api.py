@@ -309,3 +309,31 @@ def test_selection_rejects_repeated_and_negative_indices_without_double_charging
         plan.select([index, index])
     with pytest.raises(ValueError, match="non-negative"):
         plan.select([-1])
+
+
+def test_repeated_portable_application_does_not_depend_on_earlier_applications():
+    def pair(left, right):
+        return ("sequential", ("computation", (left,)), ("computation", (right,)))
+
+    first = Architecture.from_tree(
+        ("sequential", pair("linear(16)", "relu"), pair("linear(8)", "softmax"))
+    )
+    second = Architecture.from_tree(pair("linear(32)", "identity"))
+
+    def fresh(mask):
+        plan = edit_path(first, second)
+        return apply_edits(plan, plan.select(mask)).to_json()
+
+    plan = edit_path(first, second)
+    masks = plan.probabilities()[0]
+    expected = {mask: fresh(mask) for mask in masks}
+    full = "1" * len(plan.nontrivial_ops)
+    # Full application inserts sequence nodes with newly allocated IDs.
+    assert len(Architecture.from_json(expected[full]).to_dict()["nodes"]) > len(
+        second.to_dict()["nodes"]
+    )
+    samples = [plan.sample(seed=seed).indices for seed in range(8)]
+
+    for mask in [full, *masks, *reversed(masks), full]:
+        assert apply_edits(plan, plan.select(mask)).to_json() == expected[mask]
+    assert [plan.sample(seed=seed).indices for seed in range(8)] == samples

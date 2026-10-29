@@ -465,8 +465,11 @@ impl NativePlan {
     ) -> PyResult<(String, String, usize)> {
         let started = self.profile.enabled.then(Instant::now);
         let limits = self.limits.clone();
+        // Portable application is a pure function of the retained plan, as in
+        // WASM: fresh IDs restart for every call. Legacy recipes keep advancing.
+        let mut plan = self.plan.clone();
         let (outcome, callback_error) = detached_with_budget(py, limits, memory_check, |budget| {
-            apply::apply(&mut self.plan, &selected, validate, budget)
+            apply::apply(&mut plan, &selected, validate, budget)
         });
         let result = outcome.map_err(|error| python_error(error, callback_error))?;
         if let Some(start) = started {
