@@ -29,7 +29,8 @@ The following corrections deliberately differ from that source:
 - Zero-cost matches do not replace unchanged modules, routing functions, or
   wrapper payloads. When an accompanying binary-wrapper match requires a branch
   reorientation, application relinks its children and rebinds its anchor ID
-  without copying the matched subtree from parent one.
+  without copying the matched subtree from parent one. A match accompanies the
+  preceding nonzero edit in application order.
 - Removing the only module of a routing or single-module branching wrapper
   fails when that wrapper stays. The original's nested-wrapper dependencies
   allow such selections, then promote a routing or aggregation function into the
@@ -65,3 +66,6 @@ swapped order: an edit inside it can name the other branch's source occurrence.
 The original records the same node ID but applies a remapped coordinate. Here,
 application edits the wrong module, so the child can differ from parent one, or
 application fails with a missing mutation target or the removal guard above.
+A swapped zero-cost binary-wrapper match that precedes every nonzero edit in
+application order accompanies none, so it keeps parent two's branch order even
+when every edit is selected.

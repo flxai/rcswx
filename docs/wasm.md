@@ -103,7 +103,9 @@ not a promise of original-output parity.
 
 Empty selection starts from prepared **Parent 2**, not Parent 1. The target is
 Parent 1's operation topology, modulo associative sequential grouping and
-commutative additive branches. Endpoint comparisons also account for ID
+commutative additive branches. This target is not guaranteed for arbitrary
+pairs; [known swapped-path limitations](compatibility.md#what-the-checks-establish)
+can change the endpoint or cause application to fail. Endpoint comparisons also account for ID
 renumbering and output arena compaction; they are not raw input JSON equality.
 Opaque parameters/provenance are inherited from actual source occurrences, and
 `input_spec` is inherited from Parent 2. They are not alignment dimensions and
