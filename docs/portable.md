@@ -84,7 +84,8 @@ preservation/application semantics.
 
 A mask follows `plan.nontrivial_ops` order. Do not reuse this example's mask for
 an unrelated plan. `plan.select` also accepts selected-path operation indices,
-which are **not** the numbered bit positions printed above. Edits can have
+which are **not** the numbered bit positions printed above. Indices must be
+non-negative and may each appear only once; duplicates are rejected. Edits can have
 enabling/disabling dependencies: this pair has two independent changes, but not
 every subset of a larger plan is applicable. Selection validation checks edit
 dependencies; it does not guarantee that the selected edits can be materialized
@@ -108,6 +109,9 @@ For this pair and seed, sampling also produces `Linear(…, 32) → ReLU`.
 Selections belong to one plan and cannot be applied to another, even if it was
 created from the same parents. Portable `Architecture` values are immutable;
 alignment and application do not mutate the input values.
+Repeated or interleaved `apply_edits` calls with the same portable plan and
+selection produce identical children, including newly allocated IDs. Legacy
+application retains its historical advancing ID counter.
 
 Use each plan from one thread at a time. Concurrent calls on the same plan are
 not supported; use separate plans for concurrent work.
@@ -122,6 +126,12 @@ contract and the [fresh-module API](pytorch.md#cross-two-models).
 Native ChaCha12 sampling is the default. It uses an RCSWX RNG rather than
 NumPy's global stream, and a structural seed never seeds PyTorch weight
 initialization.
+
+A plan with no nontrivial edits has exactly one selection:
+`plan.probabilities()` returns `([""], [0.0], [1.0])`, and `plan.sample()` returns
+the empty selection with cost zero. Neither native nor reference sampling draws
+from its RNG in this case. Invalid skewness, sampler, seed, and RNG arguments
+are still rejected.
 
 For a sequence of draws, keep a `NativeRng` stream instead of reseeding every
 call. Checkpoint its state to replay a later selection:

@@ -94,6 +94,11 @@ Native quota accounting is not throttled with host polling. RSS checks are
 sampled and can overshoot a threshold between polls, so they are not a hard
 process-memory ceiling.
 
+Python signals are polled on the same checkpoint schedule even without an RSS
+callback, including portable serial calls. Serial analysis checkpoints can be
+sparse, so interrupt delivery may still take seconds during long analysis
+steps; this is not a fixed wall-clock latency guarantee.
+
 Parallel calls additionally poll elapsed time at 10 ms intervals while waiting
 for compute jobs. This does not change canonical work or allocation counters.
 The coordinator handles callbacks and signals; interrupted calls join their
