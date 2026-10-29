@@ -88,15 +88,14 @@ where
             })
         };
         let result = {
-            // Core checkpoints account every unit of work/allocation. Host RSS
-            // polling is much more expensive: check initially, periodically,
-            // and before publishing success, not for every enumeration visit.
+            // Core checkpoints account every unit of work/allocation. Host
+            // polling (signals, plus RSS when requested) is much more expensive:
+            // check initially, periodically, and before publishing success, not
+            // for every enumeration visit. Signals are polled even without an
+            // RSS callback so serial work remains promptly interruptible.
             let poll = std::cell::RefCell::new(&mut poll);
             let mut until_poll = 0;
             let mut check = || {
-                if memory_check.is_none() {
-                    return Ok(());
-                }
                 if until_poll == 0 {
                     until_poll = 1023;
                     (*poll.borrow_mut())()

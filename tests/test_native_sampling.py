@@ -1,3 +1,5 @@
+import os
+import subprocess
 import sys
 
 import pytest
@@ -192,3 +194,39 @@ def test_batched_host_polling_does_not_disable_native_output_limit():
     plan = budgeted_choice_plan(12, max_output=1024)
     with pytest.raises(MemoryError, match="output limit"):
         plan.combinations(lambda: True)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX process signals")
+def test_sigint_interrupts_serial_enumeration_without_memory_callback():
+    script = """
+import os
+import signal
+import sys
+import threading
+import time
+from rcswx import Alignment, Architecture
+def tree(name, width):
+    if width == 1:
+        return ('computation', (name,))
+    middle = width // 2
+    return ('sequential', tree(name, middle), tree(name, width - middle))
+plan = Alignment(
+    Architecture.from_tree(tree('relu', 17)),
+    Architecture.from_tree(tree('sigmoid', 17)),
+    limits={'max_output': 1 << 16},
+)._native
+def interrupt():
+    time.sleep(0.001)
+    # The main thread keeps the GIL until native enumeration detaches.
+    os.kill(os.getpid(), signal.SIGINT)
+sys.setswitchinterval(1e6)
+threading.Thread(target=interrupt, daemon=True).start()
+try:
+    # Without host signal polling this reaches the output limit first.
+    plan.combinations()
+except KeyboardInterrupt:
+    pass
+else:
+    raise AssertionError('serial enumeration ignored SIGINT')
+"""
+    subprocess.run([sys.executable, "-I", "-c", script], check=True, timeout=60)
