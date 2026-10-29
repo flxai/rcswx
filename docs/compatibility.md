@@ -16,7 +16,8 @@ The following corrections deliberately differ from that source:
 
 - Recursive edits and wrapper boundaries use physical source occurrences rather
   than remapped trace coordinates. Swap bookkeeping distinguishes wrappers even
-  when their logical IDs repeat.
+  when their logical IDs repeat. Removing a binary wrapper serializes its
+  branches in the retained path's order, not by the recursive swap flag.
 - Adding a binary wrapper requires added material only in a branch that would
   otherwise be empty. The original can also require an addition in the retained
   branch, including an impossible empty enabler group.

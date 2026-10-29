@@ -622,14 +622,11 @@ impl<'a> Application<'a> {
             if children.len() < 3 {
                 return Err(Error::Index);
             }
+            // Serialize branches in the retained path's physical order, as
+            // mutation and wrapper addition do; `j_swapped` is a routing flag.
+            let swapped = usize::from(operation.source_j_swapped);
             let sequence = self.fresh_sequence(target, self.parent(target)?, budget)?;
-            self.set_children(
-                sequence,
-                vec![
-                    children[1 + usize::from(operation.j_swapped)],
-                    children[2 - usize::from(operation.j_swapped)],
-                ],
-            )?;
+            self.set_children(sequence, vec![children[1 + swapped], children[2 - swapped]])?;
             self.replace(target, sequence)?;
             self.root = self.root_of(sequence)?;
         } else if name.contains("branching") || name.contains("routing") {
@@ -1826,6 +1823,20 @@ mod tests {
         }
         visit(architecture, architecture.root)
     }
+    /// Sequential nesting is not part of serial module order.
+    fn serial(value: &Value) -> Value {
+        let items = value.as_array().unwrap();
+        let mut flat = vec![items[0].clone()];
+        for child in items[1..].iter().map(serial) {
+            match child.as_array() {
+                Some(nested) if items[0] == "sequential" && nested[0] == "sequential" => {
+                    flat.extend(nested[1..].iter().cloned())
+                }
+                _ => flat.push(child),
+            }
+        }
+        Value::Array(flat)
+    }
     fn analyzed(first: Architecture, second: Architecture) -> EditPlan {
         let prepared = prepare(first, second).unwrap();
         budgeted(|budget| {
@@ -1973,5 +1984,73 @@ mod tests {
                 assert_eq!(topology(&child), first, "first IDs start at {base}");
             }
         }
+    }
+
+    #[test]
+    fn branch_removal_follows_physical_path_orientation() {
+        let first = json!([
+            "sequential",
+            [
+                "sequential",
+                ["sequential", computation("relu"), computation("linear(32)")],
+                [
+                    "sequential",
+                    computation("linear(32)"),
+                    computation("identity")
+                ]
+            ],
+            [
+                "sequential",
+                [
+                    "branching(2)",
+                    ["clone(2)"],
+                    computation("softmax"),
+                    computation("identity"),
+                    ["cat(2,1)"]
+                ],
+                [
+                    "branching(2)",
+                    ["clone(2)"],
+                    computation("relu"),
+                    computation("norm"),
+                    ["cat(2,1)"]
+                ]
+            ]
+        ]);
+        let second = json!([
+            "sequential",
+            [
+                "branching(2)",
+                ["clone(2)"],
+                computation("linear(16)"),
+                [
+                    "branching(2)",
+                    ["clone(2)"],
+                    computation("identity"),
+                    computation("linear(32)"),
+                    ["add(2)"]
+                ],
+                ["cat(2,1)"]
+            ],
+            [
+                "routing",
+                ["im2col(3,1,1)"],
+                computation("linear(16)"),
+                ["col2im"]
+            ]
+        ]);
+        let mut plan = analyzed(tree(&first, |i| i as i64), tree(&second, |i| i as i64));
+        // The routing flag claims a swap; the retained path aligns branch one first.
+        let outer = plan.prepared.parent2_ids[1].clone();
+        assert!(
+            plan.paths[plan.path_index]
+                .iter()
+                .any(|op| op.op_type == "rem_wrap"
+                    && op.node2_id.as_deref() == Some(outer.as_str())
+                    && op.j_swapped
+                    && !op.source_j_swapped)
+        );
+        let child = apply_where(&mut plan, |_| true).unwrap();
+        assert_eq!(serial(&topology(&child)), serial(&first));
     }
 }
