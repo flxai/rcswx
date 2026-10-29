@@ -47,6 +47,26 @@ copies and are not changed by rewriting Git refs.
 
 ## Local checks
 
+The Python reference tests require an external source checkout of `einsearch`
+at commit `3f44ddf086bee0c213404e240ee0adf99e3e1501`. It is not installed by
+`make sync` or included in this repository. From the repository root, provision
+a separate directory once:
+
+```sh
+mkdir ../einsearch
+git -C ../einsearch init
+git -C ../einsearch fetch --depth=1 https://github.com/flxai/einsearch.git 3f44ddf086bee0c213404e240ee0adf99e3e1501
+git -C ../einsearch checkout --detach FETCH_HEAD
+export RCSWX_REFERENCE_ROOT="$(realpath ../einsearch)"
+```
+
+If that directory already exists, use a different empty directory or point
+`RCSWX_REFERENCE_ROOT` at an existing copy of the pinned source. Export the
+variable in each test shell. Without it, the loader looks for `einsearch` next
+to this repository; missing sources fail test collection. The loader verifies
+the source hashes in `tests/reference/original.py` before executing the oracle;
+do not substitute a newer revision or modify those files to make tests pass.
+
 Run the repository's configured commands inside that environment:
 
 ```sh
