@@ -58,3 +58,10 @@ branch-constraint correction is explicit in the oracle comparison; separate
 regressions check wrapper boundaries, ordered topology, and payload ownership.
 Passing those checks is not a claim of universal original-output parity or
 tensor-level validity for every generated architecture.
+
+Selecting every edit does not guarantee parent one's topology. The remaining
+known failures involve a binary wrapper whose branches the path traverses in
+swapped order: an edit inside it can name the other branch's source occurrence.
+The original records the same node ID but applies a remapped coordinate. Here,
+application edits the wrong module, so the child can differ from parent one, or
+application fails with a missing mutation target or the removal guard above.
