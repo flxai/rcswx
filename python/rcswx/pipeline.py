@@ -2,7 +2,8 @@
 
 Parent selection, mutation, task heads, evaluation, and population storage remain
 caller-owned.  The native structural call stays outside the build/forward retry
-handler, as in the historical integration.
+handler, as in the historical integration; only an unrealizable selection, whose
+malformed child the reference rejected inside that handler, is retried.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from os.path import join
 
 import torch
 
+from ._core import UnrealizableSelectionError
 from .recursive import raw_crossover
 
 
@@ -58,14 +60,20 @@ def validated_crossover(
         if tries > max_tries:
             raise RuntimeError("Crossover failed to generate valid children.")
         tries += 1
-        child, selected, operations, distance1, distance2, between = raw_crossover(
-            parent1,
-            parent2,
-            skewness=skewness,
-            limiter=limiter,
-            sampler=sampler,
-            rng=stream,
-        )
+        try:
+            child, selected, operations, distance1, distance2, between = raw_crossover(
+                parent1,
+                parent2,
+                skewness=skewness,
+                limiter=limiter,
+                sampler=sampler,
+                rng=stream,
+            )
+        except UnrealizableSelectionError as error:
+            # The reference returned this selection's malformed child, which then
+            # failed below; every other raw failure still escapes this loop.
+            print(error)
+            continue
         try:
             child.input_params = root_input_params
             child = rebuild(child)

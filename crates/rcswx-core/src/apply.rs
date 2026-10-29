@@ -652,7 +652,7 @@ impl<'a> Application<'a> {
                 // Only functions surround a single-module wrapper's module.
                 // The reference promotes one into the module slot when the
                 // wrapper's own removal is not selected.
-                return Err(Error::Reference(
+                return Err(Error::UnrealizableSelection(
                     "removal would leave a wrapper without a module".into(),
                 ));
             } else {
@@ -2098,7 +2098,7 @@ mod tests {
         for wrapper in [&outer, &inner] {
             assert!(matches!(
                 apply_where(&mut plan, |op| removes(op, &[&module, wrapper])),
-                Err(Error::Reference(_))
+                Err(Error::UnrealizableSelection(_))
             ));
         }
         let child = apply_where(&mut plan, |op| removes(op, &[&module, &inner, &outer])).unwrap();

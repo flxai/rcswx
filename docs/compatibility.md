@@ -28,7 +28,10 @@ The following corrections deliberately differ from that source:
 - Removing the only module of a routing or single-module branching wrapper
   fails when that wrapper stays. The original's nested-wrapper dependencies
   allow such selections, then promote a routing or aggregation function into the
-  module slot. Sampling is unchanged; application reports the failure.
+  module slot. Sampling is unchanged; application raises
+  `rcswx.UnrealizableSelectionError`, a `ValueError`. `validated_crossover`
+  counts it as a failed try and draws again, as the original did after its
+  malformed child failed to build.
 
 These corrections can change edit application order, valid selections, offspring,
 and failure behavior.

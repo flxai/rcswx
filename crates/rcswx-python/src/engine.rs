@@ -2,6 +2,7 @@
 
 use crate::execution::WorkerCount;
 use crate::sampling::NativeRng;
+use pyo3::create_exception;
 use pyo3::exceptions::{
     PyException, PyIndexError, PyMemoryError, PyRuntimeError, PyUnboundLocalError, PyValueError,
 };
@@ -20,11 +21,19 @@ use std::time::Instant;
 
 type PreparedTokenRecord = (String, String, Vec<String>, usize, Option<usize>);
 
+create_exception!(
+    rcswx._core,
+    UnrealizableSelectionError,
+    PyValueError,
+    "A dependency-valid selection cannot be materialized as a well-formed child."
+);
+
 pub(crate) fn python_error(error: Error, callback: Option<PyErr>) -> PyErr {
     match error {
         Error::InvalidInput(message) | Error::Reference(message) | Error::Numerical(message) => {
             PyValueError::new_err(message)
         }
+        Error::UnrealizableSelection(message) => UnrealizableSelectionError::new_err(message),
         Error::Index => PyIndexError::new_err("list index out of range"),
         Error::MissingMutationTarget => PyException::new_err("Nodes to mutate not found"),
         Error::EmptyMinimum => PyValueError::new_err(
@@ -552,6 +561,10 @@ fn prepare_architectures(
 }
 
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
+    module.add(
+        "UnrealizableSelectionError",
+        module.py().get_type::<UnrealizableSelectionError>(),
+    )?;
     module.add_class::<NativePrepared>()?;
     module.add_class::<NativePlan>()?;
     module.add_function(wrap_pyfunction!(validate_architecture, module)?)?;

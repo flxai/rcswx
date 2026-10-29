@@ -22,6 +22,7 @@ fn native_error(error: Error) -> PyErr {
         }
         Error::Unbound(_)
         | Error::Reference(_)
+        | Error::UnrealizableSelection(_)
         | Error::MissingMutationTarget
         | Error::Limit(_)
         | Error::Cancelled

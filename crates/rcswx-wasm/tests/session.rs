@@ -207,3 +207,61 @@ fn repeated_selection_indices_are_rejected_instead_of_double_charged() {
         .unwrap_err();
     assert_eq!(error.code, "invalid_selection");
 }
+#[test]
+fn unrealizable_selection_is_an_application_failure() {
+    fn architecture(tree: &Value) -> String {
+        fn add(tree: &Value, nodes: &mut Vec<Value>) -> usize {
+            let items = tree.as_array().unwrap();
+            let index = nodes.len();
+            nodes.push(json!({"id": index.to_string(), "name": items[0]}));
+            let children = items[1..]
+                .iter()
+                .map(|child| add(child, nodes))
+                .collect::<Vec<_>>();
+            nodes[index]["children"] = json!(children);
+            index
+        }
+        let mut nodes = vec![];
+        add(tree, &mut nodes);
+        json!({"schema": 1, "grammar": "einspace", "grammar_version": "1", "root": 0, "nodes": nodes})
+            .to_string()
+    }
+    let computation = |name: &str| json!(["computation", [name]]);
+    let routing = |module: Value| json!(["routing", ["identity"], module, ["identity"]]);
+    let first = json!([
+        "branching(2)",
+        ["clone(2)"],
+        routing(json!([
+            "sequential",
+            computation("relu"),
+            computation("softmax")
+        ])),
+        routing(computation("relu")),
+        ["add(2)"]
+    ]);
+    let retained = json!([
+        "branching(2)",
+        ["clone(2)"],
+        computation("softmax"),
+        routing(computation("norm")),
+        ["add(2)"]
+    ]);
+    let second = json!([
+        "sequential",
+        retained,
+        routing(routing(computation("relu")))
+    ]);
+    let mut s = Session::new("unrealizable").unwrap();
+    let p = s
+        .analyze(&architecture(&first), &architecture(&second), "{}")
+        .unwrap();
+    // The module removal and the inner wrapper removal, without the outer one.
+    let error = s
+        .apply_selection(&p.plan_id, &json!(p.nontrivial[..2]).to_string())
+        .unwrap_err();
+    assert_eq!(error.code, "application_failure");
+    assert!(
+        s.apply_selection(&p.plan_id, &json!(p.nontrivial[..3]).to_string())
+            .is_ok()
+    );
+}

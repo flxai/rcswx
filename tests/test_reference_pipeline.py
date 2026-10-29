@@ -1,22 +1,28 @@
 import copy
 import math
 import pickle
+from functools import partial
 from types import SimpleNamespace
 
 import pytest
 import torch
 from rcswx import (
     PCFG,
+    Alignment,
     Limiter,
+    NativeRng,
     Reconstructor,
+    UnrealizableSelectionError,
+    apply_edits,
     gated_crossover,
     generation_step,
+    pipeline,
     raw_crossover,
     validated_crossover,
 )
 from rcswx.grammars import einspace
 
-from tests.reference.corpus import input_params, operation_map
+from tests.reference.corpus import computation, input_params, operation_map
 from tests.reference.original import limits, load, operation_record, tree_record
 from tests.test_reference_construction import metadata, rng_record, seed
 
@@ -183,6 +189,116 @@ def test_raw_failures_escape_the_inner_build_retry_handler(failure):
                 evolver.recursive_constrained_smith_waterman_crossover(*parents)
         assert attempts == []
         assert_rng_equal(rng_record(), before)
+
+
+def stranding_parents():
+    """Legacy parents whose nested-wrapper removals can strand a routing wrapper."""
+    _, guard, sampler, _ = prepare(True)
+    choices = operation_map(einspace)
+
+    def routing(module):
+        return ("routing", "identity", module, "identity")
+
+    def recipe(item):
+        if isinstance(item, str):
+            return [choices[item]]
+        return [choices[item[0]], *(choice for child in item[1:] for choice in recipe(child))]
+
+    first = (
+        "branching(2)",
+        "clone(2)",
+        routing(("sequential", computation("relu"), computation("softmax"))),
+        routing(computation("relu")),
+        "add(2)",
+    )
+    retained = ("branching(2)", "clone(2)", computation("softmax"), routing(computation("norm")))
+    second = ("sequential", (*retained, "add(2)"), routing(routing(computation("relu"))))
+    parents = tuple(
+        sampler.sample(input_params((2, 8, 8)), operations=recipe(item)) for item in (first, second)
+    )
+    return parents, guard, sampler
+
+
+@pytest.mark.parametrize("max_tries", [1, 2])
+def test_unrealizable_selections_are_redrawn_until_the_retry_cap(max_tries, capsys):
+    seed()
+    parents, guard, sampler = stranding_parents()
+    # Replay the native stream on copies: two unrealizable draws precede a valid one.
+    plan, replay = Alignment(*copy.deepcopy(parents)), NativeRng(26)
+    draws = []
+    for _ in range(3):
+        draws.append((plan.sample(rng=replay), replay.state()))
+    for selection, _ in draws[:2]:
+        with pytest.raises(UnrealizableSelectionError):
+            apply_edits(plan, selection)
+    # The raw historical helper still fails fast.
+    with pytest.raises(UnrealizableSelectionError):
+        raw_crossover(*copy.deepcopy(parents), rng=NativeRng(26))
+    capsys.readouterr()
+
+    attempts = []
+
+    def rebuild(child):
+        attempts.append(child)
+        return sampler.re_id(child)
+
+    stream = NativeRng(26)
+    run = partial(
+        validated_crossover,
+        *parents,
+        rebuild=rebuild,
+        batch_shape=guard.batch_shape,
+        max_tries=max_tries,
+        rng=stream,
+    )
+    if max_tries == 1:
+        with pytest.raises(RuntimeError, match="Crossover failed"):
+            run()
+        assert attempts == []
+        assert stream.state() == draws[1][1]
+    else:
+        _, report = run()
+        assert len(attempts) == 1
+        assert stream.state() == draws[2][1]
+        expected = draws[2][0].operations
+        assert list(map(operation_record, report["crossover_operations"])) == list(
+            map(operation_record, expected)
+        )
+    assert capsys.readouterr().out.count("wrapper without a module") == 2
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [ValueError("plain"), IndexError("raw"), MemoryError("raw")],
+    ids=lambda failure: type(failure).__name__,
+)
+def test_only_unrealizable_raw_failures_are_retried(failure, monkeypatch):
+    calls = []
+
+    def raw(*args, **kwargs):
+        calls.append(kwargs["rng"])
+        raise failure
+
+    monkeypatch.setattr(pipeline, "raw_crossover", raw)
+    parent = SimpleNamespace(input_params={}, limiter=None)
+    with pytest.raises(type(failure)) as caught:
+        validated_crossover(parent, parent, rebuild=None, batch_shape=(1,), seed=0)
+    assert caught.value is failure
+    assert len(calls) == 1
+
+
+def test_invalid_skewness_escapes_the_unrealizable_retry():
+    seed()
+    parents, guard, sampler = stranding_parents()
+    with pytest.raises(ValueError, match="finite") as caught:
+        validated_crossover(
+            *parents,
+            rebuild=sampler.re_id,
+            batch_shape=guard.batch_shape,
+            skewness=math.nan,
+            seed=26,
+        )
+    assert not isinstance(caught.value, UnrealizableSelectionError)
 
 
 @pytest.mark.parametrize("rate", [0, 0.5, 1])

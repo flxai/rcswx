@@ -89,8 +89,9 @@ non-negative and may each appear only once; duplicates are rejected. Edits can h
 enabling/disabling dependencies: this pair has two independent changes, but not
 every subset of a larger plan is applicable. Selection validation checks edit
 dependencies; it does not guarantee that the selected edits can be materialized
-or that their child is executable. Application can still raise for an
-unrealizable selection. It does not repair the child or retry another selection.
+or that their child is executable. Application can still raise
+`rcswx.UnrealizableSelectionError`, a `ValueError`, for an unrealizable
+selection. It does not repair the child or retry another selection.
 
 If only the distance is needed, use `rcswx.distance(first, second)` instead of
 retaining an edit plan. To sample a valid selection instead of choosing one:

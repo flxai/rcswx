@@ -1,5 +1,5 @@
 import pytest
-from rcswx import Architecture, apply_edits, edit_path
+from rcswx import Architecture, UnrealizableSelectionError, apply_edits, edit_path
 
 
 def test_portable_tree_round_trip_uses_canonical_native_schema():
@@ -309,6 +309,47 @@ def test_selection_rejects_repeated_and_negative_indices_without_double_charging
         plan.select([index, index])
     with pytest.raises(ValueError, match="non-negative"):
         plan.select([-1])
+
+
+def test_unrealizable_selection_raises_a_dedicated_value_error():
+    def routing(module):
+        return ("routing", ("identity",), module, ("identity",))
+
+    def computation(name):
+        return ("computation", (name,))
+
+    first = Architecture.from_tree(
+        (
+            "branching(2)",
+            ("clone(2)",),
+            routing(("sequential", computation("relu"), computation("softmax"))),
+            routing(computation("relu")),
+            ("add(2)",),
+        )
+    )
+    retained = (
+        "branching(2)",
+        ("clone(2)",),
+        computation("softmax"),
+        routing(computation("norm")),
+        ("add(2)",),
+    )
+    second = Architecture.from_tree(("sequential", retained, routing(routing(computation("relu")))))
+    plan = edit_path(first, second)
+    operations = plan.nontrivial_ops
+    # Removing the module is enabled by removing either enclosing routing wrapper.
+    assert [operation.op_type for operation in operations[:3]] == ["rem", "rem_wrap", "rem_wrap"]
+    rest = "0" * (len(operations) - 3)
+
+    assert issubclass(UnrealizableSelectionError, ValueError)
+    with pytest.raises(UnrealizableSelectionError, match="wrapper without a module"):
+        apply_edits(plan, plan.select("110" + rest))
+    child = apply_edits(plan, plan.select("111" + rest))
+
+    def topology(architecture):
+        return [(node["name"], node["children"]) for node in architecture.to_dict()["nodes"]]
+
+    assert topology(child) == topology(Architecture.from_tree(retained))
 
 
 def test_repeated_portable_application_does_not_depend_on_earlier_applications():

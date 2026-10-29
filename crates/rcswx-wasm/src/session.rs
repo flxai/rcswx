@@ -56,6 +56,7 @@ fn core_error(error: Error, stage: &str) -> BrowserError {
         Error::Cancelled => "cancelled",
         Error::PlanMismatch => "wrong_plan",
         Error::Numerical(_) => "sampling_failure",
+        Error::UnrealizableSelection(_) => "application_failure",
         _ => {
             if stage == "application" {
                 "application_failure"

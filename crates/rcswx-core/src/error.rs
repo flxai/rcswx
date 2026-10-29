@@ -9,6 +9,8 @@ pub enum Error {
     MissingMutationTarget,
     Unbound(&'static str),
     Reference(String),
+    /// Dependency-valid edits that cannot form a well-formed child.
+    UnrealizableSelection(String),
     Numerical(String),
     Execution(String),
     Memory,
@@ -38,6 +40,7 @@ impl fmt::Display for Error {
         match self {
             Self::InvalidInput(message)
             | Self::Reference(message)
+            | Self::UnrealizableSelection(message)
             | Self::Numerical(message)
             | Self::Execution(message) => formatter.write_str(message),
             Self::Index => formatter.write_str("list index out of range"),
