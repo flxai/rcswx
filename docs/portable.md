@@ -86,7 +86,10 @@ A mask follows `plan.nontrivial_ops` order. Do not reuse this example's mask for
 an unrelated plan. `plan.select` also accepts selected-path operation indices,
 which are **not** the numbered bit positions printed above. Edits can have
 enabling/disabling dependencies: this pair has two independent changes, but not
-every subset of a larger plan is applicable. Selection is validated.
+every subset of a larger plan is applicable. Selection validation checks edit
+dependencies; it does not guarantee that the selected edits can be materialized
+or that their child is executable. Application can still raise for an
+unrealizable selection. It does not repair the child or retry another selection.
 
 If only the distance is needed, use `rcswx.distance(first, second)` instead of
 retaining an edit plan. To sample a valid selection instead of choosing one:
@@ -105,6 +108,9 @@ For this pair and seed, sampling also produces `Linear(…, 32) → ReLU`.
 Selections belong to one plan and cannot be applied to another, even if it was
 created from the same parents. Portable `Architecture` values are immutable;
 alignment and application do not mutate the input values.
+
+Use each plan from one thread at a time. Concurrent calls on the same plan are
+not supported; use separate plans for concurrent work.
 
 Legacy callback-bearing trees retain the historical second-parent ID updates
 during preparation. Structural changes to those trees invalidate subsequent
@@ -144,6 +150,13 @@ See the runnable [reference sampling example](../examples/reference_sampling.py)
 The two samplers share the discrete probability law, not seed-to-child identity.
 The reference sampler operates on the **current** edit plan; it does not undo
 the [intentional operator corrections](compatibility.md).
+
+Both routes retain the reference's discrete cost-grid limitations. For a
+nonempty edit set whose final enumerated cost is below `0.25`, the grid has no
+points and sampling raises rather than choosing an approximate distribution.
+Explicit selection with `plan.select(...)` remains available. Other invalid
+grid indices can also raise; arbitrary custom costs are not guaranteed to be
+sampleable.
 
 ## Serialize architecture data
 
@@ -189,6 +202,9 @@ bounded_plan = edit_path(
 ```
 
 `max_allocation_bytes` bounds accounted native allocations, **not process RSS**.
+With `limits=None`, native quotas are unlimited; large alignments or selection
+enumerations can exhaust process memory. An allocation quota helps bound work
+but does not guarantee recovery from every process allocation failure.
 On legacy/PyTorch trees, the `Limiter`'s `memory_crossover` guard samples host RSS
 and can overshoot between polls. Neither is a hard process-memory ceiling.
 See the [resource-check contract](wavefront.md#resource-checks-and-host-callbacks)
