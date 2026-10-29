@@ -203,7 +203,6 @@ import os
 import signal
 import sys
 import threading
-import time
 from rcswx import Alignment, Architecture
 def tree(name, width):
     if width == 1:
@@ -215,12 +214,14 @@ plan = Alignment(
     Architecture.from_tree(tree('sigmoid', 17)),
     limits={'max_output': 1 << 16},
 )._native
+ready = threading.Event()
 def interrupt():
-    time.sleep(0.001)
-    # The main thread keeps the GIL until native enumeration detaches.
+    ready.wait()
     os.kill(os.getpid(), signal.SIGINT)
-sys.setswitchinterval(1e6)
 threading.Thread(target=interrupt, daemon=True).start()
+# The main thread keeps the GIL from here until native enumeration detaches.
+sys.setswitchinterval(1e6)
+ready.set()
 try:
     # Without host signal polling this reaches the output limit first.
     plan.combinations()
